@@ -22,7 +22,7 @@
         </p>
         <div class="cta-row">
           <a href="#guiding-question" class="btn btn-primary">Read the Vision</a>
-          <a href="#sections" class="btn btn-secondary">Explore Sections</a>
+          <a href="#fund-dashboard" class="btn btn-secondary">Explore Dashboard</a>
         </div>
       </div>
     </header>
@@ -39,10 +39,31 @@
         </div>
       </section>
 
-      <section id="sections" class="sections" aria-labelledby="sections-heading">
+      <section id="fund-dashboard" class="sections" aria-labelledby="dashboard-heading">
         <div class="container">
-          <h2 id="sections-heading">Platform Sections (Early Navigation)</h2>
-          <ul id="section-list" class="section-grid" aria-live="polite"></ul>
+          <h2 id="dashboard-heading">Fund Dashboard (v0.2)</h2>
+          <ul id="metrics-strip" class="metrics-strip" aria-live="polite"></ul>
+
+          <div class="filters" aria-label="Project filters">
+            <label>
+              Track
+              <select id="track-filter">
+                <option value="all">All tracks</option>
+              </select>
+            </label>
+            <label>
+              Stage
+              <select id="stage-filter">
+                <option value="all">All stages</option>
+              </select>
+            </label>
+          </div>
+
+          <h3 class="dashboard-subheading">Project Portfolio</h3>
+          <ul id="project-grid" class="project-grid" aria-live="polite"></ul>
+
+          <h3 class="dashboard-subheading">Public Ledger Activity</h3>
+          <ul id="activity-list" class="activity-list" aria-live="polite"></ul>
         </div>
       </section>
 

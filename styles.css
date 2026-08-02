@@ -143,6 +143,96 @@ blockquote {
   padding: 0.7rem 0.8rem;
 }
 
+.metrics-strip,
+.project-grid,
+.activity-list {
+  list-style: none;
+  padding: 0;
+  margin: 1rem 0 0;
+}
+
+.metrics-strip {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(180px, 1fr));
+  gap: 0.75rem;
+}
+
+.metric-card,
+.project-card,
+.activity-item {
+  background: var(--surface);
+  border: 1px solid var(--border);
+  border-radius: 0.6rem;
+  padding: 0.8rem;
+}
+
+.metric-label,
+.project-meta,
+.activity-meta {
+  color: var(--muted);
+  font-size: 0.92rem;
+}
+
+.metric-value {
+  margin: 0.25rem 0 0;
+  font-size: 1.4rem;
+  font-weight: 700;
+}
+
+.filters {
+  margin-top: 1.25rem;
+  display: flex;
+  gap: 0.75rem;
+  flex-wrap: wrap;
+}
+
+.filters label {
+  display: grid;
+  gap: 0.3rem;
+  color: var(--muted);
+}
+
+.filters select {
+  min-width: 170px;
+  border-radius: 0.5rem;
+  border: 1px solid var(--border);
+  background: var(--surface);
+  color: var(--text);
+  padding: 0.45rem;
+  font: inherit;
+}
+
+.dashboard-subheading {
+  margin: 1.5rem 0 0;
+  font-size: 1.15rem;
+}
+
+.project-grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(220px, 1fr));
+  gap: 0.75rem;
+}
+
+.project-title {
+  margin: 0;
+}
+
+.project-links {
+  margin-top: 0.55rem;
+  display: flex;
+  gap: 0.65rem;
+  flex-wrap: wrap;
+}
+
+.project-links a {
+  color: var(--accent);
+}
+
+.activity-list {
+  display: grid;
+  gap: 0.65rem;
+}
+
 .guiding-text {
   font-size: clamp(1.5rem, 4vw, 2.25rem);
   font-weight: 700;
