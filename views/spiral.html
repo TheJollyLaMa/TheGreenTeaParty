@@ -1,0 +1,177 @@
+<!doctype html>
+<html lang="en">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <meta
+      name="description"
+      content="Spiral Constellation — explore Green Tea Party projects in a Mandelbrot-inspired interactive view."
+    />
+    <title>Spiral Constellation | The Green Tea Party</title>
+    <!-- Resolve data paths relative to repository root -->
+    <base href="../" />
+    <link rel="stylesheet" href="styles/spiral.css" />
+  </head>
+  <body>
+    <div class="spiral-shell">
+      <!-- ---- Top toolbar ---- -->
+      <nav class="spiral-toolbar" aria-label="Constellation controls">
+        <a href="index.html" class="brand" aria-label="The Green Tea Party home">
+          🍵 <span>Green Tea Party</span>
+        </a>
+
+        <div class="toolbar-sep" role="separator"></div>
+
+        <!-- Track filter -->
+        <div class="toolbar-filter">
+          <label for="spiral-track-filter">Track</label>
+          <select id="spiral-track-filter" aria-label="Filter by track">
+            <option value="all">All tracks</option>
+          </select>
+        </div>
+
+        <!-- Status filter -->
+        <div class="toolbar-filter">
+          <label for="spiral-status-filter">Status</label>
+          <select id="spiral-status-filter" aria-label="Filter by status">
+            <option value="all">All statuses</option>
+          </select>
+        </div>
+
+        <div class="toolbar-sep" role="separator"></div>
+
+        <!-- Association lines toggle -->
+        <button
+          id="toggle-assoc"
+          class="toolbar-btn active"
+          type="button"
+          aria-pressed="true"
+          title="Toggle association lines"
+        >
+          ⟷ Connections
+        </button>
+
+        <!-- Focus mode toggle -->
+        <button
+          id="toggle-focus"
+          class="toolbar-btn"
+          type="button"
+          aria-pressed="false"
+          title="Toggle focus mode — highlight selected project and its neighbours"
+        >
+          ◎ Focus
+        </button>
+
+        <!-- Reset view -->
+        <button
+          id="reset-view"
+          class="toolbar-btn"
+          type="button"
+          title="Reset pan and zoom (or double-click the canvas)"
+        >
+          ⟳ Reset
+        </button>
+
+        <a href="index.html" class="toolbar-back" aria-label="Back to dashboard">
+          ← Dashboard
+        </a>
+      </nav>
+
+      <!-- ---- Canvas ---- -->
+      <div class="spiral-canvas-wrap" role="region" aria-label="Interactive project constellation">
+        <canvas id="spiral-canvas" role="img" aria-label="Spiral constellation of projects"></canvas>
+
+        <!-- Loading indicator -->
+        <div id="spiral-loading" class="spiral-loading" aria-live="polite" aria-label="Loading constellation data">
+          <div class="spinner"></div>
+          <div>Loading constellation…</div>
+        </div>
+
+        <!-- Empty state -->
+        <div id="spiral-empty" class="spiral-empty" style="display:none" aria-live="polite">
+          <strong>No projects match this filter.</strong>
+          <p>Try adjusting the track or status filter above.</p>
+        </div>
+      </div>
+
+      <!-- ---- Tooltip (mouse hover) ---- -->
+      <div id="spiral-tooltip" role="tooltip" aria-hidden="true"></div>
+
+      <!-- ---- Details panel (click) ---- -->
+      <aside
+        id="details-panel"
+        class="details-panel"
+        role="complementary"
+        aria-label="Project details"
+        aria-hidden="true"
+      >
+        <div class="details-header">
+          <h3>Project details</h3>
+          <button
+            id="close-details"
+            class="close-btn"
+            type="button"
+            aria-label="Close project details"
+          >✕</button>
+        </div>
+        <div class="details-body">
+          <div id="details-content" class="details-content"></div>
+        </div>
+      </aside>
+
+      <!-- ---- Track colour legend ---- -->
+      <aside class="spiral-legend" aria-label="Track colour legend">
+        <div class="legend-item">
+          <span class="legend-dot" style="background:#22c55e"></span> Green Tea
+        </div>
+        <div class="legend-item">
+          <span class="legend-dot" style="background:#3b82f6"></span> Blue Tea
+        </div>
+        <div class="legend-item">
+          <span class="legend-dot" style="background:#ef4444"></span> Red Rice
+        </div>
+        <div class="legend-item">
+          <span class="legend-dot" style="background:#a855f7"></span> Purple Sage
+        </div>
+        <div class="legend-item">
+          <span class="legend-dot" style="background:#f59e0b"></span> Golden Root
+        </div>
+        <div class="legend-item">
+          <span class="legend-dot" style="background:#94a3b8"></span> Silver Stream
+        </div>
+      </aside>
+
+      <!-- ---- Status legend ---- -->
+      <aside class="spiral-status-legend" aria-label="Status indicator legend">
+        <div class="status-item">
+          <span class="status-dot" style="background:#22c55e"></span> Active
+        </div>
+        <div class="status-item">
+          <span class="status-dot" style="background:#f59e0b"></span> Planning
+        </div>
+        <div class="status-item">
+          <span class="status-dot" style="background:#94a3b8"></span> Completed
+        </div>
+        <div class="status-item">
+          <span class="status-dot" style="background:#ef4444"></span> Paused
+        </div>
+      </aside>
+
+      <!-- ---- Keyboard / interaction hint ---- -->
+      <p class="spiral-hint" aria-hidden="true">
+        Scroll to zoom · Drag to pan · Click a node for details · Double-click to reset
+      </p>
+    </div>
+
+    <script>
+      // Close details panel button wired here before spiral.js so it works
+      // even if the module fails to load.
+      document.getElementById('close-details')?.addEventListener('click', () => {
+        const panel = document.getElementById('details-panel');
+        panel?.classList.remove('open');
+        panel?.setAttribute('aria-hidden', 'true');
+      });
+    </script>
+    <script src="scripts/spiral.js"></script>
+  </body>
+</html>
