@@ -157,6 +157,12 @@ body {
   outline-offset: 2px;
 }
 
+.toolbar-btn:disabled {
+  opacity: 0.45;
+  cursor: not-allowed;
+  border-color: var(--border);
+}
+
 /* Back link */
 .toolbar-back {
   display: inline-flex;
@@ -173,6 +179,45 @@ body {
 
 .toolbar-back:hover {
   color: var(--text);
+}
+
+.spiral-breadcrumbs {
+  flex: 1 1 100%;
+  display: flex;
+  align-items: center;
+  flex-wrap: wrap;
+  gap: 0.35rem;
+  margin-top: 0.1rem;
+  min-height: 2rem;
+}
+
+.crumb-btn {
+  --crumb-color: var(--border);
+  border: 1px solid color-mix(in srgb, var(--crumb-color) 48%, var(--border));
+  background: rgba(15, 23, 42, 0.72);
+  color: var(--text);
+  border-radius: 999px;
+  padding: 0.22rem 0.6rem;
+  font: inherit;
+  font-size: 0.76rem;
+  cursor: pointer;
+  transition: border-color 0.15s, background 0.15s, color 0.15s;
+}
+
+.crumb-btn:hover {
+  border-color: var(--accent);
+  background: var(--surface-raised);
+}
+
+.crumb-btn.active {
+  background: color-mix(in srgb, var(--crumb-color) 16%, var(--surface));
+  border-color: var(--crumb-color);
+  color: #f8fafc;
+}
+
+.crumb-sep {
+  color: var(--muted);
+  font-size: 0.8rem;
 }
 
 /* ---- Canvas ---- */
@@ -337,6 +382,28 @@ body {
   line-height: 1.5;
 }
 
+.details-priority {
+  margin: 0 0 0.95rem;
+  padding: 0.8rem 0.9rem;
+  border: 1px solid rgba(34, 197, 94, 0.28);
+  border-radius: 0.7rem;
+  background: rgba(34, 197, 94, 0.08);
+}
+
+.details-priority h3 {
+  margin: 0 0 0.35rem;
+  font-size: 0.76rem;
+  letter-spacing: 0.08em;
+  text-transform: uppercase;
+  color: var(--accent);
+}
+
+.details-priority p {
+  margin: 0;
+  font-size: 0.86rem;
+  line-height: 1.55;
+}
+
 .details-meta {
   display: flex;
   flex-wrap: wrap;
@@ -406,12 +473,12 @@ body {
   color: var(--muted);
 }
 
-/* Connections list */
-.details-connections {
+/* Relationship lists */
+.details-group {
   margin-bottom: 1rem;
 }
 
-.details-connections h3 {
+.details-group h3 {
   margin: 0 0 0.45rem;
   font-size: 0.82rem;
   font-weight: 600;
@@ -420,7 +487,7 @@ body {
   letter-spacing: 0.05em;
 }
 
-.details-connections ul {
+.details-group ul {
   list-style: none;
   margin: 0;
   padding: 0;
@@ -429,13 +496,17 @@ body {
   gap: 0.3rem;
 }
 
-.details-connections li {
+.details-group li {
   font-size: 0.82rem;
   color: var(--text);
   padding: 0.3rem 0.5rem;
   background: var(--bg);
   border-radius: 0.35rem;
   border: 1px solid var(--border);
+}
+
+.details-group small {
+  color: var(--muted);
 }
 
 /* External links */
@@ -576,6 +647,14 @@ body {
 
   .toolbar-filter select {
     min-width: 90px;
+  }
+
+  .spiral-breadcrumbs {
+    gap: 0.25rem;
+  }
+
+  .crumb-btn {
+    font-size: 0.72rem;
   }
 
   #details-panel {
