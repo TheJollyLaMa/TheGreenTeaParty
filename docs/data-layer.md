@@ -12,6 +12,10 @@ exposes a common set of selectors and a shared filter state.
 No build step is required — the module is a plain IIFE that attaches `GTPData`
 to `window`.
 
+As of v0.41, `GTPData` resolves mode via `scripts/mode-router.js` and hydrates from
+a mode-specific adapter implementing the shared contract:
+`getProjects()`, `getAssociations()`, `getMetrics()`, and `getActivity()`.
+
 ---
 
 ## File Map

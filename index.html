@@ -14,7 +14,7 @@
     <header class="site-header">
       <div class="container">
         <p class="eyebrow">The Green Tea Party</p>
-        <h1>Decent Agency</h1>
+        <h1>Decent Agency <span id="mode-badge" class="mode-badge" aria-live="polite"></span></h1>
         <p class="tagline">Build agency, not attention.</p>
         <p class="intro">
           A mission-centered platform for stewardship, collaboration, and local
@@ -24,6 +24,8 @@
           <a href="#guiding-question" class="btn btn-primary">Read the Vision</a>
           <a href="#fund-dashboard" class="btn btn-secondary">Explore Dashboard</a>
           <a href="views/spiral.html" class="btn btn-secondary">🌀 Constellation View</a>
+          <a data-mode-link="prototype" class="btn btn-secondary">Prototype Route</a>
+          <a data-mode-link="app" class="btn btn-secondary">App Route</a>
         </div>
       </div>
     </header>
@@ -46,6 +48,7 @@
           <p class="dashboard-note">
             <a href="views/spiral.html">🌀 Try the v0.3 Spiral Constellation View →</a>
           </p>
+          <div id="app-state-panel" class="app-state-panel" hidden aria-live="polite"></div>
           <ul id="metrics-strip" class="metrics-strip" aria-live="polite"></ul>
 
           <h3 class="dashboard-subheading">Stewardship KPIs</h3>
@@ -91,6 +94,13 @@
       </div>
     </footer>
 
+    <script src="scripts/config.js"></script>
+    <script src="scripts/mode-router.js"></script>
+    <script src="scripts/app-state.js"></script>
+    <script src="scripts/mode-ui.js"></script>
+    <script src="scripts/data-adapter/interface.js"></script>
+    <script src="scripts/data-adapter/mock-adapter.js"></script>
+    <script src="scripts/data-adapter/app-adapter.js"></script>
     <script src="scripts/data-layer.js"></script>
     <script src="scripts/kpi.js"></script>
     <script src="app.js"></script>
