@@ -1,41 +1,48 @@
-# Decent Agency
+# DecentCanopy
 
-Build agency, not attention.
+A canopy for real-world stewardship — build agency, not attention.
 
-If a feature increases engagement but decreases agency, don’t build it.
-If a feature decreases engagement but increases agency, seriously consider building it.
+> If a feature increases engagement but decreases agency, don't build it.
+> If a feature decreases engagement but increases agency, seriously consider building it.
 
 ## Vision
 
-Decent Agency is a public, mission-centered platform for organizing real-world stewardship, collaboration, and community projects.
+**DecentCanopy** is a public, mission-centered platform for organizing real-world stewardship, collaboration, and community projects under *The Green Tea Party* fund.
 
-Most social systems optimize for attention. This project optimizes for human agency: helping people leave better equipped to improve their neighborhoods, watersheds, towns, and communities.
+Most social systems optimize for attention. DecentCanopy optimizes for human agency: helping people leave better equipped to improve their neighborhoods, watersheds, towns, and communities.
 
-## Product Philosophy
+The "canopy" metaphor reflects the platform's purpose — a shared structure that shelters meaningful work, lets collaborative projects grow toward light, and roots coordination in place-based action rather than algorithmic engagement.
 
-- Communication supports action.
-- Action is the product.
-- Projects, missions, places, resources, skills, teams, and contributions are primary objects.
-- Media exists in context of meaningful work.
-- Reputation emerges from demonstrated contribution.
+## Principles
 
-## Initial Scope (v0)
+- **Communication supports action.** Action is the product.
+- **Projects, missions, places, resources, skills, teams, and contributions** are primary objects.
+- **Media exists in context of meaningful work.** Not the other way around.
+- **Reputation emerges from demonstrated contribution**, not follower counts.
+- **Stewardship is measurable.** We surface health metrics that prompt action, not engagement.
 
-Start simple and durable with **vanilla HTML/CSS/JS**.
+## Roadmap
 
-Phase 1:
-- A clear landing page that communicates mission and principles.
+### Phase 1 — Foundation ✅
+- Clear landing page communicating mission and principles.
 - Lightweight navigation placeholders for future sections.
 - No feed mechanics.
 
-Phase 2:
-- Public project and mission listings.
-- Contribution records.
-- Place-based discovery (map-first).
+### Phase 2 — Stewardship Dashboard ✅ (v0.4)
+- Public project and mission listings with filtering.
+- Stewardship KPI panel surfacing health metrics.
+- Place-based fund dashboard (prototype mode).
+- Spiral constellation view for project relationships.
 
-Phase 3:
-- Verification and stewardship reputation.
+### Phase 3 — Identity & Contracts (upcoming)
+- Wallet connection and session identity in app mode. → [#11 Wallet Connect + Session Identity](https://github.com/TheJollyLaMa/TheGreenTeaParty/issues/11)
+- Smart contract backbone: Project Registry, Treasury, Profile pointers. → [#12 Starter Contracts MVP](https://github.com/TheJollyLaMa/TheGreenTeaParty/issues/12)
+- Contribution records and stewardship reputation on-chain.
+
+### Phase 4 — Verification & Scale (future)
 - Purpose-driven digital asset experiments.
+- Quadratic funding and governance primitives.
+- Cross-project discovery and map-first place browsing.
 
 ## v0.4 — Shared Data Layer & Stewardship KPIs
 
@@ -54,12 +61,12 @@ KPI definitions, and a guide to adding or editing records.
 
 ## v0.41 — Prototype vs App Modes
 
-The site now runs in two parallel modes behind a shared UI contract:
+The site runs in two parallel modes behind a shared UI contract:
 
-- **Prototype mode** (`/prototype/` or `?mode=prototype`) uses local JSON fixtures through `GTPMockDataAdapter`.
-- **App mode** (`/app/` or `?mode=app`) uses `GTPAppDataAdapter` stubs for wallet/contract-backed flows.
-
-### Default route behavior
+| Mode | Route | Data source |
+|---|---|---|
+| **Prototype** | `/prototype/` or `?mode=prototype` | Local JSON fixtures via `GTPMockDataAdapter` |
+| **App** | `/app/` or `?mode=app` | `GTPAppDataAdapter` stubs for wallet/contract-backed flows |
 
 - `index.html` defaults to **prototype mode** when no mode is supplied.
 - Path routes (`/prototype/`, `/app/`) redirect to `index.html?mode=...` for static-host compatibility.
@@ -69,17 +76,12 @@ The site now runs in two parallel modes behind a shared UI contract:
 - `scripts/mode-router.js` resolves mode from path/query/default.
 - `scripts/config.js` stores mode and network defaults.
 - `scripts/data-adapter/interface.js` defines adapter requirements:
-  - `getProjects()`
-  - `getAssociations()`
-  - `getMetrics()`
-  - `getActivity()`
+  - `getProjects()` · `getAssociations()` · `getMetrics()` · `getActivity()`
 - `scripts/data-adapter/mock-adapter.js` powers deterministic offline prototype rendering.
-- `scripts/data-adapter/app-adapter.js` returns safe placeholders until wallet/contract integrations are implemented.
+- `scripts/data-adapter/app-adapter.js` returns safe placeholders until wallet/contract integrations land.
 - `scripts/app-state.js` scaffolds app wallet state (`disconnected`/`connecting`/`connected`), chain id, and profile presence, with guardrails to block writes outside ready app mode.
 
-### Roadmap linkage
-
-Wallet connection and contract read/write hooks are intentionally out of scope for this milestone and land in follow-up wallet/contracts issues.
+Wallet connection and contract read/write hooks land in [#11](https://github.com/TheJollyLaMa/TheGreenTeaParty/issues/11) and [#12](https://github.com/TheJollyLaMa/TheGreenTeaParty/issues/12).
 
 ## Core Principle Test
 
@@ -91,12 +93,31 @@ Before shipping any feature, ask:
 
 If not, reconsider.
 
+## Open Issues & Milestones
+
+| Issue | Title | Status |
+|---|---|---|
+| [#11](https://github.com/TheJollyLaMa/TheGreenTeaParty/issues/11) | v0.42 Wallet Connect + Session Identity (App Mode) | Open |
+| [#12](https://github.com/TheJollyLaMa/TheGreenTeaParty/issues/12) | v0.43 Starter Contracts MVP: Project Registry + Treasury + Profile Pointers | Open |
+
 ## Development
 
-This repository intentionally favors minimal dependencies at the beginning.
+This repository intentionally favors minimal dependencies.
 
-To run locally, open `index.html` in a browser — or use any static file server
-(e.g. `npx serve .`) so that `fetch()` can resolve the `data/` files.
+**Run locally:**
 
-(We can introduce a bundler/tooling later only when it clearly improves maintainability without compromising simplicity.)
+```sh
+# Option 1 — open directly in a browser (some fetch() calls may not work)
+open index.html
+
+# Option 2 — use a simple static server (recommended)
+npx serve .
+```
+
+Then visit `http://localhost:3000` (or the port shown by `serve`).
+
+Prototype mode works fully offline with local JSON fixtures.
+App mode requires a wallet provider (e.g. MetaMask) once wallet integration lands.
+
+(A bundler or tooling will be introduced only when it clearly improves maintainability without compromising simplicity.)
 
