@@ -82,7 +82,7 @@ const renderWalletControl = () => {
   if (state.connectionStatus === 'connected' && state.address) {
     const addressPill = document.createElement('span');
     addressPill.className = 'wallet-address-pill';
-    addressPill.textContent = shortenAddress(state.address);
+    addressPill.textContent = state.address;
     row.appendChild(addressPill);
 
     const disconnectBtn = document.createElement('button');

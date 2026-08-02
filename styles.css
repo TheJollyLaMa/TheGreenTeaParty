@@ -425,7 +425,12 @@ blockquote {
 }
 
 .wallet-control {
-  margin-top: 1rem;
+  position: fixed;
+  top: 0.9rem;
+  right: 0.9rem;
+  margin-top: 0;
+  z-index: 40;
+  max-width: min(92vw, 430px);
 }
 
 .wallet-control-row {
@@ -433,6 +438,7 @@ blockquote {
   align-items: center;
   gap: 0.65rem;
   flex-wrap: wrap;
+  justify-content: flex-end;
 }
 
 .wallet-connect-btn,
@@ -467,6 +473,14 @@ blockquote {
   margin: 0.55rem 0 0;
   color: #f59e0b;
   font-size: 0.88rem;
+  text-align: right;
+}
+
+@media (max-width: 640px) {
+  .wallet-control {
+    top: 0.65rem;
+    right: 0.65rem;
+  }
 }
 
 .btn:focus-visible {
