@@ -207,6 +207,20 @@ blockquote {
   font-size: 1.15rem;
 }
 
+.dashboard-note {
+  margin: 0.35rem 0 0;
+  font-size: 0.88rem;
+}
+
+.dashboard-note a {
+  color: var(--accent);
+  text-decoration: none;
+}
+
+.dashboard-note a:hover {
+  text-decoration: underline;
+}
+
 .project-grid {
   display: grid;
   grid-template-columns: repeat(auto-fit, minmax(220px, 1fr));
