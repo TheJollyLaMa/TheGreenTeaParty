@@ -485,6 +485,8 @@ body {
   color: var(--muted);
   text-transform: uppercase;
   letter-spacing: 0.05em;
+}
+
 .details-group ul {
   list-style: none;
   margin: 0;
@@ -492,6 +494,8 @@ body {
   display: flex;
   flex-direction: column;
   gap: 0.3rem;
+}
+
 .details-group li {
   font-size: 0.82rem;
   color: var(--text);
