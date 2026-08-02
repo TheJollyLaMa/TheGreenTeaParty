@@ -52,6 +52,35 @@ attention metrics included.
 See [`docs/data-layer.md`](docs/data-layer.md) for the full schema reference,
 KPI definitions, and a guide to adding or editing records.
 
+## v0.41 — Prototype vs App Modes
+
+The site now runs in two parallel modes behind a shared UI contract:
+
+- **Prototype mode** (`/prototype/` or `?mode=prototype`) uses local JSON fixtures through `GTPMockDataAdapter`.
+- **App mode** (`/app/` or `?mode=app`) uses `GTPAppDataAdapter` stubs for wallet/contract-backed flows.
+
+### Default route behavior
+
+- `index.html` defaults to **prototype mode** when no mode is supplied.
+- Path routes (`/prototype/`, `/app/`) redirect to `index.html?mode=...` for static-host compatibility.
+
+### Mode architecture
+
+- `scripts/mode-router.js` resolves mode from path/query/default.
+- `scripts/config.js` stores mode and network defaults.
+- `scripts/data-adapter/interface.js` defines adapter requirements:
+  - `getProjects()`
+  - `getAssociations()`
+  - `getMetrics()`
+  - `getActivity()`
+- `scripts/data-adapter/mock-adapter.js` powers deterministic offline prototype rendering.
+- `scripts/data-adapter/app-adapter.js` returns safe placeholders until wallet/contract integrations are implemented.
+- `scripts/app-state.js` scaffolds app wallet state (`disconnected`/`connecting`/`connected`), chain id, and profile presence, with guardrails to block writes outside ready app mode.
+
+### Roadmap linkage
+
+Wallet connection and contract read/write hooks are intentionally out of scope for this milestone and land in follow-up wallet/contracts issues.
+
 ## Core Principle Test
 
 Before shipping any feature, ask:

@@ -1,35 +1,20 @@
 /**
  * data-layer.js — Shared client-side data access module
- * The Green Tea Party Fund · v0.4
+ * The Green Tea Party Fund · v0.4+
  *
- * Loads and normalises data/projects.json, data/associations.json, and the
- * optional data/activity.json.  Provides selectors and a shared filter state
- * that both the dashboard (app.js) and the spiral view (spiral.js) can consume.
- *
- * Usage:
- *   GTPData.load().then(({ projects, associations, activity }) => { … });
- *   // or
- *   await GTPData.load();
- *   const projects = GTPData.getProjects();
+ * Loads and normalises project data through mode-specific adapters.
  */
 
-/* global window */
+/* global window, GTPDataAdapterInterface, GTPMockDataAdapter, GTPAppDataAdapter, GTPModeRouter, GTPAppState */
 
 var GTPData = (function () {
   'use strict';
 
   // ---- Schema ------------------------------------------------------------------
 
-  /** Fields every project record must have. */
   var REQUIRED_PROJECT_FIELDS = ['id', 'name', 'track', 'status', 'raised', 'goal'];
-
-  /** Fields every association record must have. */
   var REQUIRED_ASSOCIATION_FIELDS = ['source', 'target'];
-
-  /** Days before a project update is considered stale. */
   var FRESHNESS_WINDOW_DAYS = 30;
-
-  /** Days of silence that starts counting a project as at-risk. */
   var AT_RISK_STALE_DAYS = 21;
 
   // ---- Internal state ----------------------------------------------------------
@@ -38,8 +23,11 @@ var GTPData = (function () {
   var _associations = [];
   var _activity = [];
   var _loadPromise = null;
+  var _modeInfo = null;
+  var _adapter = null;
+  var _adapterMetrics = { availableFunds: 0, placeholder: false, reason: '' };
 
-  // ---- Shared filter state (consumed by dashboard and spiral) ------------------
+  // ---- Shared filter state -----------------------------------------------------
 
   var filterState = { track: 'all', status: 'all', search: '' };
   var _filterListeners = [];
@@ -125,32 +113,38 @@ var GTPData = (function () {
     };
   }
 
+  function createAdapter(basePath) {
+    _modeInfo = GTPModeRouter.getModeInfo(window.location);
+
+    var adapter = _modeInfo.mode === 'app'
+      ? GTPAppDataAdapter.create({ basePath: basePath, appState: GTPAppState })
+      : GTPMockDataAdapter.create({ basePath: basePath });
+
+    return GTPDataAdapterInterface.assertAdapter(adapter, _modeInfo.mode);
+  }
+
   // ---- Data loading ------------------------------------------------------------
 
-  /**
-   * Load all data files.  Subsequent calls return the same promise (cached).
-   * @param {string} [basePath=''] - Optional path prefix (e.g. '../' when loading from views/).
-   * @returns {Promise<{projects: Array, associations: Array, activity: Array}>}
-   */
   function load(basePath) {
     basePath = basePath || '';
     if (_loadPromise) return _loadPromise;
 
+    _adapter = createAdapter(basePath);
+
     _loadPromise = Promise.all([
-      fetch(basePath + 'data/projects.json'),
-      fetch(basePath + 'data/associations.json')
-    ]).then(function (responses) {
-      var pRes = responses[0];
-      var aRes = responses[1];
-      if (!pRes.ok) throw new Error('[GTPData] Failed to load data/projects.json (HTTP ' + pRes.status + ')');
-      if (!aRes.ok) throw new Error('[GTPData] Failed to load data/associations.json (HTTP ' + aRes.status + ')');
-      return Promise.all([pRes.json(), aRes.json()]);
-    }).then(function (data) {
+      _adapter.getProjects(),
+      _adapter.getAssociations(),
+      _adapter.getActivity(),
+      _adapter.getMetrics()
+    ]).then(function (data) {
       var rawProjects = data[0];
       var rawAssociations = data[1];
+      var rawActivity = data[2];
+      _adapterMetrics = data[3] || _adapterMetrics;
 
-      if (!Array.isArray(rawProjects)) throw new Error('[GTPData] projects.json must be a JSON array');
-      if (!Array.isArray(rawAssociations)) throw new Error('[GTPData] associations.json must be a JSON array');
+      if (!Array.isArray(rawProjects)) throw new Error('[GTPData] adapter.getProjects() must return an array');
+      if (!Array.isArray(rawAssociations)) throw new Error('[GTPData] adapter.getAssociations() must return an array');
+      if (!Array.isArray(rawActivity)) rawActivity = [];
 
       _projects = rawProjects
         .map(function (p, i) { return normalizeProject(p, i); })
@@ -160,7 +154,6 @@ var GTPData = (function () {
         .map(function (a, i) { return normalizeAssociation(a, i); })
         .filter(Boolean);
 
-      // Validate that association endpoints reference known project IDs
       var knownIds = new Set(_projects.map(function (p) { return p.id; }));
       _associations.forEach(function (a, i) {
         if (!knownIds.has(a.source)) {
@@ -171,24 +164,12 @@ var GTPData = (function () {
         }
       });
 
-      // Load optional activity.json
-      return fetch(basePath + 'data/activity.json').then(function (res) {
-        if (!res.ok) return [];
-        return res.json();
-      }).catch(function () {
-        return [];
-      }).then(function (rawActivity) {
-        if (Array.isArray(rawActivity)) {
-          _activity = rawActivity
-            .map(function (a, i) { return normalizeActivity(a, i); })
-            .filter(Boolean);
-        } else {
-          console.warn('[GTPData] activity.json must be a JSON array — skipping');
-        }
-        return { projects: _projects, associations: _associations, activity: _activity };
-      });
+      _activity = rawActivity
+        .map(function (entry, i) { return normalizeActivity(entry, i); })
+        .filter(Boolean);
+
+      return { projects: _projects, associations: _associations, activity: _activity };
     }).catch(function (err) {
-      // Reset so a retry is possible after fixing data files
       _loadPromise = null;
       return Promise.reject(err);
     });
@@ -198,35 +179,28 @@ var GTPData = (function () {
 
   // ---- Selectors ---------------------------------------------------------------
 
-  /** Return a copy of the normalised project array. */
   function getProjects() { return _projects.slice(); }
-
-  /** Return a copy of the normalised association array. */
   function getAssociations() { return _associations.slice(); }
-
-  /** Return a copy of the normalised activity array. */
   function getActivity() { return _activity.slice(); }
+  function getModeInfo() { return _modeInfo ? Object.assign({}, _modeInfo) : GTPModeRouter.getModeInfo(window.location); }
+  function getAdapterMetrics() {
+    return {
+      availableFunds: Number(_adapterMetrics.availableFunds) || 0,
+      placeholder: !!_adapterMetrics.placeholder,
+      reason: _adapterMetrics.reason || ''
+    };
+  }
 
-  /** Look up a single project by its id. */
   function getProjectById(id) {
     return _projects.find(function (p) { return p.id === id; }) || null;
   }
 
-  /**
-   * Return the ids of all projects directly connected to the given id.
-   * @param {string} id
-   * @returns {string[]}
-   */
   function getNeighborIds(id) {
     return _associations
       .filter(function (a) { return a.source === id || a.target === id; })
       .map(function (a) { return a.source === id ? a.target : a.source; });
   }
 
-  /**
-   * Build an adjacency map: { [projectId]: Set<projectId> }.
-   * Useful for the spiral view.
-   */
   function buildAdjacency() {
     var adj = {};
     _projects.forEach(function (p) { adj[p.id] = new Set(); });
@@ -237,15 +211,17 @@ var GTPData = (function () {
     return adj;
   }
 
-  /** Aggregate totals across all (or a filtered subset of) projects. */
   function getTotals(projects) {
     var list = projects || _projects;
-    var raised = 0, goal = 0;
-    list.forEach(function (p) { raised += p.raised; goal += p.goal; });
+    var raised = 0;
+    var goal = 0;
+    list.forEach(function (p) {
+      raised += p.raised;
+      goal += p.goal;
+    });
     return { raised: raised, goal: goal };
   }
 
-  /** Count projects by status. */
   function getStatusCounts(projects) {
     var list = projects || _projects;
     var counts = {};
@@ -255,10 +231,23 @@ var GTPData = (function () {
     return counts;
   }
 
-  /**
-   * Return unique filter option values from the loaded data.
-   * @returns {{ tracks: string[], statuses: string[], locations: string[] }}
-   */
+  function getMetrics(projects) {
+    var list = projects || _projects;
+    var allTotals = getTotals(_projects);
+    var totalStewards = _projects.reduce(function (sum, project) { return sum + project.stewards; }, 0);
+    var activeProjects = list.filter(function (project) { return project.status === 'active'; }).length;
+    var adapterMetrics = getAdapterMetrics();
+
+    return {
+      totalRaised: allTotals.raised,
+      availableFunds: adapterMetrics.availableFunds,
+      activeProjects: activeProjects,
+      totalStewards: totalStewards,
+      placeholder: adapterMetrics.placeholder,
+      reason: adapterMetrics.reason
+    };
+  }
+
   function getFilterOptions() {
     var tracks = [];
     var statuses = [];
@@ -276,12 +265,6 @@ var GTPData = (function () {
     };
   }
 
-  /**
-   * Apply a filter state object and return matching projects.
-   * Uses the shared `filterState` when no explicit state is passed.
-   * @param {{ track?: string, status?: string, search?: string }} [state]
-   * @returns {Array}
-   */
   function filterProjects(state) {
     var s = state || filterState;
     var search = (s.search || '').trim().toLowerCase();
@@ -293,34 +276,28 @@ var GTPData = (function () {
     });
   }
 
-  // ---- Public API --------------------------------------------------------------
-
   return {
-    // Data loading
     load: load,
-
-    // Raw accessors
     getProjects: getProjects,
     getAssociations: getAssociations,
     getActivity: getActivity,
+    getModeInfo: getModeInfo,
+    getAdapterMetrics: getAdapterMetrics,
 
-    // Lookup helpers
     getProjectById: getProjectById,
     getNeighborIds: getNeighborIds,
     buildAdjacency: buildAdjacency,
 
-    // Aggregate selectors
     getTotals: getTotals,
     getStatusCounts: getStatusCounts,
+    getMetrics: getMetrics,
     getFilterOptions: getFilterOptions,
     filterProjects: filterProjects,
 
-    // Shared filter state
     filterState: filterState,
     setFilter: setFilter,
     onFilterChange: onFilterChange,
 
-    // Constants (consumed by kpi.js and views)
     FRESHNESS_WINDOW_DAYS: FRESHNESS_WINDOW_DAYS,
     AT_RISK_STALE_DAYS: AT_RISK_STALE_DAYS
   };
