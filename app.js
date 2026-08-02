@@ -1,4 +1,4 @@
-/* global GTPData, GTPKpi, GTPModeRouter, GTPAppState */
+/* global GTPData, GTPKpi, GTPModeRouter, GTPAppState, GTPWallet, GTPNetwork */
 
 const metricsStrip = document.querySelector('#metrics-strip');
 const projectGrid = document.querySelector('#project-grid');
@@ -8,6 +8,7 @@ const stageFilter = document.querySelector('#stage-filter');
 const kpiPanel = document.querySelector('#kpi-panel');
 const modeBadge = document.querySelector('#mode-badge');
 const appStatePanel = document.querySelector('#app-state-panel');
+const walletControl = document.querySelector('#wallet-control');
 
 const modeInfo = GTPModeRouter.getModeInfo(window.location);
 
@@ -17,6 +18,13 @@ const formatCurrency = (value) =>
     currency: 'USD',
     maximumFractionDigits: 0
   }).format(value);
+
+const shortenAddress = (address) => {
+  if (!address || typeof address !== 'string' || address.length < 10) {
+    return address || '';
+  }
+  return `${address.slice(0, 6)}…${address.slice(-4)}`;
+};
 
 const renderModeBadge = () => {
   if (!modeBadge) {
@@ -44,11 +52,95 @@ const renderAppStatePanel = () => {
   appStatePanel.hidden = false;
   appStatePanel.innerHTML = `
     <strong>App mode bootstrap</strong>
-    <p class="app-state-meta">Wallet: ${state.walletStatus}</p>
+    <p class="app-state-meta">Wallet: ${state.connectionStatus}</p>
+    <p class="app-state-meta">Address: ${state.address ? shortenAddress(state.address) : 'not connected'}</p>
     <p class="app-state-meta">Network: ${state.chainId || 'not selected'}</p>
+    <p class="app-state-meta">Network support: ${state.isSupportedNetwork ? 'supported' : 'unsupported'}</p>
     <p class="app-state-meta">Profile: ${state.profilePresent ? 'present' : 'missing'}</p>
     ${readiness.ready ? '' : `<p class="app-state-warning">${readiness.reason}</p>`}
+    ${state.lastError ? `<p class="app-state-warning">${state.lastError}</p>` : ''}
   `;
+};
+
+let connectIconFailed = false;
+
+const renderWalletControl = () => {
+  if (!walletControl) return;
+  if (!modeInfo.isApp) {
+    walletControl.hidden = true;
+    walletControl.innerHTML = '';
+    return;
+  }
+
+  const state = GTPAppState.getState();
+  walletControl.hidden = false;
+  walletControl.innerHTML = '';
+
+  const row = document.createElement('div');
+  row.className = 'wallet-control-row';
+
+  if (state.connectionStatus === 'connected' && state.address) {
+    const addressPill = document.createElement('span');
+    addressPill.className = 'wallet-address-pill';
+    addressPill.textContent = shortenAddress(state.address);
+    row.appendChild(addressPill);
+
+    const disconnectBtn = document.createElement('button');
+    disconnectBtn.type = 'button';
+    disconnectBtn.className = 'btn btn-secondary wallet-disconnect-btn';
+    disconnectBtn.textContent = 'Disconnect';
+    disconnectBtn.addEventListener('click', () => {
+      GTPWallet.disconnect();
+    });
+    row.appendChild(disconnectBtn);
+  } else {
+    const connectBtn = document.createElement('button');
+    connectBtn.type = 'button';
+    connectBtn.className = 'btn btn-primary wallet-connect-btn';
+    connectBtn.setAttribute('aria-label', 'Connect MetaMask Wallet');
+    connectBtn.disabled = state.connectionStatus === 'connecting';
+
+    if (!connectIconFailed) {
+      const icon = document.createElement('img');
+      icon.src = 'assets/metamask.png';
+      icon.alt = 'MetaMask';
+      icon.className = 'wallet-connect-icon';
+      icon.addEventListener('error', () => {
+        connectIconFailed = true;
+        renderWalletControl();
+      });
+      connectBtn.appendChild(icon);
+    }
+
+    const label = document.createElement('span');
+    if (state.connectionStatus === 'connecting') {
+      label.textContent = 'Connecting…';
+    } else {
+      label.textContent = connectIconFailed ? 'Connect Wallet' : 'Connect MetaMask Wallet';
+    }
+    connectBtn.appendChild(label);
+
+    connectBtn.addEventListener('click', () => {
+      GTPWallet.connect();
+    });
+    row.appendChild(connectBtn);
+  }
+
+  walletControl.appendChild(row);
+
+  if (!state.isSupportedNetwork && typeof state.chainId === 'number') {
+    const unsupported = document.createElement('p');
+    unsupported.className = 'wallet-warning';
+    unsupported.textContent = `Unsupported network (${state.chainId}). Switch to one of: ${GTPNetwork.supportedChainLabel()}.`;
+    walletControl.appendChild(unsupported);
+  }
+
+  if (state.connectionStatus === 'rejected' || state.connectionStatus === 'error') {
+    const warning = document.createElement('p');
+    warning.className = 'wallet-warning';
+    warning.textContent = state.lastError || 'Wallet connection failed. Try again.';
+    walletControl.appendChild(warning);
+  }
 };
 
 const updateMetrics = (filteredProjects) => {
@@ -172,6 +264,7 @@ const populateFilters = () => {
 
 renderModeBadge();
 renderAppStatePanel();
+renderWalletControl();
 
 GTPData.load().then(() => {
   populateFilters();
@@ -201,3 +294,15 @@ if (themeToggle) {
     document.documentElement.classList.toggle('light');
   });
 }
+
+if (modeInfo.isApp) {
+  GTPWallet.init().then(() => {
+    renderAppStatePanel();
+    renderWalletControl();
+  });
+}
+
+GTPAppState.subscribe(() => {
+  renderAppStatePanel();
+  renderWalletControl();
+});

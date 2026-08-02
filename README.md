@@ -81,6 +81,30 @@ The site runs in two parallel modes behind a shared UI contract:
 
 Wallet connection and contract read/write hooks land in [#11](https://github.com/TheJollyLaMa/TheGreenTeaParty/issues/11) and [#12](https://github.com/TheJollyLaMa/TheGreenTeaParty/issues/12).
 
+## v0.42 — Wallet Connect + Session Identity (App mode)
+
+App mode now includes a client-side wallet/session identity layer for entering the
+real product path without backend auth.
+
+### Wallet assumptions
+
+- Browser-injected EVM wallet provider (`window.ethereum`) is expected.
+- MetaMask is the primary supported wallet UX (icon CTA uses `assets/metamask.png`).
+- Prototype mode never requests wallet access.
+
+### Supported network config
+
+- Supported chain IDs are configured in `scripts/config.js`.
+- Current defaults: `1` (Ethereum), `10` (Optimism), `8453` (Base).
+- App write-intent guardrails remain blocked when wallet is disconnected or on an unsupported chain.
+
+### Troubleshooting
+
+- **No connect prompt appears:** ensure you are in `?mode=app` (or `/app/`) and a wallet extension is installed.
+- **Unsupported network warning:** switch wallet network to one of the configured supported chain IDs.
+- **Rejected connection:** reconnect and approve the wallet permission prompt.
+- **Wrong account shown:** switch account in wallet; account/chain changes are observed live without reload.
+
 ## Core Principle Test
 
 Before shipping any feature, ask:
@@ -127,4 +151,3 @@ Prototype mode works fully offline with local JSON fixtures.
 App mode requires a wallet provider (e.g. MetaMask) once wallet integration lands.
 
 (A bundler or tooling will be introduced only when it clearly improves maintainability without compromising simplicity.)
-
