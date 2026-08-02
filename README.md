@@ -37,11 +37,26 @@ Phase 3:
 - Verification and stewardship reputation.
 - Purpose-driven digital asset experiments.
 
+## v0.4 — Shared Data Layer & Stewardship KPIs
+
+The `scripts/data-layer.js` module is a single shared data-access layer consumed
+by all fund views.  It loads and normalises `data/projects.json`,
+`data/associations.json`, and the optional `data/activity.json`, then exposes a
+consistent API and a shared filter state used by both the dashboard and the
+spiral constellation view.
+
+A **Stewardship KPI Panel** (`scripts/kpi.js`) surfaces four agency-first health
+metrics to help stewards decide where to act next — no engagement or
+attention metrics included.
+
+See [`docs/data-layer.md`](docs/data-layer.md) for the full schema reference,
+KPI definitions, and a guide to adding or editing records.
+
 ## Core Principle Test
 
 Before shipping any feature, ask:
 
-1. Does this increase a person’s ability to contribute meaningfully?
+1. Does this increase a person's ability to contribute meaningfully?
 2. Does this improve local coordination and stewardship?
 3. Does this reduce passive consumption?
 
@@ -51,6 +66,8 @@ If not, reconsider.
 
 This repository intentionally favors minimal dependencies at the beginning.
 
-To run locally, open `index.html` in a browser.
+To run locally, open `index.html` in a browser — or use any static file server
+(e.g. `npx serve .`) so that `fetch()` can resolve the `data/` files.
 
 (We can introduce a bundler/tooling later only when it clearly improves maintainability without compromising simplicity.)
+

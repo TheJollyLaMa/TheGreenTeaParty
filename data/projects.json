@@ -10,7 +10,9 @@
     "stewards": 8,
     "description": "Community tea house and garden for local gathering, ceremony, and cultivation of traditional teas.",
     "repoUrl": "https://github.com/TheJollyLaMa/GreenTeaHut_01",
-    "artizenUrl": "https://artizen.fund/project/green-tea-hut"
+    "artizenUrl": "https://artizen.fund/project/green-tea-hut",
+    "nextAction": "Schedule August volunteer orientation",
+    "location": "Portland, OR"
   },
   {
     "id": "proj-002",
@@ -21,7 +23,9 @@
     "goal": 8000,
     "lastUpdate": "2026-07-25",
     "stewards": 6,
-    "description": "A shared open garden space for growing, harvesting, and sharing heritage tea varietals in the urban core."
+    "description": "A shared open garden space for growing, harvesting, and sharing heritage tea varietals in the urban core.",
+    "nextAction": "Post summer harvest schedule",
+    "location": "Portland, OR"
   },
   {
     "id": "proj-003",
@@ -43,7 +47,9 @@
     "goal": 14000,
     "lastUpdate": "2026-07-29",
     "stewards": 12,
-    "description": "A shared commercial kitchen supporting tea-infused food production, value-added processing, and community meals."
+    "description": "A shared commercial kitchen supporting tea-infused food production, value-added processing, and community meals.",
+    "nextAction": "Finalise commercial kitchen permit application",
+    "location": "Portland, OR"
   },
   {
     "id": "proj-005",
@@ -230,7 +236,9 @@
     "goal": 9000,
     "lastUpdate": "2026-07-24",
     "stewards": 4,
-    "description": "A community-based water quality lab monitoring local watershed health through participatory science and open data."
+    "description": "A community-based water quality lab monitoring local watershed health through participatory science and open data.",
+    "nextAction": "Draft community science protocol doc",
+    "location": "Seattle, WA"
   },
   {
     "id": "proj-022",
@@ -241,7 +249,9 @@
     "goal": 15000,
     "lastUpdate": "2026-07-29",
     "stewards": 11,
-    "description": "Coordinating riparian restoration across multiple catchments through community planting days and invasive species removal."
+    "description": "Coordinating riparian restoration across multiple catchments through community planting days and invasive species removal.",
+    "nextAction": "Coordinate September planting day logistics",
+    "location": "Seattle, WA"
   },
   {
     "id": "proj-023",
@@ -441,7 +451,9 @@
     "goal": 12000,
     "lastUpdate": "2026-07-27",
     "stewards": 9,
-    "description": "Safeguarding hundreds of traditional and indigenous crop varieties through community-managed seed storage and exchange."
+    "description": "Safeguarding hundreds of traditional and indigenous crop varieties through community-managed seed storage and exchange.",
+    "nextAction": "Source cold storage unit — get quotes by Aug 15",
+    "location": "Santa Fe, NM"
   },
   {
     "id": "proj-041",
@@ -452,7 +464,8 @@
     "goal": 8500,
     "lastUpdate": "2026-07-24",
     "stewards": 7,
-    "description": "Reviving heritage grain cultivation and small-scale milling to reconnect communities with traditional food systems."
+    "description": "Reviving heritage grain cultivation and small-scale milling to reconnect communities with traditional food systems.",
+    "location": "Santa Fe, NM"
   },
   {
     "id": "proj-042",
@@ -463,7 +476,9 @@
     "goal": 16000,
     "lastUpdate": "2026-07-30",
     "stewards": 14,
-    "description": "Supporting indigenous-led food sovereignty initiatives through land access, seed sharing, and intergenerational knowledge transfer."
+    "description": "Supporting indigenous-led food sovereignty initiatives through land access, seed sharing, and intergenerational knowledge transfer.",
+    "nextAction": "Confirm land access agreements with three partner farms",
+    "location": "Albuquerque, NM"
   },
   {
     "id": "proj-043",
@@ -783,7 +798,9 @@
     "lastUpdate": "2026-07-30",
     "stewards": 15,
     "description": "A community solar installation hub providing shared renewable energy access to low-income households.",
-    "repoUrl": "https://github.com/TheJollyLaMa/GoldenRootSolar_01"
+    "repoUrl": "https://github.com/TheJollyLaMa/GoldenRootSolar_01",
+    "nextAction": "Finalise community solar array site permit",
+    "location": "Denver, CO"
   },
   {
     "id": "proj-072",
@@ -794,7 +811,9 @@
     "goal": 20000,
     "lastUpdate": "2026-07-29",
     "stewards": 13,
-    "description": "A member-owned energy cooperative enabling community investment in local renewable energy generation."
+    "description": "A member-owned energy cooperative enabling community investment in local renewable energy generation.",
+    "nextAction": "Open member sign-up window for Q3",
+    "location": "Denver, CO"
   },
   {
     "id": "proj-073",

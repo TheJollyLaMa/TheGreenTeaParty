@@ -136,13 +136,20 @@
     bindEvents();
 
     try {
-      const [pRes, aRes] = await Promise.all([
-        fetch('data/projects.json'),
-        fetch('data/associations.json')
-      ]);
-      if (!pRes.ok || !aRes.ok) throw new Error('Fetch failed');
-      allProjects = await pRes.json();
-      allAssociations = await aRes.json();
+      // Use the shared data layer when available, otherwise fall back to own fetch.
+      if (typeof GTPData !== 'undefined') {
+        await GTPData.load();
+        allProjects = GTPData.getProjects();
+        allAssociations = GTPData.getAssociations();
+      } else {
+        const [pRes, aRes] = await Promise.all([
+          fetch('data/projects.json'),
+          fetch('data/associations.json')
+        ]);
+        if (!pRes.ok || !aRes.ok) throw new Error('Fetch failed');
+        allProjects = await pRes.json();
+        allAssociations = await aRes.json();
+      }
     } catch (err) {
       console.error('[spiral] Failed to load data:', err);
       if (loadingEl) loadingEl.style.display = 'none';
