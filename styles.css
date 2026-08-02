@@ -40,8 +40,23 @@ body {
 }
 
 .site-header {
-  padding: 5rem 0 3rem;
+  padding: clamp(3.5rem, 8vw, 5rem) 0 3rem;
   border-bottom: 1px solid var(--border);
+  position: relative;
+  color: #f8fafc;
+  background:
+    linear-gradient(135deg, rgba(2, 6, 23, 0.82), rgba(6, 78, 59, 0.62)),
+    url("GreenTeaParty_underground.jpeg") center 35% / cover no-repeat;
+}
+
+.hero-copy {
+  width: min(100%, 42rem);
+  padding: clamp(1.25rem, 3vw, 2rem);
+  border: 1px solid rgba(255, 255, 255, 0.18);
+  border-radius: 1rem;
+  background: rgba(2, 6, 23, 0.5);
+  backdrop-filter: blur(3px);
+  box-shadow: 0 24px 60px rgba(2, 6, 23, 0.3);
 }
 
 .eyebrow {
@@ -50,6 +65,11 @@ body {
   text-transform: uppercase;
   letter-spacing: 0.08em;
   font-size: 0.8rem;
+}
+
+.site-header .eyebrow,
+.site-header .intro {
+  color: rgba(248, 250, 252, 0.82);
 }
 
 h1 {
@@ -107,6 +127,18 @@ h1 {
 .btn-secondary,
 .btn-tertiary {
   background: var(--surface);
+}
+
+.site-header .btn {
+  border-color: rgba(255, 255, 255, 0.24);
+}
+
+.site-header .btn-secondary {
+  background: rgba(255, 255, 255, 0.12);
+}
+
+.site-header .btn-secondary:hover {
+  background: rgba(255, 255, 255, 0.18);
 }
 
 section {
@@ -341,6 +373,11 @@ blockquote {
 @media (max-width: 640px) {
   .site-header {
     padding-top: 3.5rem;
+    background-position: center;
+  }
+
+  .hero-copy {
+    padding: 1.15rem;
   }
 }
 
