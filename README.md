@@ -1,17 +1,15 @@
-# DecentCanopy
+# Green Tea Party
 
-A canopy for real-world stewardship — build agency, not attention.
+A grounded home for real-world stewardship — build agency, not attention.
 
 > If a feature increases engagement but decreases agency, don't build it.
 > If a feature decreases engagement but increases agency, seriously consider building it.
 
 ## Vision
 
-**DecentCanopy** is a public, mission-centered platform for organizing real-world stewardship, collaboration, and community projects under *The Green Tea Party* fund.
+**Green Tea Party** is a public, mission-centered platform for organizing real-world stewardship, collaboration, and community projects under the Green Tea Party fund.
 
-Most social systems optimize for attention. DecentCanopy optimizes for human agency: helping people leave better equipped to improve their neighborhoods, watersheds, towns, and communities.
-
-The "canopy" metaphor reflects the platform's purpose — a shared structure that shelters meaningful work, lets collaborative projects grow toward light, and roots coordination in place-based action rather than algorithmic engagement.
+Most social systems optimize for attention. Green Tea Party optimizes for human agency: helping people leave better equipped to improve their neighborhoods, watersheds, towns, and communities.
 
 ## Principles
 
@@ -99,6 +97,15 @@ If not, reconsider.
 |---|---|---|
 | [#11](https://github.com/TheJollyLaMa/TheGreenTeaParty/issues/11) | v0.42 Wallet Connect + Session Identity (App Mode) | Open |
 | [#12](https://github.com/TheJollyLaMa/TheGreenTeaParty/issues/12) | v0.43 Starter Contracts MVP: Project Registry + Treasury + Profile Pointers | Open |
+
+## Asset Map
+
+All public image/icon assets live under `assets/`:
+
+| File | Used by | Purpose |
+|---|---|---|
+| `assets/favicon.png` | all pages (`index.html`, `app/`, `prototype/`, `views/spiral.html`) | Browser tab icon |
+| `assets/GreenTeaParty_underground.jpeg` | `styles.css` (`.site-header` background) | Hero background image |
 
 ## Development
 

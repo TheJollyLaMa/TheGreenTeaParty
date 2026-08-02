@@ -46,7 +46,7 @@ body {
   color: #f8fafc;
   background:
     linear-gradient(135deg, rgba(2, 6, 23, 0.82), rgba(6, 78, 59, 0.62)),
-    url("GreenTeaParty_underground.jpeg") center 35% / cover no-repeat;
+    url("assets/GreenTeaParty_underground.jpeg") center 35% / cover no-repeat;
 }
 
 .hero-copy {
