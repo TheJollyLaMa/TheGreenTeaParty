@@ -423,3 +423,67 @@ blockquote {
   color: #f59e0b;
   font-size: 0.88rem;
 }
+
+.wallet-control {
+  position: fixed;
+  top: 0.9rem;
+  right: 0.9rem;
+  margin-top: 0;
+  z-index: 40;
+  max-width: min(92vw, 430px);
+}
+
+.wallet-control-row {
+  display: flex;
+  align-items: center;
+  gap: 0.65rem;
+  flex-wrap: wrap;
+  justify-content: flex-end;
+}
+
+.wallet-connect-btn,
+.wallet-disconnect-btn,
+.wallet-address-pill {
+  min-height: 44px;
+}
+
+.wallet-connect-btn {
+  display: inline-flex;
+  align-items: center;
+  gap: 0.55rem;
+}
+
+.wallet-connect-icon {
+  width: 22px;
+  height: 22px;
+  object-fit: contain;
+}
+
+.wallet-address-pill {
+  display: inline-flex;
+  align-items: center;
+  border: 1px solid var(--border);
+  border-radius: 999px;
+  padding: 0.45rem 0.75rem;
+  background: var(--surface);
+  font-size: 0.9rem;
+}
+
+.wallet-warning {
+  margin: 0.55rem 0 0;
+  color: #f59e0b;
+  font-size: 0.88rem;
+  text-align: right;
+}
+
+@media (max-width: 640px) {
+  .wallet-control {
+    top: 0.65rem;
+    right: 0.65rem;
+  }
+}
+
+.btn:focus-visible {
+  outline: 2px solid var(--accent);
+  outline-offset: 2px;
+}
