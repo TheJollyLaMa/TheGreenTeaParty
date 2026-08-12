@@ -670,6 +670,16 @@ main,
     linear-gradient(180deg, rgba(2, 6, 23, 0.82) 0%, rgba(15, 23, 42, 0.74) 45%, rgba(15, 23, 42, 0.9) 100%);
 }
 
+[data-route-variant="unified-root"] .site-background-video {
+  opacity: 0.32;
+}
+
+[data-route-variant="unified-root"] .site-background-overlay {
+  background:
+    radial-gradient(circle at top, rgba(21, 128, 61, 0.18), transparent 42%),
+    linear-gradient(180deg, rgba(2, 6, 23, 0.72) 0%, rgba(15, 23, 42, 0.58) 45%, rgba(15, 23, 42, 0.78) 100%);
+}
+
 .unified-main {
   position: relative;
 }
@@ -710,6 +720,12 @@ main,
 .panel-section {
   background: rgba(15, 23, 42, 0.72);
   backdrop-filter: blur(6px);
+}
+
+[data-route-variant="unified-root"] .panel-section,
+[data-route-variant="unified-root"] .site-footer {
+  background: rgba(15, 23, 42, 0.54);
+  backdrop-filter: blur(8px);
 }
 
 .panel-section .eyebrow {

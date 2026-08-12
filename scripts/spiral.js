@@ -120,6 +120,7 @@
   let statusSel;
   let loadingEl;
   let emptyEl;
+  let canvasBackdropFill = '#0f172a';
 
   // ---- Initialisation -----------------------------------------------------------
 
@@ -141,6 +142,9 @@
     statusSel = document.getElementById('spiral-status-filter');
     loadingEl = document.getElementById('spiral-loading');
     emptyEl = document.getElementById('spiral-empty');
+    canvasBackdropFill = document.body && document.body.dataset && document.body.dataset.spiralBackdrop
+      ? document.body.dataset.spiralBackdrop
+      : '#0f172a';
 
     setupCanvas();
     bindEvents();
@@ -578,8 +582,10 @@
     const focusContext = focusContextIds();
 
     ctx.clearRect(0, 0, W, H);
-    ctx.fillStyle = '#0f172a';
-    ctx.fillRect(0, 0, W, H);
+    if (canvasBackdropFill && canvasBackdropFill !== 'transparent') {
+      ctx.fillStyle = canvasBackdropFill;
+      ctx.fillRect(0, 0, W, H);
+    }
     drawStarField(W, H);
 
     if (!nodes.length) return;

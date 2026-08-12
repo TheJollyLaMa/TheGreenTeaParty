@@ -66,12 +66,13 @@ The canonical Green Tea Party experience now lives on the root route:
 | **`/`** | Unified fractal-first route with inline Public Ledger | `GTPAppDataAdapter` using wallet-aware, fixture-backed fund snapshots until live contract reads are wired |
 | **`/app/`** | Redirects to the canonical root route | Redirect |
 | **`/prototype/`** | Redirects to the canonical root route | Redirect |
-| **`/views/spiral.html`** | Standalone experimental constellation page | Local JSON fixtures via `GTPMockDataAdapter` |
+| **`/views/spiral.html`** | Standalone experimental constellation page (secondary, non-canonical) | Local JSON fixtures via `GTPMockDataAdapter` |
 
 - `index.html` now defaults to the unified app path.
 - The Green Tea Party fractal is the first screen and the Public Ledger sits directly below on scroll.
 - `assets/Yantra_01C_compressed.mp4` stays fixed behind the page with reduced-motion fallback.
 - `/app/` and `/prototype/` are retained only as compatibility redirects.
+- Redirect routes and the standalone spiral page are marked non-canonical so the root route remains the only primary entry path.
 
 ### Mode architecture
 
