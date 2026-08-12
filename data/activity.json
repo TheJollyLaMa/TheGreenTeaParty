@@ -1,1 +1,41 @@
-[]
+[
+  {
+    "id": "ledger-seed-funding-pending",
+    "type": "Seed Funding",
+    "date": "2026-08-10",
+    "projectId": "green-tea-party",
+    "direction": "incoming",
+    "status": "pending",
+    "amount": 5000,
+    "category": "funding-support",
+    "description": "Initial seed funding is pending final confirmation for The Green Tea Party ledger.",
+    "notes": "Proof link placeholder is ready for bank receipt or treasury confirmation once funds clear.",
+    "proofUrl": "https://github.com/TheJollyLaMa/TheGreenTeaParty/issues/33"
+  },
+  {
+    "id": "ledger-equipment-rental-request",
+    "type": "Equipment Rental",
+    "date": "2026-08-11",
+    "projectId": "GreenTeaHut_01",
+    "direction": "incoming",
+    "status": "pending",
+    "amount": 250,
+    "category": "shared-equipment",
+    "description": "Green Tea Hut #1 requested a cement mixer rental from The Green Tea Party equipment pool.",
+    "notes": "Awaiting signed pickup confirmation and final tool-return schedule.",
+    "proofUrl": "https://github.com/TheJollyLaMa/TheGreenTeaParty/issues/33"
+  },
+  {
+    "id": "ledger-labor-payout-neighbors",
+    "type": "Labor Payout",
+    "date": "2026-08-12",
+    "projectId": "green-tea-party",
+    "direction": "outgoing",
+    "status": "confirmed",
+    "amount": 180,
+    "category": "labor-support",
+    "description": "Labor payout recorded for neighbors who assisted an elder with stewardship work.",
+    "notes": "Proof link can be updated with payout receipt and neighbor acknowledgment.",
+    "proofUrl": "https://github.com/TheJollyLaMa/TheGreenTeaParty/issues/33"
+  }
+]

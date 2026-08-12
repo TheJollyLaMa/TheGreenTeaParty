@@ -81,7 +81,7 @@ The canonical Green Tea Party experience now lives on the root route:
 - `scripts/data-adapter/interface.js` defines adapter requirements:
   - `getProjects()` · `getAssociations()` · `getMetrics()` · `getActivity()`
 - `scripts/data-adapter/mock-adapter.js` powers deterministic offline prototype rendering.
-- `scripts/data-adapter/app-adapter.js` returns safe placeholders until wallet/contract integrations land.
+- `scripts/data-adapter/app-adapter.js` merges canonical JSON ingest with live contract reads so seeded ledger rows and remembered project registrations stay visible while onchain state catches up.
 - `scripts/app-state.js` scaffolds app wallet state (`disconnected`/`connecting`/`connected`), chain id, and profile presence, with guardrails to block writes outside ready app mode.
 
 Wallet connection and contract read/write hooks land in [#11](https://github.com/TheJollyLaMa/TheGreenTeaParty/issues/11) and [#12](https://github.com/TheJollyLaMa/TheGreenTeaParty/issues/12).

@@ -16,6 +16,32 @@ var GTPAppDataAdapter = (function () {
     });
   }
 
+  function safeFetchJson(url) {
+    return fetchJson(url).catch(function () { return []; });
+  }
+
+  function getRememberedProjectIds() {
+    if (typeof window === 'undefined' || !window.localStorage) return [];
+    try {
+      var parsed = JSON.parse(window.localStorage.getItem('gtp.registeredProjectIds') || '[]');
+      return Array.isArray(parsed) ? parsed : [];
+    } catch (error) {
+      console.warn('[GTPAppDataAdapter] Could not read remembered project ids', error);
+      return [];
+    }
+  }
+
+  function mergeById(primaryRows, fallbackRows) {
+    var merged = {};
+    (fallbackRows || []).forEach(function (row) {
+      if (row && row.id) merged[row.id] = row;
+    });
+    (primaryRows || []).forEach(function (row) {
+      if (row && row.id) merged[row.id] = row;
+    });
+    return Object.keys(merged).map(function (id) { return merged[id]; });
+  }
+
   // ---- Live project list from ProjectRegistry --------------------------------
 
   /**
@@ -66,10 +92,6 @@ var GTPAppDataAdapter = (function () {
 
     return registry.queryFilter(registry.filters.ProjectRegistered(), fromBlock, 'latest')
       .then(function (logs) {
-        if (!logs.length) return [];
-
-        // De-duplicate by projectId, keeping the last (highest-index) event per ID.
-        // The contract prevents re-registration, but this guards against edge cases.
         var latestByProjectId = {};
         logs.forEach(function (log) {
           var pid = log.args && log.args.projectId ? log.args.projectId : null;
@@ -77,22 +99,35 @@ var GTPAppDataAdapter = (function () {
             latestByProjectId[pid] = log;
           }
         });
+        getRememberedProjectIds().forEach(function (projectId) {
+          var canonicalProjectId = GTPContractAdapter.getCanonicalProjectId(projectId);
+          if (canonicalProjectId) {
+            latestByProjectId[canonicalProjectId] = { rememberedProjectId: canonicalProjectId };
+          }
+        });
         var uniqueLogs = Object.values(latestByProjectId);
+        if (!uniqueLogs.length) return [];
 
         // Fetch current on-chain state for each project
         var stateFetches = uniqueLogs.map(function (log) {
-          var projectId = log.args.projectId;
-          return registry.getProject(projectId)
+          var rawProjectId = log.args && log.args.projectId
+            ? log.args.projectId
+            : GTPContractAdapter.getCanonicalProjectId(log.rememberedProjectId);
+          var lookupProjectId = typeof rawProjectId === 'string' && /^0x[0-9a-fA-F]{64}$/.test(rawProjectId)
+            ? rawProjectId
+            : window.ethers.keccak256(window.ethers.toUtf8Bytes(String(rawProjectId)));
+          return registry.getProject(lookupProjectId)
             .then(function (result) {
               return {
-                projectId: projectId,
+                projectId: lookupProjectId,
                 steward: result.steward,
                 metadataURI: result.metadataURI,
-                status: Number(result.status)
+                status: Number(result.status),
+                rememberedProjectId: log.rememberedProjectId || null
               };
             })
             .catch(function (err) {
-              console.warn('[GTPAppDataAdapter] getProject(' + projectId + ') failed:', err);
+              console.warn('[GTPAppDataAdapter] getProject(' + rawProjectId + ') failed:', err);
               return null;
             });
         });
@@ -175,7 +210,9 @@ var GTPAppDataAdapter = (function () {
     var statusLabel = CONTRACT_STATUS_TO_LABEL[record.status] || 'draft';
 
     // Use the hex projectId as the canonical id, falling back to a metadata id field
-    var id = (meta && meta.id) ? String(meta.id) : record.projectId;
+    var id = (meta && meta.id)
+      ? String(meta.id)
+      : (record.rememberedProjectId || record.projectId);
 
     return {
       id: id,
@@ -414,18 +451,46 @@ var GTPAppDataAdapter = (function () {
 
     return {
       getProjects: function () {
-        return fetchProjectsFromRegistry(resolvedChainId()).catch(function (err) {
+        return Promise.all([
+          fetchProjectsFromRegistry(resolvedChainId()),
+          safeFetchJson(basePath + 'data/projects.json')
+        ]).then(function (results) {
+          return mergeById(results[0], results[1]);
+        }).catch(function (err) {
           console.warn('[GTPAppDataAdapter] fetchProjectsFromRegistry failed:', err);
           return [];
         });
       },
       getAssociations: function () {
-        // Associations in app mode come from on-chain metadata when registered.
-        // Return empty until projects are present and carry association metadata.
-        return Promise.resolve([]);
+        return Promise.all([
+          safeFetchJson(basePath + 'data/associations.json'),
+          fetchProjectsFromRegistry(resolvedChainId())
+        ]).then(function (results) {
+          var associations = Array.isArray(results[0]) ? results[0] : [];
+          var projects = Array.isArray(results[1]) ? results[1] : [];
+          var knownIds = {};
+          projects.forEach(function (project) {
+            if (project && project.id) knownIds[project.id] = true;
+          });
+          return associations.filter(function (association) {
+            return association
+              && association.source
+              && association.target
+              && knownIds[association.source]
+              && knownIds[association.target];
+          });
+        }).catch(function (err) {
+          console.warn('[GTPAppDataAdapter] association load failed:', err);
+          return [];
+        });
       },
       getActivity: function () {
-        return fetchLiveActivity(resolvedChainId()).catch(function (err) {
+        return Promise.all([
+          safeFetchJson(basePath + 'data/activity.json'),
+          fetchLiveActivity(resolvedChainId())
+        ]).then(function (results) {
+          return (Array.isArray(results[0]) ? results[0] : []).concat(Array.isArray(results[1]) ? results[1] : []);
+        }).catch(function (err) {
           console.warn('[GTPAppDataAdapter] Live activity fetch failed:', err);
           return [];
         });
@@ -486,4 +551,3 @@ var GTPAppDataAdapter = (function () {
 }());
 
 window.GTPAppDataAdapter = GTPAppDataAdapter;
-

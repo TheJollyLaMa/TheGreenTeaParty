@@ -6,8 +6,9 @@
   // ── helpers ───────────────────────────────────────────────────────────────────
 
   function toBytes32(value) {
-    if (typeof value === 'string' && /^0x[0-9a-fA-F]{64}$/.test(value)) return value;
-    return window.ethers.keccak256(window.ethers.toUtf8Bytes(String(value)));
+    var canonicalValue = canonicalProjectId(value);
+    if (typeof canonicalValue === 'string' && /^0x[0-9a-fA-F]{64}$/.test(canonicalValue)) return canonicalValue;
+    return window.ethers.keccak256(window.ethers.toUtf8Bytes(String(canonicalValue)));
   }
 
   function currentChainId() {
@@ -50,46 +51,24 @@
     return contracts[chainId] || {};
   }
 
-  var PROJECT_REGISTRY_ABI = [
-    'function owner() view returns (address)',
-    'function paused() view returns (bool)',
-    'function projectExists(bytes32) view returns (bool)',
-    'function getSteward(bytes32) view returns (address)',
-    'function getStatus(bytes32) view returns (uint8)',
-    'function getProject(bytes32) view returns (address steward, string metadataURI, uint8 status)',
-    'function registerProject(bytes32, address, string)',
-    'function updateProjectMetadataURI(bytes32, string)',
-    'function updateProjectStatus(bytes32, uint8)',
-    'function transferSteward(bytes32, address)',
-    'function transferOwnership(address)',
-    'function pause()',
-    'function unpause()'
-  ];
-
-  var TREASURY_ABI = [
-    'function owner() view returns (address)',
-    'function paused() view returns (bool)',
-    'function projectBalances(bytes32) view returns (uint256)',
-    'function payoutAddresses(bytes32) view returns (address)',
-    'function contribute(bytes32) payable',
-    'function setPayoutAddress(bytes32, address)',
-    'function withdraw(bytes32, uint256)',
-    'function transferOwnership(address)',
-    'function pause()',
-    'function unpause()'
-  ];
-
-  var PROFILE_REGISTRY_ABI = [
-    'function getProfileURI(address) view returns (string)',
-    'function setProfileURI(string)'
-  ];
-
   function networkName() {
     var chainId = currentChainId();
     var networks = GTPConfig && GTPConfig.networks ? GTPConfig.networks : {};
-    return (networks[chainId] && networks[chainId].name) ? networks[chainId].name : 'Optimism';
+    return (networks[chainId] && networks[chainId].label) ? networks[chainId].label : 'Optimism Mainnet';
   }
-    var addr = contractAddresses()[addrKey];
+
+  function getContractDefinition(contractKey) {
+    return GTPContractAdapter.getContractDefinition(contractKey, currentChainId());
+  }
+
+  function getContractAbi(contractKey) {
+    var definition = getContractDefinition(contractKey);
+    return definition ? definition.abi : [];
+  }
+
+  function readContract(abi, addrKey) {
+    var definition = getContractDefinition(addrKey);
+    var addr = definition && definition.address ? definition.address : contractAddresses()[addrKey];
     if (!addr) throw new Error('Contract address not configured for this network.');
     var provider = getReadProvider();
     if (!provider) throw new Error('Read provider unavailable.');
@@ -98,11 +77,63 @@
 
   function writeContract(abi, addrKey) {
     return getSignerProvider().getSigner().then(function (signer) {
-      var addr = contractAddresses()[addrKey];
+      var definition = getContractDefinition(addrKey);
+      var addr = definition && definition.address ? definition.address : contractAddresses()[addrKey];
       if (!addr) throw new Error('Contract address not configured for this network.');
       return new window.ethers.Contract(addr, abi, signer);
     });
   }
+
+  function canonicalProjectId(value) {
+    return GTPContractAdapter.getCanonicalProjectId(value);
+  }
+
+  function getAdminContractDiagnostics(contractKey, abi) {
+    var chainId = currentChainId();
+    var definition = getContractDefinition(contractKey);
+    var identity = GTPAppState && typeof GTPAppState.getSessionIdentity === 'function'
+      ? GTPAppState.getSessionIdentity()
+      : {};
+    var diagnostics = {
+      contractKey: contractKey,
+      chainId: chainId,
+      contractAddress: definition && definition.address ? definition.address : null,
+      contractInitialized: false,
+      functionsParsedCount: 0,
+      parseError: '',
+      readMethods: [],
+      writeMethods: []
+    };
+
+    if (!Array.isArray(abi)) {
+      diagnostics.parseError = 'ABI is not an array.';
+      return diagnostics;
+    }
+
+    try {
+      var fragments = new window.ethers.Interface(abi).fragments.filter(function (fragment) {
+        return fragment && fragment.type === 'function';
+      });
+      diagnostics.contractInitialized = !!diagnostics.contractAddress;
+      diagnostics.functionsParsedCount = fragments.length;
+      diagnostics.readMethods = fragments.filter(function (fragment) {
+        return fragment.constant || fragment.stateMutability === 'view' || fragment.stateMutability === 'pure';
+      });
+      diagnostics.writeMethods = fragments.filter(function (fragment) {
+        return fragment.stateMutability === 'nonpayable' || fragment.stateMutability === 'payable';
+      });
+      diagnostics.walletConnected = identity.connectionStatus === 'connected';
+      diagnostics.walletSupported = !!identity.isSupportedNetwork;
+      return diagnostics;
+    } catch (error) {
+      diagnostics.parseError = error.message || String(error);
+      return diagnostics;
+    }
+  }
+
+  var PROJECT_REGISTRY_ABI = GTPContractAdapter.PROJECT_REGISTRY_ABI.slice();
+  var TREASURY_ABI = GTPContractAdapter.TREASURY_ABI.slice();
+  var PROFILE_REGISTRY_ABI = GTPContractAdapter.PROFILE_REGISTRY_ABI.slice();
 
   // ── DOM helpers ───────────────────────────────────────────────────────────────
 
@@ -201,7 +232,7 @@
     form.addEventListener('submit', function (e) {
       e.preventDefault();
       if (!walletReady()) {
-        setStatus(statusEl, 'error', 'Connect wallet to ' + networkName() + ' first.');
+        setStatus(statusEl, 'error', 'Connect wallet and switch to ' + networkName() + ' first.');
         return;
       }
       clearStatus(statusEl);
@@ -219,7 +250,15 @@
 
       promise
         .then(function (tx) {
-          setStatus(statusEl, 'success', 'Submitted.' + txLink(tx));
+          var diagnostics = tx && tx.diagnostics
+            ? ' [' + [
+              tx.diagnostics.chainId !== undefined && tx.diagnostics.chainId !== null ? 'chainId ' + tx.diagnostics.chainId : '',
+              tx.diagnostics.contractAddress ? 'contract ' + tx.diagnostics.contractAddress : '',
+              tx.diagnostics.signerAddress ? 'signer ' + tx.diagnostics.signerAddress : '',
+              tx.diagnostics.txHash ? 'tx ' + tx.diagnostics.txHash : ''
+            ].filter(Boolean).join(' · ') + ']'
+            : '';
+          setStatus(statusEl, 'success', 'Submitted.' + txLink(tx.tx || tx) + diagnostics);
           form.reset();
         })
         .catch(function (err) {
@@ -307,9 +346,7 @@
       if (!pid) throw new Error('Project ID is required.');
       if (!steward) throw new Error('Steward address is required.');
       if (!uri) throw new Error('Metadata URI is required.');
-      return writeContract(PROJECT_REGISTRY_ABI, 'projectRegistry').then(function (c) {
-        return c.registerProject(toBytes32(pid), steward, uri);
-      });
+      return GTPContractAdapter.create({ chainId: currentChainId() }).registerProject(pid, steward, uri);
     });
   }
 
@@ -496,9 +533,91 @@
   function updateWalletNotice() {
     var el = document.getElementById('admin-wallet-notice');
     if (!el) return;
+    var identity = GTPAppState && typeof GTPAppState.getSessionIdentity === 'function'
+      ? GTPAppState.getSessionIdentity()
+      : {};
+    if (!identity.connectionStatus || identity.connectionStatus === 'disconnected') {
+      el.textContent = 'Connect wallet to enable write functions.';
+      return;
+    }
     el.textContent = walletReady()
       ? ''
-      : 'Connect wallet to ' + networkName() + ' to enable write functions.';
+      : 'Switch to Optimism Mainnet to enable write functions.';
+  }
+
+  function ensureDiagnosticsEl(group) {
+    if (!group) return null;
+    var diagnosticsEl = group.querySelector('.admin-contract-diagnostics');
+    if (!diagnosticsEl) {
+      diagnosticsEl = document.createElement('p');
+      diagnosticsEl.className = 'admin-contract-diagnostics';
+      var header = group.querySelector('.admin-contract-header');
+      if (header && header.parentNode) {
+        header.parentNode.insertBefore(diagnosticsEl, header.nextSibling);
+      }
+    }
+    return diagnosticsEl;
+  }
+
+  function updateContractHeader(group, contractKey, diagnostics) {
+    var addressLink = group ? group.querySelector('.admin-contract-address') : null;
+    if (!addressLink || !diagnostics) return;
+    var address = diagnostics.contractAddress || 'Not configured';
+    addressLink.textContent = address === 'Not configured'
+      ? address
+      : address.slice(0, 10) + '…' + address.slice(-4);
+    var networks = GTPConfig && GTPConfig.networks ? GTPConfig.networks : {};
+    var chainId = diagnostics.chainId;
+    var explorer = networks[chainId] && networks[chainId].blockExplorer
+      ? networks[chainId].blockExplorer
+      : 'https://optimistic.etherscan.io';
+    if (diagnostics.contractAddress) {
+      addressLink.href = explorer + '/address/' + diagnostics.contractAddress;
+    } else {
+      addressLink.removeAttribute('href');
+    }
+  }
+
+  function renderContractDiagnostics(group, contractKey) {
+    var abi = getContractAbi(contractKey);
+    var diagnostics = getAdminContractDiagnostics(contractKey, abi);
+    var diagnosticsEl = ensureDiagnosticsEl(group);
+    updateContractHeader(group, contractKey, diagnostics);
+    if (!diagnosticsEl) return diagnostics;
+
+    if (!Array.isArray(abi)) {
+      diagnosticsEl.textContent = 'No functions parsed · reason: ABI is not an array.';
+      diagnosticsEl.className = 'admin-contract-diagnostics admin-contract-diagnostics--error';
+      return diagnostics;
+    }
+
+    if (diagnostics.parseError) {
+      diagnosticsEl.textContent = 'No functions parsed · reason: ' + diagnostics.parseError;
+      diagnosticsEl.className = 'admin-contract-diagnostics admin-contract-diagnostics--error';
+      return diagnostics;
+    }
+
+    if (!diagnostics.functionsParsedCount) {
+      diagnosticsEl.textContent = 'No functions parsed · reason: ABI has zero function entries.';
+      diagnosticsEl.className = 'admin-contract-diagnostics admin-contract-diagnostics--warning';
+      return diagnostics;
+    }
+
+    diagnosticsEl.textContent = [
+      'functions parsed ' + diagnostics.functionsParsedCount,
+      'contract initialized ' + String(diagnostics.contractInitialized),
+      'active chainId ' + (diagnostics.chainId !== null && diagnostics.chainId !== undefined ? diagnostics.chainId : '—'),
+      'active contract address ' + (diagnostics.contractAddress || '—')
+    ].join(' · ');
+    diagnosticsEl.className = 'admin-contract-diagnostics';
+    return diagnostics;
+  }
+
+  function updateAllContractDiagnostics() {
+    var groups = document.querySelectorAll('.admin-contract-group[data-contract-key]');
+    groups.forEach(function (group) {
+      renderContractDiagnostics(group, group.getAttribute('data-contract-key'));
+    });
   }
 
   // ── Access guard ──────────────────────────────────────────────────────────────
@@ -611,15 +730,18 @@
     details.addEventListener('toggle', function () {
       if (details.open) {
         updateAccessGate(details, accessNotice, gateNotice);
+        updateAllContractDiagnostics();
         wireAll();
       }
     });
 
     updateWalletNotice();
+    updateAllContractDiagnostics();
 
     if (GTPAppState && typeof GTPAppState.subscribe === 'function') {
       GTPAppState.subscribe(function () {
         updateWalletNotice();
+        updateAllContractDiagnostics();
         // Re-evaluate access whenever wallet state changes while panel is open
         if (details.open) updateAccessGate(details, accessNotice, gateNotice);
       });
@@ -631,5 +753,10 @@
   } else {
     init();
   }
+
+  window.GTPAdminPanel = {
+    getAdminContractDiagnostics: getAdminContractDiagnostics,
+    renderContractDiagnostics: renderContractDiagnostics
+  };
 
 }());

@@ -1,5 +1,13 @@
 [
   {
+    "source": "green-tea-party",
+    "target": "GreenTeaHut_01",
+    "type": "shared-equipment",
+    "direction": "source-to-target",
+    "resource": "cement mixer",
+    "notes": "Green Tea Hut #1 is registered as an associated project for shared equipment and ledger context."
+  },
+  {
     "source": "proj-001",
     "target": "proj-002",
     "type": "collaboration"

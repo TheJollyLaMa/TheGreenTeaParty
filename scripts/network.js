@@ -18,7 +18,10 @@ var GTPNetwork = (function () {
   }
 
   function supportedChainLabel() {
-    return GTPConfig.app.supportedChainIds.join(', ');
+    return GTPConfig.app.supportedChainIds.map(function (chainId) {
+      var network = GTPConfig.networks && GTPConfig.networks[chainId];
+      return network && network.label ? network.label : String(chainId);
+    }).join(', ');
   }
 
   return {

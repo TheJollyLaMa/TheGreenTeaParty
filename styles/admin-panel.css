@@ -92,6 +92,20 @@
   color: var(--text);
 }
 
+.admin-contract-diagnostics {
+  margin: -0.25rem 0 0;
+  font-size: 0.72rem;
+  color: var(--muted);
+}
+
+.admin-contract-diagnostics--warning {
+  color: #fbbf24;
+}
+
+.admin-contract-diagnostics--error {
+  color: #fca5a5;
+}
+
 .admin-contract-address {
   display: inline-flex;
   align-items: center;

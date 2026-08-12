@@ -44,12 +44,26 @@ var GTPConfig = (function () {
     }
   };
 
+  // Canonical project identifiers used across contract reads/writes and
+  // cross-project ledger context. Aliases are normalized to the canonical key.
+  var PROJECT_IDS = {
+    greenTeaParty: 'green-tea-party',
+    greenTeaHut01: 'GreenTeaHut_01'
+  };
+
+  var PROJECT_ID_ALIASES = {
+    'green-tea-party': ['green tea party', 'greenteaparty', 'GreenTeaParty'],
+    GreenTeaHut_01: ['green-tea-hut-01', 'green tea hut 01', 'greenteahut_01', 'greenteahut01']
+  };
+
   return {
     defaultMode: DEFAULT_MODE,
     modes: MODES,
     app: APP,
     contracts: CONTRACTS,
-    networks: NETWORKS
+    networks: NETWORKS,
+    projectIds: PROJECT_IDS,
+    projectIdAliases: PROJECT_ID_ALIASES
   };
  }());
 

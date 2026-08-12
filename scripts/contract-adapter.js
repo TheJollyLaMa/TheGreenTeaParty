@@ -35,6 +35,12 @@ var GTPContractAdapter = (function () {
     'event Withdrawal(bytes32 indexed projectId, address indexed recipient, uint256 amount, uint256 newBalance)'
   ];
 
+  var CONTRACT_DEFINITIONS = {
+    projectRegistry: { key: 'projectRegistry', label: 'ProjectRegistry', abi: PROJECT_REGISTRY_ABI },
+    treasury: { key: 'treasury', label: 'Treasury', abi: TREASURY_ABI },
+    profileRegistry: { key: 'profileRegistry', label: 'ProfileRegistry', abi: PROFILE_REGISTRY_ABI }
+  };
+
   function getContractsForChain(chainId) {
     var contracts = GTPConfig && GTPConfig.contracts ? GTPConfig.contracts : {};
     return contracts[chainId] || {
@@ -42,6 +48,84 @@ var GTPContractAdapter = (function () {
       treasury: null,
       profileRegistry: null
     };
+  }
+
+  function getContractDefinition(contractKey, chainId) {
+    var base = CONTRACT_DEFINITIONS[contractKey];
+    if (!base) return null;
+    var contracts = getContractsForChain(chainId);
+    return {
+      key: base.key,
+      label: base.label,
+      abi: base.abi.slice(),
+      address: contracts[contractKey] || null
+    };
+  }
+
+  function normalizeProjectIdKey(value) {
+    return String(value || '')
+      .trim()
+      .toLowerCase()
+      .replace(/[^a-z0-9]/g, '');
+  }
+
+  function getCanonicalProjectId(value) {
+    if (typeof value === 'string' && /^0x[0-9a-fA-F]{64}$/.test(value)) {
+      return value;
+    }
+
+    var trimmed = String(value || '').trim();
+    if (!trimmed) return trimmed;
+
+    var aliases = GTPConfig && GTPConfig.projectIdAliases ? GTPConfig.projectIdAliases : {};
+    var canonicalMap = {};
+    Object.keys(aliases).forEach(function (canonicalId) {
+      canonicalMap[normalizeProjectIdKey(canonicalId)] = canonicalId;
+      var aliasList = Array.isArray(aliases[canonicalId]) ? aliases[canonicalId] : [];
+      aliasList.forEach(function (alias) {
+        canonicalMap[normalizeProjectIdKey(alias)] = canonicalId;
+      });
+    });
+
+    return canonicalMap[normalizeProjectIdKey(trimmed)] || trimmed;
+  }
+
+  function getErrorMessage(error) {
+    if (!error) return 'Unknown error';
+    return error.shortMessage
+      || error.reason
+      || error.info && error.info.error && error.info.error.message
+      || error.data && error.data.message
+      || error.message
+      || String(error);
+  }
+
+  function buildDiagnostics(chainId, contractKey, signerAddress, txHash, error) {
+    var definition = getContractDefinition(contractKey, chainId);
+    return {
+      chainId: chainId,
+      contractAddress: definition ? definition.address : null,
+      signerAddress: signerAddress || null,
+      txHash: txHash || null,
+      revertReason: error ? getErrorMessage(error) : null
+    };
+  }
+
+  function rememberRegisteredProjectId(projectId) {
+    if (typeof window === 'undefined' || !window.localStorage) return;
+    var canonicalProjectId = getCanonicalProjectId(projectId);
+    if (!canonicalProjectId || /^0x[0-9a-fA-F]{64}$/.test(canonicalProjectId)) return;
+    var storageKey = 'gtp.registeredProjectIds';
+    try {
+      var parsed = JSON.parse(window.localStorage.getItem(storageKey) || '[]');
+      var next = Array.isArray(parsed) ? parsed.slice() : [];
+      if (next.indexOf(canonicalProjectId) === -1) {
+        next.push(canonicalProjectId);
+        window.localStorage.setItem(storageKey, JSON.stringify(next));
+      }
+    } catch (error) {
+      console.warn('[GTPContractAdapter] Could not persist registered project id', error);
+    }
   }
 
   function getReadiness(chainId) {
@@ -132,24 +216,24 @@ var GTPContractAdapter = (function () {
   // ---- Contract factories -----------------------------------------------------
 
   function readRegistry(chainId) {
-    var contracts = getContractsForChain(chainId);
+    var definition = getContractDefinition('projectRegistry', chainId);
     var provider = getReadProvider(chainId);
     if (!provider) throw new Error('Read provider unavailable for chainId ' + chainId);
-    return new window.ethers.Contract(contracts.projectRegistry, PROJECT_REGISTRY_ABI, provider);
+    return new window.ethers.Contract(definition.address, definition.abi, provider);
   }
 
   function readTreasury(chainId) {
-    var contracts = getContractsForChain(chainId);
+    var definition = getContractDefinition('treasury', chainId);
     var provider = getReadProvider(chainId);
     if (!provider) throw new Error('Read provider unavailable for chainId ' + chainId);
-    return new window.ethers.Contract(contracts.treasury, TREASURY_ABI, provider);
+    return new window.ethers.Contract(definition.address, definition.abi, provider);
   }
 
   function readProfile(chainId) {
-    var contracts = getContractsForChain(chainId);
+    var definition = getContractDefinition('profileRegistry', chainId);
     var provider = getReadProvider(chainId);
     if (!provider) throw new Error('Read provider unavailable for chainId ' + chainId);
-    return new window.ethers.Contract(contracts.profileRegistry, PROFILE_REGISTRY_ABI, provider);
+    return new window.ethers.Contract(definition.address, definition.abi, provider);
   }
 
   // ---- create() ---------------------------------------------------------------
@@ -211,20 +295,50 @@ var GTPContractAdapter = (function () {
         if (!ethersAvailable() || !chainId) {
           return Promise.resolve({ ok: false, placeholder: true, action: 'getProjectRecord', chainId: chainId });
         }
-        return readRegistry(chainId).getProject(toBytes32(projectId))
+        var canonicalProjectId = getCanonicalProjectId(projectId);
+        var projectIdBytes32 = toBytes32(canonicalProjectId);
+        var registry = readRegistry(chainId);
+        return registry.getProject(projectIdBytes32)
           .then(function (result) {
             return {
               ok: true,
               placeholder: false,
-              projectId: projectId,
+              projectId: canonicalProjectId,
+              projectIdBytes32: projectIdBytes32,
               steward: result.steward,
               metadataURI: result.metadataURI,
-              status: Number(result.status)
+              status: Number(result.status),
+              retrievalSource: 'storage'
             };
           })
           .catch(function (err) {
-            console.warn('[GTPContractAdapter] getProjectRecord error', err);
-            return { ok: false, placeholder: false, action: 'getProjectRecord', chainId: chainId, error: err.message };
+            return registry.queryFilter(registry.filters.ProjectRegistered(projectIdBytes32), 0, 'latest')
+              .then(function (logs) {
+                if (!logs.length) throw err;
+                var latest = logs[logs.length - 1];
+                return {
+                  ok: true,
+                  placeholder: false,
+                  projectId: canonicalProjectId,
+                  projectIdBytes32: projectIdBytes32,
+                  steward: latest.args && latest.args.steward ? latest.args.steward : null,
+                  metadataURI: latest.args && latest.args.metadataURI ? latest.args.metadataURI : '',
+                  status: latest.args && latest.args.status !== undefined ? Number(latest.args.status) : 0,
+                  retrievalSource: 'event-fallback'
+                };
+              })
+              .catch(function () {
+                console.warn('[GTPContractAdapter] getProjectRecord error', err);
+                return {
+                  ok: false,
+                  placeholder: false,
+                  action: 'getProjectRecord',
+                  chainId: chainId,
+                  projectId: canonicalProjectId,
+                  projectIdBytes32: projectIdBytes32,
+                  error: getErrorMessage(err)
+                };
+              });
           });
       },
 
@@ -274,15 +388,60 @@ var GTPContractAdapter = (function () {
       registerProject: function (projectId, steward, metadataURI) {
         assertCanWrite();
         var chainId = currentChainId();
-        var contracts = getContractsForChain(chainId);
+        var definition = getContractDefinition('projectRegistry', chainId);
+        var canonicalProjectId = getCanonicalProjectId(projectId);
+        var projectIdBytes32 = toBytes32(canonicalProjectId);
+        var signerAddress = null;
+        var txRef = null;
         return getSignerProvider().getSigner().then(function (signer) {
-          var registry = new window.ethers.Contract(contracts.projectRegistry, PROJECT_REGISTRY_ABI, signer);
-          return registry.registerProject(toBytes32(projectId), steward, metadataURI);
-        }).then(function (tx) {
-          return { ok: true, placeholder: false, action: 'registerProject', tx: tx };
+          signerAddress = typeof signer.getAddress === 'function' ? null : signer.address;
+          return Promise.resolve(typeof signer.getAddress === 'function' ? signer.getAddress() : signer.address)
+            .then(function (resolvedSignerAddress) {
+              signerAddress = resolvedSignerAddress || signerAddress;
+              var registry = new window.ethers.Contract(definition.address, definition.abi, signer);
+              return registry.registerProject(projectIdBytes32, steward, metadataURI).then(function (tx) {
+                txRef = tx;
+                return tx.wait(1).then(function (receipt) {
+                  return registry.getProject(projectIdBytes32).then(function (readback) {
+                    rememberRegisteredProjectId(canonicalProjectId);
+                    return {
+                      ok: true,
+                      placeholder: false,
+                      action: 'registerProject',
+                      projectId: canonicalProjectId,
+                      projectIdBytes32: projectIdBytes32,
+                      chainId: chainId,
+                      contractAddress: definition.address,
+                      signerAddress: signerAddress,
+                      txHash: tx.hash,
+                      tx: tx,
+                      receipt: receipt,
+                      readback: {
+                        steward: readback.steward,
+                        metadataURI: readback.metadataURI,
+                        status: Number(readback.status)
+                      },
+                      diagnostics: buildDiagnostics(chainId, 'projectRegistry', signerAddress, tx.hash, null)
+                    };
+                  });
+                });
+              });
+            });
         }).catch(function (err) {
           console.warn('[GTPContractAdapter] registerProject error', err);
-          return { ok: false, placeholder: false, action: 'registerProject', chainId: chainId, error: err.message };
+          return {
+            ok: false,
+            placeholder: false,
+            action: 'registerProject',
+            chainId: chainId,
+            projectId: canonicalProjectId,
+            projectIdBytes32: projectIdBytes32,
+            contractAddress: definition ? definition.address : null,
+            signerAddress: signerAddress,
+            txHash: txRef && txRef.hash ? txRef.hash : null,
+            error: getErrorMessage(err),
+            diagnostics: buildDiagnostics(chainId, 'projectRegistry', signerAddress, txRef && txRef.hash ? txRef.hash : null, err)
+          };
         });
       },
 
@@ -420,9 +579,11 @@ var GTPContractAdapter = (function () {
     PROFILE_REGISTRY_ABI: PROFILE_REGISTRY_ABI.slice(),
     TREASURY_ABI: TREASURY_ABI.slice(),
     create: create,
-    getContractsForChain: getContractsForChain
+    getContractsForChain: getContractsForChain,
+    getContractDefinition: getContractDefinition,
+    getCanonicalProjectId: getCanonicalProjectId,
+    buildDiagnostics: buildDiagnostics
   };
 }());
 
 window.GTPContractAdapter = GTPContractAdapter;
-

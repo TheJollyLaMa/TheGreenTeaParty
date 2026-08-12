@@ -24,6 +24,18 @@
     return ' View: ' + explorer + hash;
   }
 
+  function formatDiagnostics(result) {
+    if (!result || !result.diagnostics) return '';
+    var diagnostics = result.diagnostics;
+    var parts = [];
+    if (diagnostics.chainId !== null && diagnostics.chainId !== undefined) parts.push('chainId ' + diagnostics.chainId);
+    if (diagnostics.contractAddress) parts.push('contract ' + diagnostics.contractAddress);
+    if (diagnostics.signerAddress) parts.push('signer ' + diagnostics.signerAddress);
+    if (diagnostics.txHash) parts.push('tx ' + diagnostics.txHash);
+    if (diagnostics.revertReason) parts.push('revert ' + diagnostics.revertReason);
+    return parts.length ? ' [' + parts.join(' · ') + ']' : '';
+  }
+
   function adapter() {
     var identity = GTPAppState.getSessionIdentity();
     return GTPContractAdapter.create({ chainId: identity.chainId });
@@ -47,7 +59,7 @@
       e.preventDefault();
 
       if (!walletReady()) {
-        setStatus(statusEl, 'error', 'Connect your wallet to Optimism first.');
+        setStatus(statusEl, 'error', 'Connect your wallet and switch to Optimism Mainnet first.');
         return;
       }
 
@@ -94,10 +106,16 @@
       adapter().registerProject(projectId, steward, metadataURI)
         .then(function (result) {
           if (result.ok) {
-            setStatus(statusEl, 'success', 'Transaction submitted.' + txLink(result.tx));
+            setStatus(
+              statusEl,
+              'success',
+              'Confirmed and read back successfully.'
+              + txLink(result.tx)
+              + formatDiagnostics(result)
+            );
             form.reset();
           } else {
-            setStatus(statusEl, 'error', result.error || 'Transaction failed.');
+            setStatus(statusEl, 'error', (result.error || 'Transaction failed.') + formatDiagnostics(result));
           }
         })
         .catch(function (err) {
@@ -124,7 +142,7 @@
       e.preventDefault();
 
       if (!walletReady()) {
-        setStatus(statusEl, 'error', 'Connect your wallet to Optimism first.');
+        setStatus(statusEl, 'error', 'Connect your wallet and switch to Optimism Mainnet first.');
         return;
       }
 
@@ -177,7 +195,7 @@
       e.preventDefault();
 
       if (!walletReady()) {
-        setStatus(statusEl, 'error', 'Connect your wallet to Optimism first.');
+        setStatus(statusEl, 'error', 'Connect your wallet and switch to Optimism Mainnet first.');
         return;
       }
 
@@ -235,7 +253,7 @@
     notices.forEach(function (el) {
       el.textContent = ready
         ? ''
-        : 'Connect wallet to Optimism to enable form submission.';
+        : 'Connect wallet and switch to Optimism Mainnet to enable form submission.';
     });
   }
 

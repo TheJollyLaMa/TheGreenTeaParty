@@ -96,7 +96,7 @@ var GTPAppState = (function () {
       return { ready: false, reason: 'Select a supported network to continue.' };
     }
     if (!state.isSupportedNetwork) {
-      return { ready: false, reason: 'Connected network is unsupported. Switch to Optimism to continue.' };
+      return { ready: false, reason: 'Connected network is unsupported. Switch to Optimism Mainnet to continue.' };
     }
     return { ready: true, reason: '' };
   }
