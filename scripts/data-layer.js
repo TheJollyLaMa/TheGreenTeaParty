@@ -254,7 +254,7 @@ var GTPData = (function () {
     var projectIdValue = raw.projectId !== undefined && raw.projectId !== null ? raw.projectId : args.projectId;
     var projectId = projectIdValue === undefined || projectIdValue === null ? null : String(projectIdValue);
     var direction = normalizeDirection(raw.direction, amount, eventDefaults && eventDefaults.direction);
-    var status = normalizeStatus(raw.status || 'confirmed');
+    var status = normalizeStatus(raw.status);
     var title = String(raw.title || eventName || typeValue);
     var category = String(raw.category || (eventDefaults && eventDefaults.category) || typeValue || 'general');
     var description = String(raw.description || buildContractDescription(eventName, args, title));
