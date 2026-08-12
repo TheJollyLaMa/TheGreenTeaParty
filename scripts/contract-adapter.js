@@ -350,9 +350,28 @@ var GTPContractAdapter = (function () {
         assertCanWrite();
         var chainId = currentChainId();
         var contracts = getContractsForChain(chainId);
-        var valueWei = contributeOptions && contributeOptions.value != null
-          ? window.ethers.parseEther(String(contributeOptions.value))
-          : 0n;
+        var rawValue = contributeOptions && contributeOptions.value != null
+          ? contributeOptions.value
+          : null;
+        if (rawValue === null || rawValue === '' || rawValue === 0 || rawValue === '0') {
+          return Promise.resolve({
+            ok: false,
+            placeholder: false,
+            action: 'contribute',
+            chainId: chainId,
+            error: 'A non-zero ETH value is required. Pass { value: "0.01" } (in ETH) to contribute.'
+          });
+        }
+        var valueWei = window.ethers.parseEther(String(rawValue));
+        if (valueWei === 0n) {
+          return Promise.resolve({
+            ok: false,
+            placeholder: false,
+            action: 'contribute',
+            chainId: chainId,
+            error: 'Contribution value must be greater than zero.'
+          });
+        }
         return getSignerProvider().getSigner().then(function (signer) {
           var treasury = new window.ethers.Contract(contracts.treasury, TREASURY_ABI, signer);
           return treasury.contribute(toBytes32(projectId), { value: valueWei });

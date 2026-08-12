@@ -202,6 +202,9 @@
             </div>
             <div class="ledger-header-actions">
               <span id="ledger-wallet-network-chip" class="ledger-chip" aria-live="polite"></span>
+              <button id="ledger-refresh-btn" class="btn btn-secondary ledger-refresh-btn" type="button" aria-label="Refresh ledger from chain">
+                ↺ Refresh
+              </button>
               <a href="#fractal-experience" class="ledger-return-link" aria-label="Return to the fractal view">
                 ↑ Back to Fractal
               </a>
@@ -294,7 +297,7 @@
       </div>
     </footer>
 
-    <script src="https://cdnjs.cloudflare.com/ajax/libs/ethers/6.13.4/ethers.umd.min.js" crossorigin="anonymous" referrerpolicy="no-referrer"></script>
+    <script src="https://cdn.jsdelivr.net/npm/ethers@6.17.0/dist/ethers.umd.min.js" crossorigin="anonymous"></script>
     <script src="scripts/config.js"></script>
     <script src="scripts/mode-router.js"></script>
     <script src="scripts/app-state.js"></script>
