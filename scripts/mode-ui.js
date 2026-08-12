@@ -12,10 +12,14 @@
     badge.classList.toggle('mode-badge--app', modeInfo.isApp);
   }
 
+  var canonicalRootHref = new URL('../index.html', document.currentScript.src).href;
   var modeLinks = document.querySelectorAll('[data-mode-link]');
   modeLinks.forEach(function (link) {
     var mode = link.getAttribute('data-mode-link');
-    var target = mode === 'app' ? 'index.html' : 'views/spiral.html';
-    link.setAttribute('href', new URL(target, document.baseURI).href);
+    if (mode !== 'app' && mode !== 'prototype') {
+      return;
+    }
+
+    link.setAttribute('href', canonicalRootHref);
   });
 }());
