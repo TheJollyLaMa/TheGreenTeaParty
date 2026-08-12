@@ -11,6 +11,7 @@
     <link rel="icon" href="assets/favicon.png" type="image/png" />
     <link rel="stylesheet" href="styles/spiral.css" />
     <link rel="stylesheet" href="styles/steward-panel.css" />
+    <link rel="stylesheet" href="styles/admin-panel.css" />
     <link rel="stylesheet" href="styles.css" />
   </head>
   <body
@@ -421,6 +422,504 @@
       </section>
     </main>
 
+    <!-- ═══════════════════════════════════════════════════════════════════════
+         Admin — Contract Console (collapsed by default)
+    ════════════════════════════════════════════════════════════════════════════ -->
+    <details id="admin-panel" class="admin-panel-details">
+      <summary class="admin-panel-summary">
+        <span class="admin-lock" aria-hidden="true">🔒</span>
+        <span class="admin-label">Admin — Contract Console</span>
+        <span class="admin-chevron" aria-hidden="true">▲</span>
+      </summary>
+
+      <div class="admin-panel-body">
+        <div class="container">
+
+          <p class="admin-wallet-notice" id="admin-wallet-notice" aria-live="polite"></p>
+
+          <!-- ─── ProjectRegistry ────────────────────────────────────────── -->
+          <div class="admin-contract-group">
+            <div class="admin-contract-header">
+              <h3>ProjectRegistry</h3>
+              <a class="admin-contract-address"
+                 href="https://optimistic.etherscan.io/address/0x1b093804d9BF8572F9ea58e24E051580Ed608F64"
+                 target="_blank" rel="noopener noreferrer">
+                0x1b093804…8F64
+              </a>
+            </div>
+
+            <p class="admin-fn-group-label">Read</p>
+            <div class="admin-fn-grid">
+
+              <!-- owner() -->
+              <div class="admin-fn-card admin-fn-read">
+                <h4>owner()</h4>
+                <form id="admin-pr-owner-form" class="admin-fn-form" novalidate>
+                  <div class="admin-fn-actions">
+                    <button type="submit" class="admin-call-btn">Call</button>
+                    <button type="reset" class="admin-clear-btn">Clear</button>
+                  </div>
+                  <pre class="admin-read-output" aria-live="polite"></pre>
+                  <div class="admin-fn-status" aria-live="polite"></div>
+                </form>
+              </div>
+
+              <!-- paused() -->
+              <div class="admin-fn-card admin-fn-read">
+                <h4>paused()</h4>
+                <form id="admin-pr-paused-form" class="admin-fn-form" novalidate>
+                  <div class="admin-fn-actions">
+                    <button type="submit" class="admin-call-btn">Call</button>
+                    <button type="reset" class="admin-clear-btn">Clear</button>
+                  </div>
+                  <pre class="admin-read-output" aria-live="polite"></pre>
+                  <div class="admin-fn-status" aria-live="polite"></div>
+                </form>
+              </div>
+
+              <!-- projectExists(projectId) -->
+              <div class="admin-fn-card admin-fn-read">
+                <h4>projectExists(projectId)</h4>
+                <form id="admin-pr-exists-form" class="admin-fn-form" novalidate>
+                  <label>
+                    Project ID (slug)
+                    <input type="text" name="pr-exists-id" placeholder="e.g. green-tea-hut-01" autocomplete="off" />
+                  </label>
+                  <div class="admin-fn-actions">
+                    <button type="submit" class="admin-call-btn">Call</button>
+                    <button type="reset" class="admin-clear-btn">Clear</button>
+                  </div>
+                  <pre class="admin-read-output" aria-live="polite"></pre>
+                  <div class="admin-fn-status" aria-live="polite"></div>
+                </form>
+              </div>
+
+              <!-- getSteward(projectId) -->
+              <div class="admin-fn-card admin-fn-read">
+                <h4>getSteward(projectId)</h4>
+                <form id="admin-pr-steward-form" class="admin-fn-form" novalidate>
+                  <label>
+                    Project ID (slug)
+                    <input type="text" name="pr-steward-id" placeholder="e.g. green-tea-hut-01" autocomplete="off" />
+                  </label>
+                  <div class="admin-fn-actions">
+                    <button type="submit" class="admin-call-btn">Call</button>
+                    <button type="reset" class="admin-clear-btn">Clear</button>
+                  </div>
+                  <pre class="admin-read-output" aria-live="polite"></pre>
+                  <div class="admin-fn-status" aria-live="polite"></div>
+                </form>
+              </div>
+
+              <!-- getStatus(projectId) -->
+              <div class="admin-fn-card admin-fn-read">
+                <h4>getStatus(projectId)</h4>
+                <form id="admin-pr-status-form" class="admin-fn-form" novalidate>
+                  <label>
+                    Project ID (slug)
+                    <input type="text" name="pr-status-id" placeholder="e.g. green-tea-hut-01" autocomplete="off" />
+                  </label>
+                  <div class="admin-fn-actions">
+                    <button type="submit" class="admin-call-btn">Call</button>
+                    <button type="reset" class="admin-clear-btn">Clear</button>
+                  </div>
+                  <pre class="admin-read-output" aria-live="polite"></pre>
+                  <div class="admin-fn-status" aria-live="polite"></div>
+                </form>
+              </div>
+
+              <!-- getProject(projectId) -->
+              <div class="admin-fn-card admin-fn-read">
+                <h4>getProject(projectId)</h4>
+                <form id="admin-pr-get-form" class="admin-fn-form" novalidate>
+                  <label>
+                    Project ID (slug)
+                    <input type="text" name="pr-get-id" placeholder="e.g. green-tea-hut-01" autocomplete="off" />
+                  </label>
+                  <div class="admin-fn-actions">
+                    <button type="submit" class="admin-call-btn">Call</button>
+                    <button type="reset" class="admin-clear-btn">Clear</button>
+                  </div>
+                  <pre class="admin-read-output" aria-live="polite"></pre>
+                  <div class="admin-fn-status" aria-live="polite"></div>
+                </form>
+              </div>
+
+            </div><!-- /.admin-fn-grid (reads) -->
+
+            <p class="admin-fn-group-label">Write</p>
+            <div class="admin-fn-grid">
+
+              <!-- registerProject -->
+              <div class="admin-fn-card">
+                <h4>registerProject(projectId, steward, metadataURI)</h4>
+                <form id="admin-pr-register-form" class="admin-fn-form" novalidate>
+                  <label>
+                    Project ID (slug)
+                    <input type="text" name="pr-reg-id" placeholder="green-tea-hut-01" required autocomplete="off" />
+                  </label>
+                  <label>
+                    Steward address
+                    <input type="text" name="pr-reg-steward" placeholder="0x…" required autocomplete="off" />
+                  </label>
+                  <label>
+                    Metadata URI (JSON string or ipfs:// or https://)
+                    <textarea name="pr-reg-uri" placeholder='{"id":"green-tea-hut-01","name":"…"}' required></textarea>
+                  </label>
+                  <div class="admin-fn-actions">
+                    <button type="submit" class="admin-write-btn">Send</button>
+                    <button type="reset" class="admin-clear-btn">Clear</button>
+                  </div>
+                  <div class="admin-fn-status" aria-live="polite"></div>
+                </form>
+              </div>
+
+              <!-- updateProjectMetadataURI -->
+              <div class="admin-fn-card">
+                <h4>updateProjectMetadataURI(projectId, metadataURI)</h4>
+                <form id="admin-pr-updatemeta-form" class="admin-fn-form" novalidate>
+                  <label>
+                    Project ID (slug)
+                    <input type="text" name="pr-updatemeta-id" placeholder="green-tea-hut-01" required autocomplete="off" />
+                  </label>
+                  <label>
+                    New metadata URI
+                    <textarea name="pr-updatemeta-uri" placeholder='{"id":"…"} or ipfs://…' required></textarea>
+                  </label>
+                  <div class="admin-fn-actions">
+                    <button type="submit" class="admin-write-btn">Send</button>
+                    <button type="reset" class="admin-clear-btn">Clear</button>
+                  </div>
+                  <div class="admin-fn-status" aria-live="polite"></div>
+                </form>
+              </div>
+
+              <!-- updateProjectStatus -->
+              <div class="admin-fn-card">
+                <h4>updateProjectStatus(projectId, nextStatus)</h4>
+                <form id="admin-pr-updatestatus-form" class="admin-fn-form" novalidate>
+                  <label>
+                    Project ID (slug)
+                    <input type="text" name="pr-updatestatus-id" placeholder="green-tea-hut-01" required autocomplete="off" />
+                  </label>
+                  <label>
+                    Next status
+                    <select name="pr-updatestatus-next" required>
+                      <option value="">— select —</option>
+                      <option value="0">0 — Draft</option>
+                      <option value="1">1 — Active</option>
+                      <option value="2">2 — Paused</option>
+                      <option value="3">3 — Completed</option>
+                    </select>
+                  </label>
+                  <div class="admin-fn-actions">
+                    <button type="submit" class="admin-write-btn">Send</button>
+                    <button type="reset" class="admin-clear-btn">Clear</button>
+                  </div>
+                  <div class="admin-fn-status" aria-live="polite"></div>
+                </form>
+              </div>
+
+              <!-- transferSteward -->
+              <div class="admin-fn-card">
+                <h4>transferSteward(projectId, nextSteward)</h4>
+                <form id="admin-pr-xfersteward-form" class="admin-fn-form" novalidate>
+                  <label>
+                    Project ID (slug)
+                    <input type="text" name="pr-xfersteward-id" placeholder="green-tea-hut-01" required autocomplete="off" />
+                  </label>
+                  <label>
+                    New steward address
+                    <input type="text" name="pr-xfersteward-next" placeholder="0x…" required autocomplete="off" />
+                  </label>
+                  <div class="admin-fn-actions">
+                    <button type="submit" class="admin-write-btn">Send</button>
+                    <button type="reset" class="admin-clear-btn">Clear</button>
+                  </div>
+                  <div class="admin-fn-status" aria-live="polite"></div>
+                </form>
+              </div>
+
+              <!-- transferOwnership (PR) -->
+              <div class="admin-fn-card">
+                <h4>transferOwnership(nextOwner)</h4>
+                <form id="admin-pr-xferowner-form" class="admin-fn-form" novalidate>
+                  <label>
+                    New owner address
+                    <input type="text" name="pr-xferowner-next" placeholder="0x…" required autocomplete="off" />
+                  </label>
+                  <div class="admin-fn-actions">
+                    <button type="submit" class="admin-write-btn">Send</button>
+                    <button type="reset" class="admin-clear-btn">Clear</button>
+                  </div>
+                  <div class="admin-fn-status" aria-live="polite"></div>
+                </form>
+              </div>
+
+              <!-- pause (PR) -->
+              <div class="admin-fn-card">
+                <h4>pause()</h4>
+                <form id="admin-pr-pause-form" class="admin-fn-form" novalidate>
+                  <div class="admin-fn-actions">
+                    <button type="submit" class="admin-write-btn">Send</button>
+                  </div>
+                  <div class="admin-fn-status" aria-live="polite"></div>
+                </form>
+              </div>
+
+              <!-- unpause (PR) -->
+              <div class="admin-fn-card">
+                <h4>unpause()</h4>
+                <form id="admin-pr-unpause-form" class="admin-fn-form" novalidate>
+                  <div class="admin-fn-actions">
+                    <button type="submit" class="admin-write-btn">Send</button>
+                  </div>
+                  <div class="admin-fn-status" aria-live="polite"></div>
+                </form>
+              </div>
+
+            </div><!-- /.admin-fn-grid (writes) -->
+          </div><!-- /.admin-contract-group ProjectRegistry -->
+
+          <!-- ─── Treasury ───────────────────────────────────────────────── -->
+          <div class="admin-contract-group">
+            <div class="admin-contract-header">
+              <h3>Treasury</h3>
+              <a class="admin-contract-address"
+                 href="https://optimistic.etherscan.io/address/0xebE0D6Fa315CeA75D491219d5D9CC13136580144"
+                 target="_blank" rel="noopener noreferrer">
+                0xebE0D6…0144
+              </a>
+            </div>
+
+            <p class="admin-fn-group-label">Read</p>
+            <div class="admin-fn-grid">
+
+              <!-- owner() -->
+              <div class="admin-fn-card admin-fn-read">
+                <h4>owner()</h4>
+                <form id="admin-tr-owner-form" class="admin-fn-form" novalidate>
+                  <div class="admin-fn-actions">
+                    <button type="submit" class="admin-call-btn">Call</button>
+                    <button type="reset" class="admin-clear-btn">Clear</button>
+                  </div>
+                  <pre class="admin-read-output" aria-live="polite"></pre>
+                  <div class="admin-fn-status" aria-live="polite"></div>
+                </form>
+              </div>
+
+              <!-- paused() -->
+              <div class="admin-fn-card admin-fn-read">
+                <h4>paused()</h4>
+                <form id="admin-tr-paused-form" class="admin-fn-form" novalidate>
+                  <div class="admin-fn-actions">
+                    <button type="submit" class="admin-call-btn">Call</button>
+                    <button type="reset" class="admin-clear-btn">Clear</button>
+                  </div>
+                  <pre class="admin-read-output" aria-live="polite"></pre>
+                  <div class="admin-fn-status" aria-live="polite"></div>
+                </form>
+              </div>
+
+              <!-- projectBalances(projectId) -->
+              <div class="admin-fn-card admin-fn-read">
+                <h4>projectBalances(projectId)</h4>
+                <form id="admin-tr-balance-form" class="admin-fn-form" novalidate>
+                  <label>
+                    Project ID (slug)
+                    <input type="text" name="tr-balance-id" placeholder="e.g. green-tea-hut-01" autocomplete="off" />
+                  </label>
+                  <div class="admin-fn-actions">
+                    <button type="submit" class="admin-call-btn">Call</button>
+                    <button type="reset" class="admin-clear-btn">Clear</button>
+                  </div>
+                  <pre class="admin-read-output" aria-live="polite"></pre>
+                  <div class="admin-fn-status" aria-live="polite"></div>
+                </form>
+              </div>
+
+              <!-- payoutAddresses(projectId) -->
+              <div class="admin-fn-card admin-fn-read">
+                <h4>payoutAddresses(projectId)</h4>
+                <form id="admin-tr-payout-form" class="admin-fn-form" novalidate>
+                  <label>
+                    Project ID (slug)
+                    <input type="text" name="tr-payout-id" placeholder="e.g. green-tea-hut-01" autocomplete="off" />
+                  </label>
+                  <div class="admin-fn-actions">
+                    <button type="submit" class="admin-call-btn">Call</button>
+                    <button type="reset" class="admin-clear-btn">Clear</button>
+                  </div>
+                  <pre class="admin-read-output" aria-live="polite"></pre>
+                  <div class="admin-fn-status" aria-live="polite"></div>
+                </form>
+              </div>
+
+            </div><!-- /.admin-fn-grid (reads) -->
+
+            <p class="admin-fn-group-label">Write</p>
+            <div class="admin-fn-grid">
+
+              <!-- contribute -->
+              <div class="admin-fn-card">
+                <h4>contribute(projectId) payable</h4>
+                <form id="admin-tr-contribute-form" class="admin-fn-form" novalidate>
+                  <label>
+                    Project ID (slug)
+                    <input type="text" name="tr-contribute-id" placeholder="green-tea-hut-01" required autocomplete="off" />
+                  </label>
+                  <label>
+                    Amount (ETH)
+                    <input type="number" name="tr-contribute-amount" placeholder="0.01" min="0" step="any" required />
+                  </label>
+                  <div class="admin-fn-actions">
+                    <button type="submit" class="admin-write-btn">Send</button>
+                    <button type="reset" class="admin-clear-btn">Clear</button>
+                  </div>
+                  <div class="admin-fn-status" aria-live="polite"></div>
+                </form>
+              </div>
+
+              <!-- setPayoutAddress -->
+              <div class="admin-fn-card">
+                <h4>setPayoutAddress(projectId, payoutAddress)</h4>
+                <form id="admin-tr-setpayout-form" class="admin-fn-form" novalidate>
+                  <label>
+                    Project ID (slug)
+                    <input type="text" name="tr-setpayout-id" placeholder="green-tea-hut-01" required autocomplete="off" />
+                  </label>
+                  <label>
+                    Payout address
+                    <input type="text" name="tr-setpayout-addr" placeholder="0x…" required autocomplete="off" />
+                  </label>
+                  <div class="admin-fn-actions">
+                    <button type="submit" class="admin-write-btn">Send</button>
+                    <button type="reset" class="admin-clear-btn">Clear</button>
+                  </div>
+                  <div class="admin-fn-status" aria-live="polite"></div>
+                </form>
+              </div>
+
+              <!-- withdraw -->
+              <div class="admin-fn-card">
+                <h4>withdraw(projectId, amount)</h4>
+                <form id="admin-tr-withdraw-form" class="admin-fn-form" novalidate>
+                  <label>
+                    Project ID (slug)
+                    <input type="text" name="tr-withdraw-id" placeholder="green-tea-hut-01" required autocomplete="off" />
+                  </label>
+                  <label>
+                    Amount (ETH)
+                    <input type="number" name="tr-withdraw-amount" placeholder="0.01" min="0" step="any" required />
+                  </label>
+                  <div class="admin-fn-actions">
+                    <button type="submit" class="admin-write-btn">Send</button>
+                    <button type="reset" class="admin-clear-btn">Clear</button>
+                  </div>
+                  <div class="admin-fn-status" aria-live="polite"></div>
+                </form>
+              </div>
+
+              <!-- transferOwnership (TR) -->
+              <div class="admin-fn-card">
+                <h4>transferOwnership(nextOwner)</h4>
+                <form id="admin-tr-xferowner-form" class="admin-fn-form" novalidate>
+                  <label>
+                    New owner address
+                    <input type="text" name="tr-xferowner-next" placeholder="0x…" required autocomplete="off" />
+                  </label>
+                  <div class="admin-fn-actions">
+                    <button type="submit" class="admin-write-btn">Send</button>
+                    <button type="reset" class="admin-clear-btn">Clear</button>
+                  </div>
+                  <div class="admin-fn-status" aria-live="polite"></div>
+                </form>
+              </div>
+
+              <!-- pause (TR) -->
+              <div class="admin-fn-card">
+                <h4>pause()</h4>
+                <form id="admin-tr-pause-form" class="admin-fn-form" novalidate>
+                  <div class="admin-fn-actions">
+                    <button type="submit" class="admin-write-btn">Send</button>
+                  </div>
+                  <div class="admin-fn-status" aria-live="polite"></div>
+                </form>
+              </div>
+
+              <!-- unpause (TR) -->
+              <div class="admin-fn-card">
+                <h4>unpause()</h4>
+                <form id="admin-tr-unpause-form" class="admin-fn-form" novalidate>
+                  <div class="admin-fn-actions">
+                    <button type="submit" class="admin-write-btn">Send</button>
+                  </div>
+                  <div class="admin-fn-status" aria-live="polite"></div>
+                </form>
+              </div>
+
+            </div><!-- /.admin-fn-grid (writes) -->
+          </div><!-- /.admin-contract-group Treasury -->
+
+          <!-- ─── ProfileRegistry ────────────────────────────────────────── -->
+          <div class="admin-contract-group">
+            <div class="admin-contract-header">
+              <h3>ProfileRegistry</h3>
+              <a class="admin-contract-address"
+                 href="https://optimistic.etherscan.io/address/0xd66AdB0E70303D4e6daf8C963c7947f9ae722446"
+                 target="_blank" rel="noopener noreferrer">
+                0xd66AdB…2446
+              </a>
+            </div>
+
+            <p class="admin-fn-group-label">Read</p>
+            <div class="admin-fn-grid">
+
+              <!-- getProfileURI(account) -->
+              <div class="admin-fn-card admin-fn-read">
+                <h4>getProfileURI(account)</h4>
+                <form id="admin-pf-geturi-form" class="admin-fn-form" novalidate>
+                  <label>
+                    Address
+                    <input type="text" name="pf-geturi-addr" placeholder="0x…" autocomplete="off" />
+                  </label>
+                  <div class="admin-fn-actions">
+                    <button type="submit" class="admin-call-btn">Call</button>
+                    <button type="reset" class="admin-clear-btn">Clear</button>
+                  </div>
+                  <pre class="admin-read-output" aria-live="polite"></pre>
+                  <div class="admin-fn-status" aria-live="polite"></div>
+                </form>
+              </div>
+
+            </div><!-- /.admin-fn-grid (reads) -->
+
+            <p class="admin-fn-group-label">Write</p>
+            <div class="admin-fn-grid">
+
+              <!-- setProfileURI -->
+              <div class="admin-fn-card">
+                <h4>setProfileURI(profileURI)</h4>
+                <form id="admin-pf-seturi-form" class="admin-fn-form" novalidate>
+                  <label>
+                    Profile URI (ipfs:// or https://)
+                    <input type="text" name="pf-seturi-uri" placeholder="ipfs://…" required autocomplete="off" />
+                  </label>
+                  <div class="admin-fn-actions">
+                    <button type="submit" class="admin-write-btn">Send</button>
+                    <button type="reset" class="admin-clear-btn">Clear</button>
+                  </div>
+                  <div class="admin-fn-status" aria-live="polite"></div>
+                </form>
+              </div>
+
+            </div><!-- /.admin-fn-grid (writes) -->
+          </div><!-- /.admin-contract-group ProfileRegistry -->
+
+        </div><!-- /.container -->
+      </div><!-- /.admin-panel-body -->
+    </details><!-- /#admin-panel -->
+
     <footer class="site-footer">
       <div class="container footer-row">
         <p>Green Tea Party · unified route</p>
@@ -445,6 +944,7 @@
     <script src="scripts/kpi.js"></script>
     <script src="scripts/spiral.js"></script>
     <script src="scripts/steward-panel.js"></script>
+    <script src="scripts/admin-panel.js"></script>
     <script src="app.js"></script>
   </body>
 </html>
