@@ -3,6 +3,9 @@
 const metricsStrip = document.querySelector('#metrics-strip');
 const projectGrid = document.querySelector('#project-grid');
 const activityList = document.querySelector('#activity-list');
+const publicLedgerBody = document.querySelector('#public-ledger-body');
+const ledgerViewMoreBtn = document.querySelector('#ledger-view-more-btn');
+const ledgerWalletNetworkChip = document.querySelector('#ledger-wallet-network-chip');
 const trackFilter = document.querySelector('#track-filter');
 const stageFilter = document.querySelector('#stage-filter');
 const kpiPanel = document.querySelector('#kpi-panel');
@@ -14,6 +17,8 @@ const operationsSnapshotGrid = document.querySelector('#operations-snapshot-grid
 
 const modeInfo = GTPModeRouter.getModeInfo(window.location);
 const dataBasePath = new URL('.', document.baseURI).href;
+const LEDGER_PAGE_SIZE = 8;
+let ledgerVisibleCount = LEDGER_PAGE_SIZE;
 
 const formatCurrency = (value) =>
   new Intl.NumberFormat('en-US', {
@@ -100,6 +105,166 @@ const renderOperationsSessionStatus = () => {
 
   statusParts.push(readiness.ready ? 'Ready for contract-backed actions' : readiness.reason);
   operationsSessionStatus.textContent = statusParts.join(' · ');
+};
+
+const isSafeHttpUrl = (value) => {
+  if (!value || typeof value !== 'string') {
+    return false;
+  }
+
+  try {
+    const parsed = new URL(value, window.location.href);
+    return parsed.protocol === 'http:' || parsed.protocol === 'https:';
+  } catch (error) {
+    return false;
+  }
+};
+
+const statusClassName = (value) => String(value || 'unknown')
+  .toLowerCase()
+  .replace(/[^a-z0-9]+/g, '-')
+  .replace(/(^-|-$)/g, '') || 'unknown';
+
+const getDeterministicLedgerEntries = () => GTPData.getActivity()
+  .slice()
+  .sort((entryA, entryB) => {
+    const timeA = Date.parse(entryA.date) || 0;
+    const timeB = Date.parse(entryB.date) || 0;
+    if (timeA !== timeB) {
+      return timeB - timeA;
+    }
+
+    const idA = String(entryA.id || '');
+    const idB = String(entryB.id || '');
+    if (idA !== idB) {
+      return idA.localeCompare(idB);
+    }
+
+    return Number(entryA.sortIndex || 0) - Number(entryB.sortIndex || 0);
+  });
+
+const renderLedgerWalletNetworkChip = () => {
+  if (!ledgerWalletNetworkChip || !modeInfo.isApp) {
+    return;
+  }
+
+  const state = GTPAppState.getState();
+  const walletLabel = state.address
+    ? shortenAddress(state.address)
+    : formatStatusLabel(state.connectionStatus);
+  const networkLabel = typeof state.chainId === 'number'
+    ? `chain ${state.chainId}${state.isSupportedNetwork ? '' : ' unsupported'}`
+    : 'network n/a';
+
+  ledgerWalletNetworkChip.textContent = `${walletLabel} · ${networkLabel}`;
+};
+
+const renderPublicLedgerState = (kind, message) => {
+  if (!publicLedgerBody) {
+    return;
+  }
+
+  publicLedgerBody.innerHTML = '';
+  const row = document.createElement('tr');
+  const cell = document.createElement('td');
+  const text = document.createElement('p');
+  row.className = `public-ledger-state-row public-ledger-state-row--${kind}`;
+  cell.colSpan = 9;
+  text.className = `public-ledger-state public-ledger-state--${kind}`;
+  text.textContent = message;
+  cell.appendChild(text);
+  row.appendChild(cell);
+  publicLedgerBody.appendChild(row);
+
+  if (ledgerViewMoreBtn) {
+    ledgerViewMoreBtn.hidden = true;
+  }
+};
+
+const renderPublicLedger = () => {
+  if (!publicLedgerBody) {
+    return;
+  }
+
+  const entries = getDeterministicLedgerEntries();
+  const visibleEntries = entries.slice(0, ledgerVisibleCount);
+
+  if (!visibleEntries.length) {
+    renderPublicLedgerState('empty', 'No contract ledger rows available yet.');
+    return;
+  }
+
+  publicLedgerBody.innerHTML = '';
+
+  visibleEntries.forEach((entry) => {
+    const row = document.createElement('tr');
+    row.className = 'public-ledger-row';
+
+    const idCell = document.createElement('td');
+    idCell.textContent = entry.id || '—';
+    row.appendChild(idCell);
+
+    const dateCell = document.createElement('td');
+    dateCell.textContent = entry.date || '—';
+    row.appendChild(dateCell);
+
+    const typeCell = document.createElement('td');
+    typeCell.textContent = formatStatusLabel(entry.direction || entry.type || 'incoming');
+    row.appendChild(typeCell);
+
+    const statusCell = document.createElement('td');
+    const statusBadge = document.createElement('span');
+    statusBadge.className = `ledger-status-badge ledger-status-badge--${statusClassName(entry.status)}`;
+    statusBadge.textContent = formatStatusLabel(entry.status || 'confirmed');
+    statusCell.appendChild(statusBadge);
+    row.appendChild(statusCell);
+
+    const amountCell = document.createElement('td');
+    if (typeof entry.amount === 'number') {
+      const absoluteAmount = formatCurrency(Math.abs(entry.amount));
+      amountCell.textContent = (entry.direction === 'outgoing' || entry.amount < 0)
+        ? `-${absoluteAmount}`
+        : absoluteAmount;
+    } else {
+      amountCell.textContent = '—';
+    }
+    row.appendChild(amountCell);
+
+    const categoryCell = document.createElement('td');
+    categoryCell.textContent = entry.category || 'General';
+    row.appendChild(categoryCell);
+
+    const descriptionCell = document.createElement('td');
+    descriptionCell.textContent = entry.description || entry.title || '';
+    row.appendChild(descriptionCell);
+
+    const notesCell = document.createElement('td');
+    notesCell.textContent = entry.notes || '—';
+    row.appendChild(notesCell);
+
+    const proofCell = document.createElement('td');
+    if (isSafeHttpUrl(entry.proofUrl)) {
+      const proofLink = document.createElement('a');
+      proofLink.href = entry.proofUrl;
+      proofLink.target = '_blank';
+      proofLink.rel = 'noreferrer noopener';
+      proofLink.textContent = 'View proof';
+      proofCell.appendChild(proofLink);
+    } else {
+      proofCell.textContent = '—';
+    }
+    row.appendChild(proofCell);
+
+    publicLedgerBody.appendChild(row);
+  });
+
+  if (ledgerViewMoreBtn) {
+    const hasMore = entries.length > visibleEntries.length;
+    ledgerViewMoreBtn.hidden = !hasMore;
+    if (hasMore) {
+      ledgerViewMoreBtn.textContent = `View more (${entries.length - visibleEntries.length})`;
+    }
+  }
 };
 
 let connectIconFailed = false;
@@ -326,6 +491,11 @@ const renderProjects = () => {
 };
 
 const renderActivity = () => {
+  if (isOperationsLanding() && publicLedgerBody) {
+    renderPublicLedger();
+    return;
+  }
+
   if (!activityList) {
     return;
   }
@@ -378,6 +548,10 @@ renderModeBadge();
 renderAppStatePanel();
 renderWalletControl();
 renderOperationsSessionStatus();
+renderLedgerWalletNetworkChip();
+if (isOperationsLanding() && publicLedgerBody) {
+  renderPublicLedgerState('loading', 'Loading contract ledger rows…');
+}
 
 GTPData.load(dataBasePath).then(() => {
   populateFilters();
@@ -390,6 +564,9 @@ GTPData.load(dataBasePath).then(() => {
   if (projectGrid) {
     projectGrid.innerHTML =
       '<li class="project-card"><p class="project-meta">Could not load project data. Check the console for details.</p></li>';
+  }
+  if (isOperationsLanding() && publicLedgerBody) {
+    renderPublicLedgerState('error', 'Could not load ledger rows. Check the console for details.');
   }
 });
 
@@ -414,6 +591,7 @@ if (modeInfo.isApp) {
     renderAppStatePanel();
     renderWalletControl();
     renderOperationsSessionStatus();
+    renderLedgerWalletNetworkChip();
     renderOperationsSnapshots();
   });
 }
@@ -422,5 +600,13 @@ GTPAppState.subscribe(() => {
   renderAppStatePanel();
   renderWalletControl();
   renderOperationsSessionStatus();
+  renderLedgerWalletNetworkChip();
   renderOperationsSnapshots();
 });
+
+if (ledgerViewMoreBtn) {
+  ledgerViewMoreBtn.addEventListener('click', () => {
+    ledgerVisibleCount += LEDGER_PAGE_SIZE;
+    renderPublicLedger();
+  });
+}

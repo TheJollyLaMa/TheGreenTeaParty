@@ -119,6 +119,13 @@ activity data return safe defaults.
 |---|---|---|
 | `type` | `string` | Entry type (see below) |
 | `date` | `string` (ISO date) | Date of the activity (`YYYY-MM-DD`) |
+| `id` | `string` | Optional explicit ledger id (auto-generated when omitted) |
+| `direction` | `"incoming"` \| `"outgoing"` | Optional flow direction (auto-derived from amount when omitted) |
+| `status` | `string` | Optional status label for ledger badges (defaults to `confirmed`) |
+| `category` | `string` | Optional category displayed in ledger table |
+| `description` | `string` | Optional detailed description shown in ledger table |
+| `notes` | `string` | Optional steward notes |
+| `proofUrl` | `string` | Optional HTTP/HTTPS link to external proof |
 | `title` | `string` | Human-readable description |
 | `amount` | `number` | Optional monetary amount (USD) |
 | `projectId` | `string` | Optional link to a project `id` |

@@ -104,12 +104,29 @@ var GTPData = (function () {
       console.warn('[GTPData] activity[' + index + '] missing type or date', raw);
       return null;
     }
+    var amount = typeof raw.amount === 'number' ? raw.amount : null;
+    var direction = raw.direction;
+    if (direction !== 'incoming' && direction !== 'outgoing') {
+      if (amount === null) {
+        direction = 'incoming';
+      } else {
+        direction = amount < 0 ? 'outgoing' : 'incoming';
+      }
+    }
     return {
+      id: raw.id ? String(raw.id) : 'entry-' + String(index + 1).padStart(4, '0'),
       type: String(raw.type),
       title: String(raw.title || ''),
-      amount: typeof raw.amount === 'number' ? raw.amount : null,
+      amount: amount,
       date: String(raw.date),
-      projectId: raw.projectId || null
+      projectId: raw.projectId || null,
+      direction: direction,
+      status: String(raw.status || 'confirmed'),
+      category: String(raw.category || raw.type || 'general'),
+      description: String(raw.description || raw.title || ''),
+      notes: String(raw.notes || ''),
+      proofUrl: typeof raw.proofUrl === 'string' ? raw.proofUrl : null,
+      sortIndex: index
     };
   }
 
