@@ -84,7 +84,11 @@
     'function setProfileURI(string)'
   ];
 
-  function readContract(abi, addrKey) {
+  function networkName() {
+    var chainId = currentChainId();
+    var networks = GTPConfig && GTPConfig.networks ? GTPConfig.networks : {};
+    return (networks[chainId] && networks[chainId].name) ? networks[chainId].name : 'Optimism';
+  }
     var addr = contractAddresses()[addrKey];
     if (!addr) throw new Error('Contract address not configured for this network.');
     var provider = getReadProvider();
@@ -129,7 +133,12 @@
   function txLink(tx) {
     var hash = tx && tx.hash ? tx.hash : null;
     if (!hash) return '';
-    return ' View: https://optimistic.etherscan.io/tx/' + hash;
+    var chainId = currentChainId();
+    var networks = GTPConfig && GTPConfig.networks ? GTPConfig.networks : {};
+    var explorer = (networks[chainId] && networks[chainId].blockExplorer)
+      ? networks[chainId].blockExplorer
+      : 'https://optimistic.etherscan.io';
+    return ' View: ' + explorer + '/tx/' + hash;
   }
 
   function val(form, name) {
@@ -192,7 +201,7 @@
     form.addEventListener('submit', function (e) {
       e.preventDefault();
       if (!walletReady()) {
-        setStatus(statusEl, 'error', 'Connect wallet to Optimism first.');
+        setStatus(statusEl, 'error', 'Connect wallet to ' + networkName() + ' first.');
         return;
       }
       clearStatus(statusEl);
@@ -489,15 +498,68 @@
     if (!el) return;
     el.textContent = walletReady()
       ? ''
-      : 'Connect wallet to Optimism to enable write functions.';
+      : 'Connect wallet to ' + networkName() + ' to enable write functions.';
   }
 
-  // ── Init ──────────────────────────────────────────────────────────────────────
+  // ── Access guard ──────────────────────────────────────────────────────────────
+
+  /**
+   * Checks whether the currently connected wallet is the owner of the
+   * ProjectRegistry. Returns a promise resolving to true/false.
+   */
+  function isOwner() {
+    if (!walletReady()) return Promise.resolve(false);
+    var id = GTPAppState.getSessionIdentity();
+    var connectedAddress = id && id.address ? id.address.toLowerCase() : null;
+    if (!connectedAddress) return Promise.resolve(false);
+    try {
+      return readContract(PROJECT_REGISTRY_ABI, 'projectRegistry').owner()
+        .then(function (ownerAddr) {
+          return ownerAddr.toLowerCase() === connectedAddress;
+        })
+        .catch(function () { return false; });
+    } catch (e) {
+      return Promise.resolve(false);
+    }
+  }
+
+  /**
+   * Shows or hides the panel body based on owner check.
+   * Renders a notice inside the summary when access is denied.
+   */
+  function updateAccessGate(details, accessNotice) {
+    var body = details.querySelector('.admin-panel-body');
+    if (!walletReady()) {
+      if (accessNotice) accessNotice.textContent = '— connect wallet to verify access';
+      if (body) body.hidden = true;
+      return;
+    }
+    isOwner().then(function (owner) {
+      if (owner) {
+        if (accessNotice) accessNotice.textContent = '';
+        if (body) body.hidden = false;
+      } else {
+        if (accessNotice) accessNotice.textContent = '— connected wallet is not the contract owner';
+        if (body) body.hidden = true;
+      }
+    });
+  }
+
 
   function init() {
     // Only wire up when the panel is actually opened (lazy)
     var details = document.getElementById('admin-panel');
     if (!details) return;
+
+    // Small notice injected into the summary for access feedback
+    var accessNotice = document.createElement('span');
+    accessNotice.className = 'admin-access-notice';
+    var summary = details.querySelector('summary');
+    if (summary) summary.appendChild(accessNotice);
+
+    // Hide body until owner is verified on first open
+    var body = details.querySelector('.admin-panel-body');
+    if (body) body.hidden = true;
 
     var wired = false;
     function wireAll() {
@@ -537,7 +599,10 @@
     }
 
     details.addEventListener('toggle', function () {
-      if (details.open) wireAll();
+      if (details.open) {
+        updateAccessGate(details, accessNotice);
+        wireAll();
+      }
     });
 
     updateWalletNotice();
@@ -545,6 +610,8 @@
     if (GTPAppState && typeof GTPAppState.subscribe === 'function') {
       GTPAppState.subscribe(function () {
         updateWalletNotice();
+        // Re-evaluate access whenever wallet state changes while panel is open
+        if (details.open) updateAccessGate(details, accessNotice);
       });
     }
   }
