@@ -713,6 +713,8 @@ main,
 
 [data-route-variant="unified-root"] .site-background-video {
   opacity: 0.32;
+  transform: scale(0.88);
+  transform-origin: center;
 }
 
 [data-route-variant="unified-root"] .site-background-overlay {
