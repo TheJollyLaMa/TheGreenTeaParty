@@ -1,0 +1,127 @@
+/* Steward Panel — contract interaction forms */
+
+.steward-panel-section {
+  padding: clamp(2.5rem, 6vw, 4rem) 0;
+  border-top: 1px solid var(--border);
+}
+
+.steward-panel-grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(min(100%, 280px), 1fr));
+  gap: 1.5rem;
+  margin-top: 2rem;
+}
+
+.steward-form-card {
+  background: var(--surface);
+  border: 1px solid var(--border);
+  border-radius: 0.75rem;
+  padding: 1.5rem;
+  display: flex;
+  flex-direction: column;
+  gap: 1rem;
+}
+
+.steward-form-card h3 {
+  margin: 0 0 0.25rem;
+  font-size: 1rem;
+  color: var(--accent);
+}
+
+.steward-form-card p.form-desc {
+  margin: 0;
+  font-size: 0.85rem;
+  color: var(--muted);
+}
+
+.steward-form {
+  display: flex;
+  flex-direction: column;
+  gap: 0.75rem;
+}
+
+.steward-form label {
+  display: flex;
+  flex-direction: column;
+  gap: 0.3rem;
+  font-size: 0.85rem;
+  color: var(--muted);
+}
+
+.steward-form input,
+.steward-form select,
+.steward-form textarea {
+  background: var(--bg);
+  border: 1px solid var(--border);
+  border-radius: 0.375rem;
+  color: var(--text);
+  font-size: 0.875rem;
+  padding: 0.45rem 0.6rem;
+  width: 100%;
+}
+
+.steward-form input:focus,
+.steward-form select:focus,
+.steward-form textarea:focus {
+  outline: 2px solid var(--accent);
+  outline-offset: 1px;
+}
+
+.steward-form textarea {
+  resize: vertical;
+  min-height: 70px;
+}
+
+.steward-submit-btn {
+  align-self: flex-start;
+  background: var(--accent);
+  border: none;
+  border-radius: 0.375rem;
+  color: #0f172a;
+  cursor: pointer;
+  font-size: 0.875rem;
+  font-weight: 600;
+  padding: 0.5rem 1rem;
+  transition: background 0.15s;
+}
+
+.steward-submit-btn:hover:not(:disabled) {
+  background: var(--accent-dark);
+  color: #f8fafc;
+}
+
+.steward-submit-btn:disabled {
+  opacity: 0.55;
+  cursor: not-allowed;
+}
+
+.steward-form-status {
+  font-size: 0.8rem;
+  min-height: 1.2em;
+  border-radius: 0.25rem;
+  padding: 0.35rem 0.5rem;
+}
+
+.steward-form-status:empty {
+  display: none;
+}
+
+.steward-form-status--pending {
+  color: var(--muted);
+}
+
+.steward-form-status--success {
+  background: rgba(34, 197, 94, 0.12);
+  color: #86efac;
+}
+
+.steward-form-status--error {
+  background: rgba(239, 68, 68, 0.12);
+  color: #fca5a5;
+}
+
+.steward-wallet-notice {
+  color: var(--muted);
+  font-size: 0.83rem;
+  margin: 0;
+}

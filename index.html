@@ -10,6 +10,7 @@
     <title>Green Tea Party</title>
     <link rel="icon" href="assets/favicon.png" type="image/png" />
     <link rel="stylesheet" href="styles/spiral.css" />
+    <link rel="stylesheet" href="styles/steward-panel.css" />
     <link rel="stylesheet" href="styles.css" />
   </head>
   <body
@@ -97,6 +98,10 @@
 
             <a href="#public-ledger" class="toolbar-back" aria-label="Jump to the public ledger">
               ↓ Public Ledger
+            </a>
+
+            <a href="#steward-panel" class="toolbar-back" aria-label="Jump to the steward panel">
+              ✎ Steward Panel
             </a>
 
             <div
@@ -286,6 +291,118 @@
           </blockquote>
         </div>
       </section>
+
+      <section id="steward-panel" class="panel-section steward-panel-section" aria-labelledby="steward-panel-heading">
+        <div class="container">
+          <p class="eyebrow">On-chain actions</p>
+          <h2 id="steward-panel-heading">Steward Panel</h2>
+          <p class="section-lead">
+            Connect your wallet on Optimism, then use the forms below to register projects, contribute ETH to a project treasury, or withdraw funds as a steward.
+          </p>
+          <p class="steward-wallet-notice" aria-live="polite"></p>
+
+          <div class="steward-panel-grid">
+
+            <!-- Register Project -->
+            <div class="steward-form-card">
+              <h3>Register Project</h3>
+              <p class="form-desc">
+                Call <code>registerProject</code> on the ProjectRegistry. The Project ID becomes a <code>bytes32</code> key (keccak256 of the string you enter). Fill in the metadata fields or paste a URI directly.
+              </p>
+              <form id="steward-register-form" class="steward-form" novalidate>
+                <label>
+                  Project ID (slug)
+                  <input type="text" name="project-id" placeholder="e.g. green-tea-hut-01" required autocomplete="off" />
+                </label>
+                <label>
+                  Steward address
+                  <input type="text" name="steward-address" placeholder="0x…" required autocomplete="off" />
+                </label>
+                <label>
+                  Name
+                  <input type="text" name="meta-name" placeholder="The Green Tea Hut #1" autocomplete="off" />
+                </label>
+                <label>
+                  Track
+                  <select name="meta-track">
+                    <option value="">— select —</option>
+                    <option value="Green Tea">Green Tea</option>
+                    <option value="Blue Tea">Blue Tea</option>
+                    <option value="Red Rice">Red Rice</option>
+                    <option value="Purple Sage">Purple Sage</option>
+                    <option value="Golden Root">Golden Root</option>
+                    <option value="Silver Stream">Silver Stream</option>
+                  </select>
+                </label>
+                <label>
+                  Funding goal (USD)
+                  <input type="number" name="meta-goal" placeholder="12000" min="0" step="1" />
+                </label>
+                <label>
+                  Description
+                  <textarea name="meta-desc" placeholder="Short project description…"></textarea>
+                </label>
+                <label>
+                  Metadata URI (overrides fields above if set)
+                  <input type="text" name="metadata-uri" placeholder='{"id":"…"} or ipfs://… or https://…' autocomplete="off" />
+                </label>
+                <div class="steward-form-status" id="steward-register-status" aria-live="polite"></div>
+                <div style="display:flex;gap:0.5rem">
+                  <button type="submit" class="steward-submit-btn">Register Project</button>
+                  <button type="reset" class="btn btn-secondary" style="font-size:0.8rem;padding:0.4rem 0.75rem">Clear</button>
+                </div>
+              </form>
+            </div>
+
+            <!-- Contribute -->
+            <div class="steward-form-card">
+              <h3>Contribute ETH</h3>
+              <p class="form-desc">
+                Send ETH to a registered project's treasury balance via <code>contribute(projectId)</code>.
+              </p>
+              <form id="steward-contribute-form" class="steward-form" novalidate>
+                <label>
+                  Project ID (slug)
+                  <input type="text" name="contrib-project-id" placeholder="e.g. green-tea-hut-01" required autocomplete="off" />
+                </label>
+                <label>
+                  Amount (ETH)
+                  <input type="number" name="contrib-amount" placeholder="0.01" min="0" step="any" required />
+                </label>
+                <div class="steward-form-status" id="steward-contribute-status" aria-live="polite"></div>
+                <div style="display:flex;gap:0.5rem">
+                  <button type="submit" class="steward-submit-btn">Contribute</button>
+                  <button type="reset" class="btn btn-secondary" style="font-size:0.8rem;padding:0.4rem 0.75rem">Clear</button>
+                </div>
+              </form>
+            </div>
+
+            <!-- Withdraw -->
+            <div class="steward-form-card">
+              <h3>Withdraw</h3>
+              <p class="form-desc">
+                Withdraw ETH from a project's treasury as the steward via <code>withdraw(projectId, amount)</code>.
+              </p>
+              <form id="steward-withdraw-form" class="steward-form" novalidate>
+                <label>
+                  Project ID (slug)
+                  <input type="text" name="withdraw-project-id" placeholder="e.g. green-tea-hut-01" required autocomplete="off" />
+                </label>
+                <label>
+                  Amount (ETH)
+                  <input type="number" name="withdraw-amount" placeholder="0.01" min="0" step="any" required />
+                </label>
+                <div class="steward-form-status" id="steward-withdraw-status" aria-live="polite"></div>
+                <div style="display:flex;gap:0.5rem">
+                  <button type="submit" class="steward-submit-btn">Withdraw</button>
+                  <button type="reset" class="btn btn-secondary" style="font-size:0.8rem;padding:0.4rem 0.75rem">Clear</button>
+                </div>
+              </form>
+            </div>
+
+          </div>
+        </div>
+      </section>
     </main>
 
     <footer class="site-footer">
@@ -311,6 +428,7 @@
     <script src="scripts/data-layer.js"></script>
     <script src="scripts/kpi.js"></script>
     <script src="scripts/spiral.js"></script>
+    <script src="scripts/steward-panel.js"></script>
     <script src="app.js"></script>
   </body>
 </html>
