@@ -596,8 +596,10 @@ const navigateToSection = (hash) => {
   }
 
   if (window.location.hash !== hash) {
-    window.history.replaceState(null, '', hash);
+    window.location.hash = hash;
+    return;
   }
+
   target.scrollIntoView({ behavior: 'smooth', block: 'start' });
 };
 
