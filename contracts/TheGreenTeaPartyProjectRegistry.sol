@@ -1,9 +1,7 @@
 // SPDX-License-Identifier: MIT
 pragma solidity ^0.8.24;
 
-import "./interfaces/IProjectRegistry.sol";
-
-contract ProjectRegistry is IProjectRegistry {
+contract TheGreenTeaPartyProjectRegistry {
     enum Status {
         Draft,
         Active,
@@ -136,15 +134,15 @@ contract ProjectRegistry is IProjectRegistry {
         emit ProjectStewardTransferred(projectId, previousSteward, nextSteward);
     }
 
-    function projectExists(bytes32 projectId) external view override returns (bool) {
+    function projectExists(bytes32 projectId) external view returns (bool) {
         return projects[projectId].exists;
     }
 
-    function getSteward(bytes32 projectId) external view override returns (address) {
+    function getSteward(bytes32 projectId) external view returns (address) {
         return _requireProject(projectId).steward;
     }
 
-    function getStatus(bytes32 projectId) external view override returns (uint8) {
+    function getStatus(bytes32 projectId) external view returns (uint8) {
         return uint8(_requireProject(projectId).status);
     }
 

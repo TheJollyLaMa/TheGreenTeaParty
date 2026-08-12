@@ -5,6 +5,7 @@ const projectGrid = document.querySelector('#project-grid');
 const activityList = document.querySelector('#activity-list');
 const publicLedgerBody = document.querySelector('#public-ledger-body');
 const ledgerViewMoreBtn = document.querySelector('#ledger-view-more-btn');
+const ledgerRefreshBtn = document.querySelector('#ledger-refresh-btn');
 const ledgerWalletNetworkChip = document.querySelector('#ledger-wallet-network-chip');
 const trackFilter = document.querySelector('#track-filter');
 const stageFilter = document.querySelector('#stage-filter');
@@ -230,7 +231,10 @@ const renderPublicLedger = () => {
   const visibleEntries = entries.slice(0, ledgerVisibleCount);
 
   if (!visibleEntries.length) {
-    renderPublicLedgerState('empty', 'No contract ledger rows available yet.');
+    const emptyMsg = modeInfo.isApp
+      ? 'No on-chain entries yet — this ledger is a clean slate. Connect your wallet on Optimism and make the first entry.'
+      : 'No contract ledger rows available yet.';
+    renderPublicLedgerState('empty', emptyMsg);
     return;
   }
 
@@ -732,5 +736,25 @@ if (ledgerViewMoreBtn) {
   ledgerViewMoreBtn.addEventListener('click', () => {
     ledgerVisibleCount += LEDGER_PAGE_SIZE;
     renderPublicLedger();
+  });
+}
+
+if (ledgerRefreshBtn) {
+  ledgerRefreshBtn.addEventListener('click', () => {
+    ledgerRefreshBtn.disabled = true;
+    ledgerRefreshBtn.textContent = '↺ Refreshing…';
+    ledgerVisibleCount = LEDGER_PAGE_SIZE;
+    if (isOperationsLanding() && publicLedgerBody) {
+      renderPublicLedgerState('loading', 'Querying Optimism for new entries…');
+    }
+    GTPData.reloadActivity().then(() => {
+      renderActivity();
+      renderOperationsSnapshots();
+    }).catch((err) => {
+      console.warn('[app] Ledger refresh failed:', err);
+    }).finally(() => {
+      ledgerRefreshBtn.disabled = false;
+      ledgerRefreshBtn.textContent = '↺ Refresh';
+    });
   });
 }

@@ -1,0 +1,329 @@
+/* Admin Panel — collapsible contract console */
+
+/* ── Toggle bar ──────────────────────────────────────────────────────────── */
+
+.admin-panel-details {
+  border-top: 1px solid var(--border);
+  background: var(--bg);
+}
+
+.admin-panel-summary {
+  list-style: none;
+  cursor: pointer;
+  user-select: none;
+  display: flex;
+  align-items: center;
+  gap: 0.6rem;
+  padding: 0.9rem clamp(1rem, 4vw, 2.5rem);
+  font-size: 0.85rem;
+  font-weight: 600;
+  letter-spacing: 0.04em;
+  color: var(--muted);
+  background: var(--bg);
+  border-bottom: 1px solid transparent;
+  transition: color 0.15s, background 0.15s;
+}
+
+.admin-panel-summary::-webkit-details-marker {
+  display: none;
+}
+
+.admin-panel-summary:hover {
+  color: var(--text);
+  background: var(--bg-soft);
+}
+
+.admin-panel-summary .admin-lock {
+  font-size: 1rem;
+  line-height: 1;
+}
+
+.admin-panel-summary .admin-label {
+  flex: 1;
+}
+
+.admin-panel-summary .admin-chevron {
+  display: inline-block;
+  font-style: normal;
+  transition: transform 0.2s ease;
+  font-size: 0.75rem;
+}
+
+.admin-panel-details[open] .admin-panel-summary {
+  color: var(--text);
+  border-bottom-color: var(--border);
+}
+
+.admin-panel-details[open] .admin-chevron {
+  transform: rotate(180deg);
+}
+
+/* ── Panel body ──────────────────────────────────────────────────────────── */
+
+.admin-panel-body {
+  padding: clamp(1.5rem, 4vw, 2.5rem) clamp(1rem, 4vw, 2.5rem);
+  background: var(--bg-soft);
+}
+
+.admin-panel-body .container {
+  display: flex;
+  flex-direction: column;
+  gap: 2.5rem;
+}
+
+/* ── Contract group ──────────────────────────────────────────────────────── */
+
+.admin-contract-group {
+  display: flex;
+  flex-direction: column;
+  gap: 1rem;
+}
+
+.admin-contract-header {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: baseline;
+  gap: 0.5rem 1rem;
+}
+
+.admin-contract-header h3 {
+  margin: 0;
+  font-size: 0.95rem;
+  color: var(--text);
+}
+
+.admin-contract-address {
+  display: inline-flex;
+  align-items: center;
+  gap: 0.3rem;
+  font-family: 'Courier New', Courier, monospace;
+  font-size: 0.75rem;
+  color: var(--muted);
+  background: rgba(239, 68, 68, 0.07);
+  border: 1px solid rgba(239, 68, 68, 0.18);
+  border-radius: 999px;
+  padding: 0.15rem 0.65rem;
+  text-decoration: none;
+  transition: border-color 0.15s, color 0.15s;
+}
+
+.admin-contract-address:hover {
+  border-color: rgba(239, 68, 68, 0.5);
+  color: var(--text);
+}
+
+/* ── Function sub-groups ─────────────────────────────────────────────────── */
+
+.admin-fn-group-label {
+  font-size: 0.7rem;
+  font-weight: 700;
+  letter-spacing: 0.08em;
+  text-transform: uppercase;
+  color: var(--muted);
+  margin: 0.5rem 0 0.25rem;
+}
+
+.admin-fn-grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fill, minmax(min(100%, 300px), 1fr));
+  gap: 1rem;
+}
+
+/* ── Function card ───────────────────────────────────────────────────────── */
+
+.admin-fn-card {
+  background: var(--surface);
+  border: 1px solid rgba(239, 68, 68, 0.15);
+  border-radius: 0.6rem;
+  padding: 1rem 1.1rem;
+  display: flex;
+  flex-direction: column;
+  gap: 0.65rem;
+}
+
+.admin-fn-card h4 {
+  margin: 0;
+  font-size: 0.85rem;
+  font-family: 'Courier New', Courier, monospace;
+  color: #fca5a5;
+}
+
+.admin-fn-card.admin-fn-read h4 {
+  color: #86efac;
+}
+
+.admin-fn-form {
+  display: flex;
+  flex-direction: column;
+  gap: 0.5rem;
+}
+
+.admin-fn-form label {
+  display: flex;
+  flex-direction: column;
+  gap: 0.2rem;
+  font-size: 0.78rem;
+  color: var(--muted);
+}
+
+.admin-fn-form input,
+.admin-fn-form select,
+.admin-fn-form textarea {
+  background: var(--bg);
+  border: 1px solid var(--border);
+  border-radius: 0.35rem;
+  color: var(--text);
+  font-size: 0.8rem;
+  padding: 0.35rem 0.6rem;
+  width: 100%;
+  box-sizing: border-box;
+  transition: border-color 0.15s;
+}
+
+.admin-fn-form input:focus,
+.admin-fn-form select:focus,
+.admin-fn-form textarea:focus {
+  outline: none;
+  border-color: var(--accent);
+}
+
+.admin-fn-form textarea {
+  resize: vertical;
+  min-height: 4rem;
+}
+
+/* ── Buttons ─────────────────────────────────────────────────────────────── */
+
+.admin-fn-actions {
+  display: flex;
+  gap: 0.5rem;
+}
+
+.admin-call-btn {
+  background: rgba(34, 197, 94, 0.12);
+  border: 1px solid rgba(34, 197, 94, 0.35);
+  border-radius: 0.375rem;
+  color: #86efac;
+  cursor: pointer;
+  font-size: 0.78rem;
+  font-weight: 600;
+  padding: 0.35rem 0.85rem;
+  transition: background 0.15s, border-color 0.15s;
+}
+
+.admin-call-btn:hover:not(:disabled) {
+  background: rgba(34, 197, 94, 0.22);
+  border-color: rgba(34, 197, 94, 0.65);
+}
+
+.admin-call-btn:disabled {
+  opacity: 0.5;
+  cursor: not-allowed;
+}
+
+.admin-write-btn {
+  background: rgba(239, 68, 68, 0.1);
+  border: 1px solid rgba(239, 68, 68, 0.3);
+  border-radius: 0.375rem;
+  color: #fca5a5;
+  cursor: pointer;
+  font-size: 0.78rem;
+  font-weight: 600;
+  padding: 0.35rem 0.85rem;
+  transition: background 0.15s, border-color 0.15s;
+}
+
+.admin-write-btn:hover:not(:disabled) {
+  background: rgba(239, 68, 68, 0.2);
+  border-color: rgba(239, 68, 68, 0.6);
+}
+
+.admin-write-btn:disabled {
+  opacity: 0.5;
+  cursor: not-allowed;
+}
+
+.admin-clear-btn {
+  background: transparent;
+  border: 1px solid var(--border);
+  border-radius: 0.375rem;
+  color: var(--muted);
+  cursor: pointer;
+  font-size: 0.78rem;
+  padding: 0.35rem 0.75rem;
+  transition: border-color 0.15s, color 0.15s;
+}
+
+.admin-clear-btn:hover {
+  border-color: var(--accent);
+  color: var(--text);
+}
+
+/* ── Read output ─────────────────────────────────────────────────────────── */
+
+.admin-read-output {
+  display: none;
+  background: var(--bg);
+  border: 1px solid var(--border);
+  border-radius: 0.35rem;
+  font-family: 'Courier New', Courier, monospace;
+  font-size: 0.78rem;
+  color: #86efac;
+  padding: 0.5rem 0.75rem;
+  white-space: pre-wrap;
+  word-break: break-all;
+}
+
+.admin-read-output.visible {
+  display: block;
+}
+
+/* ── Status line ─────────────────────────────────────────────────────────── */
+
+.admin-fn-status {
+  font-size: 0.78rem;
+  border-radius: 0.25rem;
+  padding: 0.2rem 0;
+  min-height: 1.2em;
+}
+
+.admin-fn-status--pending {
+  color: var(--muted);
+}
+
+.admin-fn-status--success {
+  background: rgba(34, 197, 94, 0.1);
+  color: #86efac;
+  padding: 0.2rem 0.5rem;
+}
+
+.admin-fn-status--error {
+  background: rgba(239, 68, 68, 0.1);
+  color: #fca5a5;
+  padding: 0.2rem 0.5rem;
+}
+
+/* ── Wallet notice ───────────────────────────────────────────────────────── */
+
+.admin-wallet-notice {
+  font-size: 0.8rem;
+  color: var(--muted);
+  margin: 0 0 0.25rem;
+}
+
+.admin-access-notice {
+  font-size: 0.75rem;
+  color: #fca5a5;
+  font-weight: 400;
+  font-style: italic;
+}
+
+.admin-access-gate-notice {
+  font-size: 0.9rem;
+  color: var(--muted);
+  padding: 1rem 1.5rem;
+  margin: 0;
+}
+.admin-access-gate-notice:empty {
+  display: none;
+}

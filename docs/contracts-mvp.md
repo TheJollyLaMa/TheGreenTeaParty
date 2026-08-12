@@ -1,18 +1,18 @@
-# Contracts MVP — Project Registry, Treasury, Profile Pointers
+# Contracts MVP — TheGreenTeaPartyProjectRegistry, TheGreenTeaPartyTreasury, TheGreenTeaPartyProfileRegistry
 
 ## Scope
 
 This MVP adds three intentionally small Solidity contracts for app mode:
 
-- `contracts/ProjectRegistry.sol`
-- `contracts/Treasury.sol`
-- `contracts/ProfileRegistry.sol`
+- `contracts/TheGreenTeaPartyProjectRegistry.sol`
+- `contracts/TheGreenTeaPartyTreasury.sol`
+- `contracts/TheGreenTeaPartyProfileRegistry.sol`
 
 The goal is one safe, easy-to-reason-about onchain backbone for Green Tea Party before broader multi-project expansion.
 
 ## Storage model
 
-### `ProjectRegistry`
+### `TheGreenTeaPartyProjectRegistry`
 
 - `mapping(bytes32 => Project)` keyed by deterministic `projectId`
 - `Project` stores:
@@ -22,12 +22,12 @@ The goal is one safe, easy-to-reason-about onchain backbone for Green Tea Party 
   - `exists`
 - contract-wide `owner` for initial registration / emergency pause
 
-### `ProfileRegistry`
+### `TheGreenTeaPartyProfileRegistry`
 
 - `mapping(address => string)` from wallet address to profile metadata URI
 - each caller owns and updates only their own pointer
 
-### `Treasury`
+### `TheGreenTeaPartyTreasury`
 
 - immutable `registry` reference for project existence + steward checks
 - `mapping(bytes32 => uint256) projectBalances`
@@ -47,7 +47,7 @@ The goal is one safe, easy-to-reason-about onchain backbone for Green Tea Party 
 
 - `ProfileURIUpdated`
 
-### Treasury events
+### TheGreenTeaPartyTreasury events
 
 - `ContributionReceived`
 - `PayoutAddressUpdated`
@@ -59,9 +59,9 @@ Pause/unpause and ownership transfer events are also emitted for operational vis
 
 - Registry `owner` is trusted to create initial projects and trigger emergency pause.
 - A project `steward` is trusted to maintain metadata/status and control payouts for that project.
-- Treasury only accepts contributions for existing projects in `Active` status.
+- TheGreenTeaPartyTreasury only accepts contributions for existing projects in `Active` status.
 - Withdrawals are limited to the steward or a steward-configured payout address.
-- Treasury uses a simple reentrancy lock and checks-effects-interactions ordering.
+- TheGreenTeaPartyTreasury uses a simple reentrancy lock and checks-effects-interactions ordering.
 - Registry status transitions are intentionally narrow:
   - `Draft -> Active | Paused`
   - `Active -> Paused | Completed`

@@ -1,0 +1,10 @@
+{
+  "chainId": 10,
+  "network": "optimism",
+  "contracts": {
+    "projectRegistry": "0x1b093804d9BF8572F9ea58e24E051580Ed608F64",
+    "profileRegistry": "0xd66AdB0E70303D4e6daf8C963c7947f9ae722446",
+    "treasury": "0xebE0D6Fa315CeA75D491219d5D9CC13136580144"
+  },
+  "_note": "Addresses are populated. Add deployedAt, deployer, and owner after the full deployment metadata is confirmed."
+}

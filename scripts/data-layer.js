@@ -437,11 +437,13 @@ var GTPData = (function () {
 
   // ---- Data loading ------------------------------------------------------------
 
+  var _basePath = '';
+
   function load(basePath) {
-    basePath = basePath || '';
+    _basePath = basePath || '';
     if (_loadPromise) return _loadPromise;
 
-    _adapter = createAdapter(basePath);
+    _adapter = createAdapter(_basePath);
 
     _loadPromise = Promise.all([
       _adapter.getProjects(),
@@ -491,7 +493,37 @@ var GTPData = (function () {
     return _loadPromise;
   }
 
-  // ---- Selectors ---------------------------------------------------------------
+  // ---- Activity reload (call after a confirmed on-chain write) ----------------
+
+  function reloadActivity() {
+    if (!_adapter || typeof _adapter.getActivity !== 'function') {
+      return Promise.resolve([]);
+    }
+    return _adapter.getActivity().then(function (rawActivity) {
+      if (!Array.isArray(rawActivity)) rawActivity = [];
+      _activity = attachAssociationContextToActivityRows(
+        normalizeActivityRows(rawActivity),
+        _associations,
+        _projects
+      );
+      return _activity.slice();
+    }).catch(function (err) {
+      console.warn('[GTPData] reloadActivity failed', err);
+      return _activity.slice();
+    });
+  }
+
+  // ---- Adapter write-method pass-throughs -------------------------------------
+
+  function callAdapter(method) {
+    var args = Array.prototype.slice.call(arguments, 1);
+    if (!_adapter || typeof _adapter[method] !== 'function') {
+      return Promise.reject(new Error('[GTPData] Adapter not ready or method "' + method + '" unavailable.'));
+    }
+    return _adapter[method].apply(_adapter, args);
+  }
+
+
 
   function getProjects() { return _projects.slice(); }
   function getAssociations() { return _associations.slice(); }
@@ -600,6 +632,20 @@ var GTPData = (function () {
 
   return {
     load: load,
+    reloadActivity: reloadActivity,
+    registerProject: function (projectId, steward, metadataURI) { return callAdapter('registerProject', projectId, steward, metadataURI); },
+    updateProjectMetadataURI: function (projectId, metadataURI) { return callAdapter('updateProjectMetadataURI', projectId, metadataURI); },
+    updateProjectStatus: function (projectId, nextStatus) { return callAdapter('updateProjectStatus', projectId, nextStatus); },
+    transferProjectSteward: function (projectId, nextSteward) { return callAdapter('transferProjectSteward', projectId, nextSteward); },
+    setProfilePointer: function (profileURI) { return callAdapter('setProfilePointer', profileURI); },
+    contribute: function (projectId, options) { return callAdapter('contribute', projectId, options); },
+    setPayoutAddress: function (projectId, payoutAddress) { return callAdapter('setPayoutAddress', projectId, payoutAddress); },
+    withdraw: function (projectId, amountWei) { return callAdapter('withdraw', projectId, amountWei); },
+    getProjectRecord: function (projectId) { return callAdapter('getProjectRecord', projectId); },
+    getProjectBalance: function (projectId) { return callAdapter('getProjectBalance', projectId); },
+    getProfilePointer: function (account) { return callAdapter('getProfilePointer', account); },
+    getContractState: function () { return callAdapter('getContractState'); },
+
     getProjects: getProjects,
     getAssociations: getAssociations,
     getActivity: getActivity,
