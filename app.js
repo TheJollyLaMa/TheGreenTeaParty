@@ -601,20 +601,27 @@ const navigateToSection = (hash) => {
   };
 
   if (window.location.hash !== hash) {
-    const handleHashChange = () => {
-      window.removeEventListener('hashchange', handleHashChange);
-      performScroll();
-    };
-    window.addEventListener('hashchange', handleHashChange);
     window.location.hash = hash;
-    return;
   }
 
   performScroll();
 };
 
+const unbindUnifiedRouteNavigation = () => {
+  if (unifiedRouteKeydownHandler) {
+    document.removeEventListener('keydown', unifiedRouteKeydownHandler);
+    unifiedRouteKeydownHandler = null;
+  }
+  unifiedRouteNavigationBound = false;
+};
+
 const bindUnifiedRouteNavigation = () => {
-  if (document.body?.dataset?.routeVariant !== 'unified-root' || unifiedRouteNavigationBound) {
+  if (document.body?.dataset?.routeVariant !== 'unified-root') {
+    unbindUnifiedRouteNavigation();
+    return;
+  }
+
+  if (unifiedRouteNavigationBound) {
     return;
   }
 
