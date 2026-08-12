@@ -29,7 +29,7 @@ const shortenAddress = (address) => {
   return `${address.slice(0, 6)}…${address.slice(-4)}`;
 };
 
-const isOperationsLanding = () => modeInfo.isApp && !!operationsSnapshotGrid;
+const isOperationsLanding = () => modeInfo.isApp && document.body.dataset.page === 'fund-operations';
 
 const formatStatusLabel = (value) => {
   if (!value) {
@@ -242,17 +242,28 @@ const renderOperationsSnapshots = () => {
     }
   ];
 
-  operationsSnapshotGrid.innerHTML = snapshotItems
-    .map(
-      (item) => `
-        <li class="metric-card operations-snapshot-card">
-          <div class="metric-label">${item.label}</div>
-          <p class="metric-value">${item.value}</p>
-          <p class="project-meta">${item.meta}</p>
-        </li>
-      `
-    )
-    .join('');
+  operationsSnapshotGrid.innerHTML = '';
+  snapshotItems.forEach((item) => {
+    const card = document.createElement('li');
+    card.className = 'metric-card operations-snapshot-card';
+
+    const label = document.createElement('div');
+    label.className = 'metric-label';
+    label.textContent = item.label;
+
+    const value = document.createElement('p');
+    value.className = 'metric-value';
+    value.textContent = item.value;
+
+    const meta = document.createElement('p');
+    meta.className = 'project-meta';
+    meta.textContent = item.meta;
+
+    card.appendChild(label);
+    card.appendChild(value);
+    card.appendChild(meta);
+    operationsSnapshotGrid.appendChild(card);
+  });
 };
 
 const renderProjects = () => {

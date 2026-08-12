@@ -3,6 +3,9 @@
 var GTPAppDataAdapter = (function () {
   'use strict';
 
+  // Keeps the operations landing aligned with the existing mock dashboard's $9,200 available-funds placeholder.
+  var FIXTURE_AVAILABLE_FUNDS_USD = 9200;
+
   function fetchJson(url) {
     return fetch(url).then(function (res) {
       if (!res.ok) {
@@ -30,9 +33,13 @@ var GTPAppDataAdapter = (function () {
       },
       getActivity: function () {
         return fetch(basePath + 'data/activity.json').then(function (res) {
-          if (!res.ok) return [];
+          if (!res.ok) {
+            console.warn('[GTPAppDataAdapter] Activity feed unavailable at ' + (basePath + 'data/activity.json') + ' (HTTP ' + res.status + ')');
+            return [];
+          }
           return res.json();
         }).catch(function () {
+          console.warn('[GTPAppDataAdapter] Activity feed request failed. Returning empty activity list.');
           return [];
         });
       },
@@ -44,7 +51,7 @@ var GTPAppDataAdapter = (function () {
         return contractAdapter.getContractState().then(function (contractState) {
           var baseReason = readiness.reason || contractState.reason || 'Wallet connection required to load live contract data.';
           return {
-            availableFunds: 9200,
+            availableFunds: FIXTURE_AVAILABLE_FUNDS_USD,
             placeholder: true,
             reason: baseReason + ' Showing a fixture-backed fund snapshot until live contract reads are configured.'
           };
