@@ -459,6 +459,100 @@ blockquote {
   color: var(--muted);
 }
 
+.ledger-header-row {
+  display: flex;
+  align-items: center;
+  gap: 0.65rem;
+  flex-wrap: wrap;
+}
+
+.ledger-chip {
+  display: inline-flex;
+  align-items: center;
+  border: 1px solid var(--border);
+  border-radius: 999px;
+  padding: 0.2rem 0.55rem;
+  font-size: 0.78rem;
+  color: var(--muted);
+  background: var(--surface);
+}
+
+.public-ledger-shell {
+  margin-top: 1rem;
+  overflow-x: auto;
+}
+
+.public-ledger-table {
+  width: 100%;
+  min-width: 920px;
+  border-collapse: collapse;
+  background: var(--surface);
+  border: 1px solid var(--border);
+  border-radius: 0.6rem;
+  overflow: hidden;
+}
+
+.public-ledger-table th,
+.public-ledger-table td {
+  padding: 0.65rem 0.7rem;
+  border-bottom: 1px solid var(--border);
+  text-align: left;
+  vertical-align: top;
+  font-size: 0.9rem;
+}
+
+.public-ledger-table th {
+  color: var(--muted);
+  font-size: 0.8rem;
+  letter-spacing: 0.01em;
+}
+
+.public-ledger-table tbody tr:last-child td {
+  border-bottom: none;
+}
+
+.public-ledger-state-row td {
+  text-align: center;
+}
+
+.public-ledger-state {
+  margin: 0.2rem 0;
+  color: var(--muted);
+}
+
+.public-ledger-state--error {
+  color: #f59e0b;
+}
+
+.ledger-status-badge {
+  display: inline-flex;
+  align-items: center;
+  border-radius: 999px;
+  border: 1px solid var(--border);
+  padding: 0.1rem 0.45rem;
+  font-size: 0.78rem;
+  color: var(--muted);
+}
+
+.ledger-status-badge--confirmed {
+  border-color: #22c55e;
+  color: #22c55e;
+}
+
+.ledger-status-badge--pending {
+  border-color: #f59e0b;
+  color: #f59e0b;
+}
+
+.ledger-status-badge--failed {
+  border-color: #ef4444;
+  color: #ef4444;
+}
+
+.ledger-view-more-btn {
+  margin-top: 0.75rem;
+}
+
 .app-state-warning {
   margin: 0.5rem 0 0;
   color: #f59e0b;

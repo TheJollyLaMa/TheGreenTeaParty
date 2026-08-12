@@ -91,11 +91,34 @@
 
       <section id="public-ledger" aria-labelledby="public-ledger-heading">
         <div class="container">
-          <h2 id="public-ledger-heading">Public ledger</h2>
+          <div class="ledger-header-row">
+            <h2 id="public-ledger-heading">Public ledger (contract read-only)</h2>
+            <span id="ledger-wallet-network-chip" class="ledger-chip" aria-live="polite"></span>
+          </div>
           <p class="section-lead">
             Recent fund activity is surfaced here so stewards can follow contributions and milestones in public.
           </p>
-          <ul id="activity-list" class="activity-list" aria-live="polite"></ul>
+          <div class="public-ledger-shell" aria-live="polite">
+            <table id="public-ledger-table" class="public-ledger-table">
+              <thead>
+                <tr>
+                  <th scope="col">ID</th>
+                  <th scope="col">Date</th>
+                  <th scope="col">Type</th>
+                  <th scope="col">Status</th>
+                  <th scope="col">Amount</th>
+                  <th scope="col">Category</th>
+                  <th scope="col">Description</th>
+                  <th scope="col">Notes</th>
+                  <th scope="col">Proof link</th>
+                </tr>
+              </thead>
+              <tbody id="public-ledger-body"></tbody>
+            </table>
+            <button id="ledger-view-more-btn" class="btn btn-secondary ledger-view-more-btn" type="button" hidden>
+              View more
+            </button>
+          </div>
         </div>
       </section>
     </main>

@@ -30,8 +30,15 @@
     "projectId": "proj-015"
   },
   {
+    "id": "ledg-2026-07-30-001",
     "type": "Contribution",
+    "direction": "incoming",
+    "status": "confirmed",
+    "category": "donation",
     "title": "Anonymous donor supported Green Tea Hut",
+    "description": "Community donation to support Green Tea Hut operations.",
+    "notes": "Matched by weekend stewardship circle.",
+    "proofUrl": "https://example.org/proof/green-tea-hut-contribution-2026-07-30",
     "amount": 350,
     "date": "2026-07-30",
     "projectId": "proj-001"
@@ -97,8 +104,15 @@
     "date": "2026-07-27"
   },
   {
+    "id": "ledg-2026-07-27-001",
     "type": "Contribution",
+    "direction": "incoming",
+    "status": "pending",
+    "category": "grant-match",
     "title": "Grant match for Traditional Crop Seed Vault",
+    "description": "Grant matching funds posted for the seed vault campaign.",
+    "notes": "Settlement finalization in progress.",
+    "proofUrl": "https://example.org/proof/seed-vault-grant-match-2026-07-27",
     "amount": 2500,
     "date": "2026-07-27",
     "projectId": "proj-040"
