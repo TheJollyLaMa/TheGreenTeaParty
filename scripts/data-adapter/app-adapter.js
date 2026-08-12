@@ -191,6 +191,9 @@ var GTPAppDataAdapter = (function () {
       description: String((meta && meta.description) || ''),
       repoUrl: (meta && meta.repoUrl) || null,
       artizenUrl: (meta && meta.artizenUrl) || null,
+      ledgerUrl: (meta && meta.ledgerUrl) || null,
+      contractUrl: (meta && meta.contractUrl) || null,
+      githubPagesUrl: (meta && meta.githubPagesUrl) || null,
       nextAction: (meta && meta.nextAction) || null,
       location: (meta && meta.location) || null,
       // On-chain fields surfaced for the panel/detail views

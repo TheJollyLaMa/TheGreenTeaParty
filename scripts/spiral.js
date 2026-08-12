@@ -1354,7 +1354,18 @@
     const artizenLink = node.artizenUrl
       ? `<a href="${escAttr(node.artizenUrl)}" target="_blank" rel="noreferrer">Artizen ↗</a>`
       : '';
-    const linksHtml = repoLink || artizenLink ? `<div class="details-links">${repoLink}${artizenLink}</div>` : '';
+    const ledgerLink = node.ledgerUrl
+      ? `<a href="${escAttr(node.ledgerUrl)}" target="_blank" rel="noreferrer">Public Ledger ↗</a>`
+      : '';
+    const contractLink = node.contractUrl
+      ? `<a href="${escAttr(node.contractUrl)}" target="_blank" rel="noreferrer">Verify Contract ↗</a>`
+      : '';
+    const githubPagesLink = node.githubPagesUrl
+      ? `<a href="${escAttr(node.githubPagesUrl)}" target="_blank" rel="noreferrer">Project Site ↗</a>`
+      : '';
+    const linksHtml = [repoLink, artizenLink, ledgerLink, contractLink, githubPagesLink].filter(Boolean).length
+      ? `<div class="details-links">${[repoLink, artizenLink, ledgerLink, contractLink, githubPagesLink].filter(Boolean).join('')}</div>`
+      : '';
 
     detailsContentEl.innerHTML =
       `<p class="details-track" style="color:${color}">${escHtml(node.track)}</p>` +

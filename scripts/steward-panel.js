@@ -71,11 +71,19 @@
         var track = (form.elements['meta-track'] ? form.elements['meta-track'].value : '').trim();
         var goal = (form.elements['meta-goal'] ? form.elements['meta-goal'].value : '').trim();
         var desc = (form.elements['meta-desc'] ? form.elements['meta-desc'].value : '').trim();
+        var ledgerUrl = (form.elements['meta-ledger-url'] ? form.elements['meta-ledger-url'].value : '').trim();
+        var contractUrl = (form.elements['meta-contract-url'] ? form.elements['meta-contract-url'].value : '').trim();
+        var repoUrl = (form.elements['meta-repo-url'] ? form.elements['meta-repo-url'].value : '').trim();
+        var githubPagesUrl = (form.elements['meta-pages-url'] ? form.elements['meta-pages-url'].value : '').trim();
         var obj = { id: projectId };
         if (name) obj.name = name;
         if (track) obj.track = track;
         if (goal) obj.goal = Number(goal) || 0;
         if (desc) obj.description = desc;
+        if (ledgerUrl) obj.ledgerUrl = ledgerUrl;
+        if (contractUrl) obj.contractUrl = contractUrl;
+        if (repoUrl) obj.repoUrl = repoUrl;
+        if (githubPagesUrl) obj.githubPagesUrl = githubPagesUrl;
         metadataURI = JSON.stringify(obj);
       }
 
