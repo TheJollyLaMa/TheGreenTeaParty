@@ -622,3 +622,155 @@ blockquote {
   outline: 2px solid var(--accent);
   outline-offset: 2px;
 }
+
+html,
+body {
+  min-height: 100%;
+}
+
+body {
+  min-height: 100vh;
+  height: auto;
+  overflow-x: hidden;
+  overflow-y: auto;
+  position: relative;
+}
+
+main,
+.site-footer,
+.wallet-control {
+  position: relative;
+  z-index: 1;
+}
+
+.site-background {
+  position: fixed;
+  inset: 0;
+  z-index: 0;
+  overflow: hidden;
+  pointer-events: none;
+}
+
+.site-background-video,
+.site-background-overlay {
+  position: absolute;
+  inset: 0;
+  width: 100%;
+  height: 100%;
+}
+
+.site-background-video {
+  object-fit: cover;
+  opacity: 0.22;
+}
+
+.site-background-overlay {
+  background:
+    radial-gradient(circle at top, rgba(21, 128, 61, 0.14), transparent 40%),
+    linear-gradient(180deg, rgba(2, 6, 23, 0.82) 0%, rgba(15, 23, 42, 0.74) 45%, rgba(15, 23, 42, 0.9) 100%);
+}
+
+.unified-main {
+  position: relative;
+}
+
+.fractal-landing {
+  padding: 0;
+  border-bottom: none;
+}
+
+.fractal-landing .spiral-shell {
+  min-height: 100vh;
+}
+
+.fractal-intro {
+  position: absolute;
+  top: clamp(4.5rem, 10vw, 6.5rem);
+  left: 1rem;
+  z-index: 18;
+  width: min(38rem, calc(100% - 2rem));
+  padding: clamp(1rem, 2.6vw, 1.5rem);
+  border: 1px solid rgba(255, 255, 255, 0.16);
+  border-radius: 1rem;
+  background: rgba(2, 6, 23, 0.46);
+  backdrop-filter: blur(10px);
+  box-shadow: 0 24px 60px rgba(2, 6, 23, 0.28);
+}
+
+.fractal-intro .eyebrow,
+.fractal-intro .intro,
+.fractal-intro .operations-session-status {
+  color: rgba(248, 250, 252, 0.84);
+}
+
+.fractal-intro .tagline {
+  color: #bbf7d0;
+}
+
+.panel-section {
+  background: rgba(15, 23, 42, 0.72);
+  backdrop-filter: blur(6px);
+}
+
+.panel-section .eyebrow {
+  margin-bottom: 0.4rem;
+}
+
+.public-ledger-shell,
+.app-state-panel,
+.metric-card,
+.project-card,
+.activity-item,
+.kpi-card,
+.operations-link-card,
+.section-grid li,
+.filters select,
+.ledger-chip,
+.wallet-address-pill,
+.public-ledger-table,
+.wallet-warning,
+.wallet-connect-btn,
+.wallet-disconnect-btn {
+  background-color: rgba(31, 41, 55, 0.82);
+}
+
+.wallet-control {
+  padding: 0.75rem;
+  border-radius: 0.9rem;
+  background: rgba(2, 6, 23, 0.5);
+  backdrop-filter: blur(10px);
+}
+
+.public-ledger-table {
+  background: rgba(15, 23, 42, 0.82);
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .site-background-video {
+    display: none;
+  }
+
+  html {
+    scroll-behavior: auto;
+  }
+}
+
+@media (max-width: 900px) {
+  .fractal-intro {
+    top: auto;
+    bottom: 5.5rem;
+    width: min(32rem, calc(100% - 1.5rem));
+  }
+}
+
+@media (max-width: 640px) {
+  .fractal-intro {
+    left: 0.75rem;
+    bottom: 4.75rem;
+    width: calc(100% - 1.5rem);
+  }
+
+  .wallet-control {
+    max-width: calc(100vw - 1.3rem);
+  }
+}

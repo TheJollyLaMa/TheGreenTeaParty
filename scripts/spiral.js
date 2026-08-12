@@ -54,6 +54,7 @@
   const BRANCH_SPREAD = Math.PI * 0.94;
   const VIEW_MARGIN = 120;
   const DRAG_THRESHOLD = 4;
+  const GREEN_TEA_PARTY_ROOT_ID = 'gtp-root';
 
   // ---- Application state --------------------------------------------------------
 
@@ -262,6 +263,10 @@
       };
     });
 
+    if (sorted.some((project) => project.track === 'Green Tea')) {
+      nodes.push(createGreenTeaPartyRoot());
+    }
+
     nodeMap = {};
     nodes.forEach((node) => {
       nodeMap[node.id] = node;
@@ -406,7 +411,30 @@
   }
 
   function chooseTrackRoot(group) {
-    return [...group].sort(compareNodePriority)[0];
+    return group.find((node) => node.id === GREEN_TEA_PARTY_ROOT_ID) || [...group].sort(compareNodePriority)[0];
+  }
+
+  function createGreenTeaPartyRoot() {
+    return {
+      id: GREEN_TEA_PARTY_ROOT_ID,
+      name: 'Green Tea Party',
+      track: 'Green Tea',
+      status: 'active',
+      raised: 0,
+      goal: 0,
+      lastUpdate: '2026-08-12',
+      stewards: 0,
+      description: 'Canonical root for the unified Green Tea Party stewardship constellation.',
+      nextAction: 'Open the fractal, then follow the public ledger below.',
+      x: 0,
+      y: 0,
+      size: 13,
+      degree: 0,
+      depth: 0,
+      trackIndex: TRACK_ORDER.indexOf('Green Tea'),
+      screenX: 0,
+      screenY: 0
+    };
   }
 
   function compareNodePriority(a, b) {
