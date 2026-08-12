@@ -129,9 +129,9 @@ Commit this change. GitHub Pages will serve the updated config automatically.
 
 | Contract | Address | Etherscan |
 |---|---|---|
-| `TheGreenTeaPartyProjectRegistry` | PENDING | — |
-| `TheGreenTeaPartyProfileRegistry` | PENDING | — |
-| `TheGreenTeaPartyTreasury` | PENDING | — |
+| `TheGreenTeaPartyProjectRegistry` | `0x1b093804d9BF8572F9ea58e24E051580Ed608F64` | https://optimistic.etherscan.io/address/0x1b093804d9BF8572F9ea58e24E051580Ed608F64 |
+| `TheGreenTeaPartyProfileRegistry` | `0xd66AdB0E70303D4e6daf8C963c7947f9ae722446` | https://optimistic.etherscan.io/address/0xd66AdB0E70303D4e6daf8C963c7947f9ae722446 |
+| `TheGreenTeaPartyTreasury` | `0xebE0D6Fa315CeA75D491219d5D9CC13136580144` | https://optimistic.etherscan.io/address/0xebE0D6Fa315CeA75D491219d5D9CC13136580144 |
 
 See `config/deployed-addresses.json` for the machine-readable record.
 

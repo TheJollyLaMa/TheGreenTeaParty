@@ -119,6 +119,12 @@ App mode now includes a minimal contract scaffold for the planned onchain path:
 - `contracts/TheGreenTeaPartyProfileRegistry.sol`
 - `scripts/contract-adapter.js`
 
+### Optimism deployed contract addresses
+
+- `TheGreenTeaPartyProjectRegistry`: `0x1b093804d9BF8572F9ea58e24E051580Ed608F64`
+- `TheGreenTeaPartyProfileRegistry`: `0xd66AdB0E70303D4e6daf8C963c7947f9ae722446`
+- `TheGreenTeaPartyTreasury`: `0xebE0D6Fa315CeA75D491219d5D9CC13136580144`
+
 ### Current contract adapter behavior
 
 - `scripts/contract-adapter.js` defines human-readable ABI fragments and safe placeholder read/write wrappers for registry, treasury, and profile operations.

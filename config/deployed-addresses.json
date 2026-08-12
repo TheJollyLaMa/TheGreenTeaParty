@@ -5,9 +5,9 @@
   "deployer": "PENDING",
   "owner": "PENDING",
   "contracts": {
-    "projectRegistry": "PENDING",
-    "profileRegistry": "PENDING",
-    "treasury": "PENDING"
+    "projectRegistry": "0x1b093804d9BF8572F9ea58e24E051580Ed608F64",
+    "profileRegistry": "0xd66AdB0E70303D4e6daf8C963c7947f9ae722446",
+    "treasury": "0xebE0D6Fa315CeA75D491219d5D9CC13136580144"
   },
-  "_note": "Replace PENDING values after running: npx hardhat run scripts/deploy/01_deploy_all.js --network optimism"
+  "_note": "Fill in deployedAt, deployer, and owner if you want a complete machine-readable deployment record."
 }
