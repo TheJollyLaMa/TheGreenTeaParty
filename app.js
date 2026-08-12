@@ -19,6 +19,8 @@ const modeInfo = GTPModeRouter.getModeInfo(window.location);
 const dataBasePath = new URL('.', document.baseURI).href;
 const LEDGER_PAGE_SIZE = 8;
 let ledgerVisibleCount = LEDGER_PAGE_SIZE;
+let unifiedRouteNavigationBound = false;
+let unifiedRouteKeydownHandler = null;
 
 const formatCurrency = (value) =>
   new Intl.NumberFormat('en-US', {
@@ -334,7 +336,9 @@ const renderWalletControl = () => {
   if (state.connectionStatus === 'connected' && state.address) {
     const addressPill = document.createElement('span');
     addressPill.className = 'wallet-address-pill';
-    addressPill.textContent = state.address;
+    addressPill.textContent = shortenAddress(state.address);
+    addressPill.title = state.address;
+    addressPill.setAttribute('aria-label', `Connected wallet ${state.address}`);
     row.appendChild(addressPill);
 
     const disconnectBtn = document.createElement('button');
@@ -586,6 +590,64 @@ const renderActivity = () => {
     .join('');
 };
 
+const navigateToSection = (hash) => {
+  const target = document.querySelector(hash);
+  if (!target) {
+    return;
+  }
+
+  if (window.location.hash !== hash) {
+    window.history.pushState(null, '', hash);
+  }
+
+  target.scrollIntoView({ behavior: 'smooth', block: 'start' });
+};
+
+const isLedgerSectionActive = () => {
+  const ledgerSection = document.querySelector('#public-ledger');
+  if (!ledgerSection) {
+    return false;
+  }
+
+  if (window.location.hash === '#public-ledger') {
+    return true;
+  }
+
+  const rect = ledgerSection.getBoundingClientRect();
+  const viewportHeight = window.innerHeight || document.documentElement.clientHeight || 0;
+  return rect.top < viewportHeight * 0.5 && rect.bottom > 0;
+};
+
+const unbindUnifiedRouteNavigation = () => {
+  if (unifiedRouteKeydownHandler) {
+    document.removeEventListener('keydown', unifiedRouteKeydownHandler);
+    unifiedRouteKeydownHandler = null;
+  }
+  unifiedRouteNavigationBound = false;
+};
+
+const bindUnifiedRouteNavigation = () => {
+  if (document.body?.dataset?.routeVariant !== 'unified-root') {
+    unbindUnifiedRouteNavigation();
+    return;
+  }
+
+  if (unifiedRouteNavigationBound) {
+    return;
+  }
+
+  unifiedRouteNavigationBound = true;
+  unifiedRouteKeydownHandler = (event) => {
+    if (event.key !== 'Escape' || !isLedgerSectionActive()) {
+      return;
+    }
+
+    event.preventDefault();
+    navigateToSection('#fractal-experience');
+  };
+  document.addEventListener('keydown', unifiedRouteKeydownHandler);
+};
+
 const populateFilters = () => {
   if (!trackFilter || !stageFilter) {
     return;
@@ -606,6 +668,7 @@ const populateFilters = () => {
 };
 
 renderModeBadge();
+bindUnifiedRouteNavigation();
 renderAppStatePanel();
 renderWalletControl();
 renderOperationsSessionStatus();

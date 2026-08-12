@@ -5,79 +5,258 @@
     <meta name="viewport" content="width=device-width, initial-scale=1.0" />
     <meta
       name="description"
-      content="Green Tea Party — build agency through real-world stewardship."
+      content="Green Tea Party — fractal-first stewardship view with public ledger accountability."
     />
     <title>Green Tea Party</title>
     <link rel="icon" href="assets/favicon.png" type="image/png" />
+    <link rel="stylesheet" href="styles/spiral.css" />
     <link rel="stylesheet" href="styles.css" />
   </head>
-  <body>
-    <header class="site-header">
-      <div class="container">
-        <div class="hero-copy">
-          <p class="eyebrow">Green Tea Party · Green Tea Hut #1</p>
-          <h1>Build agency through real-world stewardship. <span id="mode-badge" class="mode-badge" aria-live="polite"></span></h1>
-          <p class="tagline">A grounded home for Green Tea Party stewardship.</p>
-          <p class="intro">
-            Green Tea Party helps people organize projects, coordinate resources,
-            and follow through on meaningful work in their communities.
+  <body
+    data-page="fund-operations"
+    data-route-variant="unified-root"
+    data-spiral-backdrop="rgba(15, 23, 42, 0.18)"
+  >
+    <div class="site-background" aria-hidden="true">
+      <video class="site-background-video" autoplay muted loop playsinline>
+        <source src="assets/Yantra_01C_compressed.mp4" type="video/mp4" />
+      </video>
+      <div class="site-background-overlay"></div>
+    </div>
+
+    <div id="wallet-control" class="wallet-control" hidden aria-live="polite"></div>
+
+    <main class="unified-main">
+      <section id="fractal-experience" class="fractal-landing" aria-labelledby="fractal-heading">
+        <div class="spiral-shell">
+          <nav class="spiral-toolbar" aria-label="Fractal controls">
+            <a href="#fractal-experience" class="brand" aria-label="Green Tea Party fractal home">
+              🍵 <span>Green Tea Party</span>
+            </a>
+
+            <span id="mode-badge" class="mode-badge" aria-live="polite"></span>
+
+            <div class="toolbar-sep" role="separator"></div>
+
+            <div class="toolbar-filter">
+              <label for="spiral-track-filter">Track</label>
+              <select id="spiral-track-filter" aria-label="Filter by track">
+                <option value="all">All tracks</option>
+              </select>
+            </div>
+
+            <div class="toolbar-filter">
+              <label for="spiral-status-filter">Status</label>
+              <select id="spiral-status-filter" aria-label="Filter by status">
+                <option value="all">All statuses</option>
+              </select>
+            </div>
+
+            <div class="toolbar-sep" role="separator"></div>
+
+            <button
+              id="toggle-assoc"
+              class="toolbar-btn active"
+              type="button"
+              aria-pressed="true"
+              title="Toggle association lines"
+            >
+              ⟷ Connections
+            </button>
+
+            <button
+              id="toggle-focus"
+              class="toolbar-btn"
+              type="button"
+              aria-pressed="false"
+              title="Toggle focus mode"
+            >
+              ◎ Focus
+            </button>
+
+            <button
+              id="focus-back"
+              class="toolbar-btn"
+              type="button"
+              title="Return to the previous focused branch"
+              disabled
+            >
+              ↶ Back
+            </button>
+
+            <button id="zoom-out" class="toolbar-btn" type="button" title="Zoom out">－</button>
+            <button id="zoom-in" class="toolbar-btn" type="button" title="Zoom in">＋</button>
+            <button
+              id="reset-view"
+              class="toolbar-btn"
+              type="button"
+              title="Return to the home overview"
+            >
+              ⌂ Home
+            </button>
+
+            <a href="#public-ledger" class="toolbar-back" aria-label="Jump to the public ledger">
+              ↓ Public Ledger
+            </a>
+
+            <div
+              id="spiral-breadcrumbs"
+              class="spiral-breadcrumbs"
+              aria-label="Navigation context"
+            ></div>
+          </nav>
+
+          <aside class="fractal-intro" aria-labelledby="fractal-heading">
+            <p class="eyebrow">Green Tea Party · unified stewardship flow</p>
+            <h1 id="fractal-heading">Build agency through real-world stewardship.</h1>
+            <p class="tagline">Open directly into the fractal, then scroll into the Public Ledger.</p>
+            <p class="intro">
+              The Green Tea Party constellation now starts at its own root and stays connected to wallet-aware public accountability below.
+            </p>
+            <p id="operations-session-status" class="operations-session-status" aria-live="polite"></p>
+          </aside>
+
+          <div class="spiral-canvas-wrap" role="region" aria-label="Interactive Green Tea Party fractal view">
+            <canvas id="spiral-canvas" role="img" aria-label="Fractal constellation of Green Tea Party projects"></canvas>
+
+            <div id="spiral-loading" class="spiral-loading" aria-live="polite" aria-label="Loading constellation data">
+              <div class="spinner"></div>
+              <div>Loading constellation…</div>
+            </div>
+
+            <div id="spiral-empty" class="spiral-empty" style="display:none" aria-live="polite">
+              <strong>No projects match this filter.</strong>
+              <p>Try adjusting the track or status filter above.</p>
+            </div>
+          </div>
+
+          <div id="spiral-tooltip" role="tooltip" aria-hidden="true"></div>
+
+          <aside
+            id="details-panel"
+            class="details-panel"
+            role="complementary"
+            aria-label="Project details"
+            aria-hidden="true"
+          >
+            <div class="details-header">
+              <h3>Project details</h3>
+              <button
+                id="close-details"
+                class="close-btn"
+                type="button"
+                aria-label="Close project details"
+              >✕</button>
+            </div>
+            <div class="details-body">
+              <div id="details-content" class="details-content"></div>
+            </div>
+          </aside>
+
+          <aside class="spiral-legend" aria-label="Track colour legend">
+            <div class="legend-item">
+              <span class="legend-dot" style="background:#22c55e"></span> Green Tea
+            </div>
+            <div class="legend-item">
+              <span class="legend-dot" style="background:#3b82f6"></span> Blue Tea
+            </div>
+            <div class="legend-item">
+              <span class="legend-dot" style="background:#ef4444"></span> Red Rice
+            </div>
+            <div class="legend-item">
+              <span class="legend-dot" style="background:#a855f7"></span> Purple Sage
+            </div>
+            <div class="legend-item">
+              <span class="legend-dot" style="background:#f59e0b"></span> Golden Root
+            </div>
+            <div class="legend-item">
+              <span class="legend-dot" style="background:#94a3b8"></span> Silver Stream
+            </div>
+          </aside>
+
+          <aside class="spiral-status-legend" aria-label="Status indicator legend">
+            <div class="status-item">
+              <span class="status-dot" style="background:#22c55e"></span> Active
+            </div>
+            <div class="status-item">
+              <span class="status-dot" style="background:#f59e0b"></span> Planning
+            </div>
+            <div class="status-item">
+              <span class="status-dot" style="background:#94a3b8"></span> Completed
+            </div>
+            <div class="status-item">
+              <span class="status-dot" style="background:#ef4444"></span> Paused
+            </div>
+          </aside>
+
+          <p class="spiral-hint">Scroll for the Public Ledger · Drag to pan · Click a node to focus</p>
+        </div>
+      </section>
+
+      <section id="public-ledger" class="panel-section" aria-labelledby="public-ledger-heading">
+        <div class="container">
+          <div class="ledger-header-row">
+            <div>
+              <p class="eyebrow">Public accountability</p>
+              <h2 id="public-ledger-heading">Public Ledger</h2>
+            </div>
+            <div class="ledger-header-actions">
+              <span id="ledger-wallet-network-chip" class="ledger-chip" aria-live="polite"></span>
+              <a href="#fractal-experience" class="ledger-return-link" aria-label="Return to the fractal view">
+                ↑ Back to Fractal
+              </a>
+            </div>
+          </div>
+          <p class="section-lead">
+            Recent fund activity stays in the same page flow so stewards can move from the fractal view into contract-aware ledger visibility without changing routes.
           </p>
-          <p class="intro">
-            The underground visual anchors this page in the atmosphere of Green
-            Tea Hut #1 while the dashboard highlights future Green Tea Party
-            projects.
-          </p>
-          <div class="cta-row">
-            <a data-mode-link="prototype" class="btn btn-primary">View Prototype</a>
-            <a data-mode-link="app" class="btn btn-secondary">Enter App</a>
-            <a href="#what-is-green-tea-party" class="btn btn-secondary">What is Green Tea Party?</a>
-            <a href="#how-it-works" class="btn btn-secondary">How it works</a>
+          <div id="app-state-panel" class="app-state-panel" hidden aria-live="polite"></div>
+          <div class="public-ledger-shell" aria-live="polite">
+            <table id="public-ledger-table" class="public-ledger-table">
+              <thead>
+                <tr>
+                  <th scope="col">ID</th>
+                  <th scope="col">Date</th>
+                  <th scope="col">Type</th>
+                  <th scope="col">Status</th>
+                  <th scope="col">Amount</th>
+                  <th scope="col">Category</th>
+                  <th scope="col">Description</th>
+                  <th scope="col">Notes</th>
+                  <th scope="col">Proof link</th>
+                </tr>
+              </thead>
+              <tbody id="public-ledger-body"></tbody>
+            </table>
+            <button id="ledger-view-more-btn" class="btn btn-secondary ledger-view-more-btn" type="button" hidden>
+              View more
+            </button>
           </div>
         </div>
-      </div>
-    </header>
+      </section>
 
-    <main>
-      <section id="what-is-green-tea-party" class="principle" aria-labelledby="what-is-heading">
+      <section id="fund-snapshot" class="panel-section" aria-labelledby="fund-snapshot-heading">
         <div class="container">
-          <h2 id="what-is-heading">What is Green Tea Party?</h2>
+          <h2 id="fund-snapshot-heading">Fund Snapshot</h2>
           <p class="section-lead">
-            Green Tea Party is a public platform for stewardship:
-            communication supports action, and progress is measured by real
-            contribution.
+            Wallet-aware treasury context and stewardship signals remain available on the unified route.
           </p>
-          <ul class="section-grid">
-            <li><strong>Agency first:</strong> build capacity, not passive attention.</li>
-            <li><strong>Place-based:</strong> organize work around neighborhoods and communities.</li>
-            <li><strong>Transparent:</strong> shared metrics and activity make stewardship visible.</li>
-          </ul>
-        </div>
-      </section>
+          <ul id="operations-snapshot-grid" class="operations-snapshot-grid" aria-live="polite"></ul>
 
-      <section id="how-it-works" class="sections" aria-labelledby="how-it-works-heading">
-        <div class="container">
-          <h2 id="how-it-works-heading">How it works</h2>
-          <ol class="how-it-works-list">
-            <li>Start in <strong>Prototype</strong> mode to explore projects, metrics, and activity using sample data.</li>
-            <li>Use <strong>App</strong> mode for the real data path as wallet and contract integrations come online.</li>
-            <li>Track stewardship health and decide where to contribute next.</li>
-          </ol>
-        </div>
-      </section>
-
-      <section id="fund-dashboard" class="sections" aria-labelledby="dashboard-heading">
-        <div class="container">
-          <h2 id="dashboard-heading">Fund Dashboard (v0.4)</h2>
-          <p class="dashboard-note">
-            <a href="views/spiral.html">🌀 Try the v0.3 Spiral Constellation View →</a>
-          </p>
-          <div id="wallet-control" class="wallet-control" hidden aria-live="polite"></div>
-          <div id="app-state-panel" class="app-state-panel" hidden aria-live="polite"></div>
+          <h3 class="dashboard-subheading">Stewardship metrics</h3>
           <ul id="metrics-strip" class="metrics-strip" aria-live="polite"></ul>
 
           <h3 class="dashboard-subheading">Stewardship KPIs</h3>
           <ul id="kpi-panel" class="kpi-panel" aria-live="polite" aria-label="Stewardship key performance indicators"></ul>
+        </div>
+      </section>
 
+      <section id="project-pages" class="panel-section" aria-labelledby="project-pages-heading">
+        <div class="container">
+          <h2 id="project-pages-heading">Project Pages</h2>
+          <p class="section-lead">
+            Active project records stay available below the ledger for direct follow-through.
+          </p>
           <div class="filters" aria-label="Project filters">
             <label>
               Track
@@ -92,22 +271,15 @@
               </select>
             </label>
           </div>
-
-          <h3 class="dashboard-subheading">Project Portfolio</h3>
           <ul id="project-grid" class="project-grid" aria-live="polite"></ul>
-
-          <h3 class="dashboard-subheading">Public Ledger Activity</h3>
-          <ul id="activity-list" class="activity-list" aria-live="polite"></ul>
         </div>
       </section>
 
-      <section id="guiding-question" class="guiding" aria-labelledby="guiding-heading">
+      <section id="guiding-question" class="panel-section guiding" aria-labelledby="guiding-heading">
         <div class="container">
           <h2 id="guiding-heading">Core Product Rule</h2>
           <blockquote>
-            If a feature increases engagement but decreases agency, don’t build
-            it. If a feature decreases engagement but increases agency, seriously
-            consider building it.
+            If a feature increases engagement but decreases agency, don’t build it. If a feature decreases engagement but increases agency, seriously consider building it.
           </blockquote>
         </div>
       </section>
@@ -115,7 +287,7 @@
 
     <footer class="site-footer">
       <div class="container footer-row">
-        <p>Green Tea Party · Green Tea Hut #1</p>
+        <p>Green Tea Party · unified route</p>
         <button id="theme-toggle" class="btn btn-tertiary" type="button">
           Toggle theme
         </button>
@@ -134,6 +306,7 @@
     <script src="scripts/data-adapter/app-adapter.js"></script>
     <script src="scripts/data-layer.js"></script>
     <script src="scripts/kpi.js"></script>
+    <script src="scripts/spiral.js"></script>
     <script src="app.js"></script>
   </body>
 </html>

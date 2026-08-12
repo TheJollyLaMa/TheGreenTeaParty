@@ -129,6 +129,19 @@ h1 {
   background: var(--surface);
 }
 
+.ledger-return-link {
+  display: inline-flex;
+  align-items: center;
+  min-height: 2rem;
+  color: var(--accent);
+  text-decoration: none;
+  font-size: 0.88rem;
+}
+
+.ledger-return-link:hover {
+  text-decoration: underline;
+}
+
 .site-header .btn {
   border-color: rgba(255, 255, 255, 0.24);
 }
@@ -464,6 +477,15 @@ blockquote {
   align-items: center;
   gap: 0.65rem;
   flex-wrap: wrap;
+  justify-content: space-between;
+}
+
+.ledger-header-actions {
+  display: inline-flex;
+  align-items: center;
+  justify-content: flex-end;
+  gap: 0.65rem;
+  flex-wrap: wrap;
 }
 
 .ledger-chip {
@@ -572,7 +594,7 @@ blockquote {
   display: flex;
   align-items: center;
   gap: 0.65rem;
-  flex-wrap: wrap;
+  flex-wrap: nowrap;
   justify-content: flex-end;
 }
 
@@ -602,6 +624,10 @@ blockquote {
   padding: 0.45rem 0.75rem;
   background: var(--surface);
   font-size: 0.9rem;
+  max-width: min(60vw, 18rem);
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
 }
 
 .wallet-warning {
@@ -616,9 +642,209 @@ blockquote {
     top: 0.65rem;
     right: 0.65rem;
   }
+
+  .wallet-control-row,
+  .ledger-header-actions {
+    flex-wrap: wrap;
+  }
+
+  .wallet-address-pill {
+    max-width: calc(100vw - 9rem);
+  }
 }
 
 .btn:focus-visible {
   outline: 2px solid var(--accent);
   outline-offset: 2px;
+}
+
+html,
+body {
+  min-height: 100%;
+}
+
+html {
+  height: auto;
+  overflow-x: hidden;
+  overflow-y: auto;
+  scroll-behavior: smooth;
+}
+
+body {
+  min-height: 100vh;
+  height: auto;
+  overflow-x: hidden;
+  overflow-y: auto;
+  position: relative;
+}
+
+main,
+.site-footer {
+  position: relative;
+  z-index: 1;
+}
+
+.site-background {
+  position: fixed;
+  inset: 0;
+  z-index: 0;
+  overflow: hidden;
+  pointer-events: none;
+}
+
+.site-background-video,
+.site-background-overlay {
+  position: absolute;
+  inset: 0;
+  width: 100%;
+  height: 100%;
+}
+
+.site-background-video {
+  object-fit: cover;
+  opacity: 0.22;
+}
+
+.site-background-overlay {
+  background:
+    radial-gradient(circle at top, rgba(21, 128, 61, 0.14), transparent 40%),
+    linear-gradient(180deg, rgba(2, 6, 23, 0.82) 0%, rgba(15, 23, 42, 0.74) 45%, rgba(15, 23, 42, 0.9) 100%);
+}
+
+[data-route-variant="unified-root"] .site-background-video {
+  object-fit: contain;
+  opacity: 0.28;
+}
+
+[data-route-variant="unified-root"] .site-background {
+  background: #000;
+}
+
+[data-route-variant="unified-root"] .site-background-overlay {
+  background:
+    radial-gradient(circle at top, rgba(21, 128, 61, 0.18), transparent 42%),
+    linear-gradient(180deg, rgba(2, 6, 23, 0.72) 0%, rgba(15, 23, 42, 0.58) 45%, rgba(15, 23, 42, 0.78) 100%);
+}
+
+.unified-main {
+  position: relative;
+}
+
+.fractal-landing {
+  padding: 0;
+  border-bottom: none;
+}
+
+#fractal-experience,
+#public-ledger {
+  scroll-margin-top: 4.5rem;
+}
+
+.fractal-landing .spiral-shell {
+  min-height: 100vh;
+}
+
+.fractal-intro {
+  position: absolute;
+  top: clamp(4.5rem, 10vw, 6.5rem);
+  left: 1rem;
+  z-index: 18;
+  width: min(38rem, calc(100% - 2rem));
+  padding: clamp(1rem, 2.6vw, 1.5rem);
+  border: 1px solid rgba(255, 255, 255, 0.16);
+  border-radius: 1rem;
+  background: rgba(2, 6, 23, 0.46);
+  backdrop-filter: blur(10px);
+  box-shadow: 0 24px 60px rgba(2, 6, 23, 0.28);
+}
+
+.fractal-intro .eyebrow,
+.fractal-intro .intro,
+.fractal-intro .operations-session-status {
+  color: rgba(248, 250, 252, 0.84);
+}
+
+.fractal-intro .tagline {
+  color: #bbf7d0;
+}
+
+.panel-section {
+  background: rgba(15, 23, 42, 0.72);
+  backdrop-filter: blur(6px);
+}
+
+[data-route-variant="unified-root"] .panel-section,
+[data-route-variant="unified-root"] .site-footer {
+  background: rgba(15, 23, 42, 0.54);
+  backdrop-filter: blur(8px);
+}
+
+[data-route-variant="unified-root"] .wallet-control {
+  position: fixed;
+  top: 0.75rem;
+  right: 0.75rem;
+  z-index: 40;
+  max-width: min(calc(100vw - 1.5rem), 32rem);
+}
+
+.panel-section .eyebrow {
+  margin-bottom: 0.4rem;
+}
+
+.public-ledger-shell,
+.app-state-panel,
+.metric-card,
+.project-card,
+.activity-item,
+.kpi-card,
+.operations-link-card,
+.section-grid li,
+.filters select,
+.ledger-chip,
+.wallet-address-pill,
+.wallet-warning,
+.wallet-connect-btn,
+.wallet-disconnect-btn {
+  background-color: rgba(31, 41, 55, 0.82);
+}
+
+.wallet-control {
+  padding: 0.75rem;
+  border-radius: 0.9rem;
+  background: rgba(2, 6, 23, 0.5);
+  backdrop-filter: blur(10px);
+}
+
+.public-ledger-table {
+  background: rgba(15, 23, 42, 0.82);
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .site-background-video {
+    display: none;
+  }
+
+  html {
+    scroll-behavior: auto;
+  }
+}
+
+@media (max-width: 900px) {
+  .fractal-intro {
+    top: auto;
+    bottom: 5.5rem;
+    width: min(32rem, calc(100% - 1.5rem));
+  }
+}
+
+@media (max-width: 640px) {
+  .fractal-intro {
+    left: 0.75rem;
+    bottom: 4.75rem;
+    width: calc(100% - 1.5rem);
+  }
+
+  .wallet-control {
+    max-width: calc(100vw - 1.3rem);
+  }
 }

@@ -54,6 +54,7 @@
   const BRANCH_SPREAD = Math.PI * 0.94;
   const VIEW_MARGIN = 120;
   const DRAG_THRESHOLD = 4;
+  const GREEN_TEA_PARTY_ROOT_ID = 'gtp-root';
 
   // ---- Application state --------------------------------------------------------
 
@@ -119,6 +120,7 @@
   let statusSel;
   let loadingEl;
   let emptyEl;
+  let canvasBackdropFill = '#0f172a';
 
   // ---- Initialisation -----------------------------------------------------------
 
@@ -140,6 +142,9 @@
     statusSel = document.getElementById('spiral-status-filter');
     loadingEl = document.getElementById('spiral-loading');
     emptyEl = document.getElementById('spiral-empty');
+    canvasBackdropFill = document.body && document.body.dataset && document.body.dataset.spiralBackdrop
+      ? document.body.dataset.spiralBackdrop
+      : '#0f172a';
 
     setupCanvas();
     bindEvents();
@@ -261,6 +266,10 @@
         screenY: 0
       };
     });
+
+    if (sorted.some((project) => project.track === 'Green Tea')) {
+      nodes.push(createGreenTeaPartyRoot());
+    }
 
     nodeMap = {};
     nodes.forEach((node) => {
@@ -406,7 +415,30 @@
   }
 
   function chooseTrackRoot(group) {
-    return [...group].sort(compareNodePriority)[0];
+    return group.find((node) => node.id === GREEN_TEA_PARTY_ROOT_ID) || [...group].sort(compareNodePriority)[0];
+  }
+
+  function createGreenTeaPartyRoot() {
+    return {
+      id: GREEN_TEA_PARTY_ROOT_ID,
+      name: 'Green Tea Party',
+      track: 'Green Tea',
+      status: 'active',
+      raised: 0,
+      goal: 0,
+      lastUpdate: '2026-08-12',
+      stewards: 0,
+      description: 'Canonical root for the unified Green Tea Party stewardship constellation.',
+      nextAction: 'Open the fractal, then follow the public ledger below.',
+      x: 0,
+      y: 0,
+      size: 13,
+      degree: 0,
+      depth: 0,
+      trackIndex: TRACK_ORDER.indexOf('Green Tea'),
+      screenX: 0,
+      screenY: 0
+    };
   }
 
   function compareNodePriority(a, b) {
@@ -550,8 +582,10 @@
     const focusContext = focusContextIds();
 
     ctx.clearRect(0, 0, W, H);
-    ctx.fillStyle = '#0f172a';
-    ctx.fillRect(0, 0, W, H);
+    if (canvasBackdropFill && canvasBackdropFill !== 'transparent') {
+      ctx.fillStyle = canvasBackdropFill;
+      ctx.fillRect(0, 0, W, H);
+    }
     drawStarField(W, H);
 
     if (!nodes.length) return;

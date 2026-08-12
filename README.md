@@ -26,11 +26,11 @@ Most social systems optimize for attention. Green Tea Party optimizes for human 
 - Lightweight navigation placeholders for future sections.
 - No feed mechanics.
 
-### Phase 2 — Stewardship Dashboard ✅ (v0.4)
-- Public project and mission listings with filtering.
-- Stewardship KPI panel surfacing health metrics.
-- Place-based fund dashboard (prototype mode).
-- Spiral constellation view for project relationships.
+### Phase 2 — Stewardship Dashboard ✅ (v0.58)
+- Root route opens directly into the Green Tea Party fractal view.
+- Public Ledger lives directly below the fractal in the same page flow.
+- Stewardship KPI panel and project pages remain available on the unified route.
+- Spiral constellation view remains available as a standalone experimental page.
 
 ### Phase 3 — Identity & Contracts (upcoming)
 - Wallet connection and session identity in app mode. → [#11 Wallet Connect + Session Identity](https://github.com/TheJollyLaMa/TheGreenTeaParty/issues/11)
@@ -57,19 +57,22 @@ attention metrics included.
 See [`docs/data-layer.md`](docs/data-layer.md) for the full schema reference,
 KPI definitions, and a guide to adding or editing records.
 
-## v0.41 — Prototype vs App Modes
+## v0.58 — Unified Fractal + Ledger Route
 
-The site runs in two parallel modes behind a shared UI contract:
+The canonical Green Tea Party experience now lives on the root route:
 
-| Mode | Route | Data source |
+| Route | Purpose | Data source |
 |---|---|---|
-| **Prototype** | `/prototype/` or `?mode=prototype` | Local JSON fixtures via `GTPMockDataAdapter` |
-| **App** | `/app/` or `?mode=app` | `GTPAppDataAdapter` using wallet-aware, fixture-backed fund snapshots until live contract reads are wired |
+| **`/`** | Unified fractal-first route with inline Public Ledger | `GTPAppDataAdapter` using wallet-aware, fixture-backed fund snapshots until live contract reads are wired |
+| **`/app/`** | Redirects to the canonical root route | Redirect |
+| **`/prototype/`** | Redirects to the canonical root route | Redirect |
+| **`/views/spiral.html`** | Standalone experimental constellation page (secondary, non-canonical) | Local JSON fixtures via `GTPMockDataAdapter` |
 
-- `index.html` defaults to **prototype mode** when no mode is supplied.
-- `/app/` is a dedicated Green Tea Party Fund operations landing page with wallet/session status, fund snapshot cards, project links, and public ledger activity.
-- `/prototype/` redirects to `index.html?mode=prototype` for static-host compatibility.
-- `views/spiral.html` is preserved as a **Vision Prototype (Mock Data)** page and always renders from local mock fixtures.
+- `index.html` now defaults to the unified app path.
+- The Green Tea Party fractal is the first screen and the Public Ledger sits directly below on scroll.
+- `assets/Yantra_01C_compressed.mp4` stays fixed behind the page with reduced-motion fallback.
+- `/app/` and `/prototype/` are retained only as compatibility redirects.
+- Redirect routes and the standalone spiral page are marked non-canonical so the root route remains the only primary entry path.
 
 ### Mode architecture
 
@@ -102,7 +105,7 @@ real product path without backend auth.
 
 ### Troubleshooting
 
-- **No connect prompt appears:** ensure you are in `?mode=app` (or `/app/`) and a wallet extension is installed.
+- **No connect prompt appears:** ensure you are on the root route and a wallet extension is installed.
 - **Unsupported network warning:** switch wallet network to one of the configured supported chain IDs.
 - **Rejected connection:** reconnect and approve the wallet permission prompt.
 - **Wrong account shown:** switch account in wallet; account/chain changes are observed live without reload.

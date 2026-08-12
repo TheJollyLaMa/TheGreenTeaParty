@@ -3,13 +3,13 @@
 var GTPConfig = (function () {
   'use strict';
 
-  var DEFAULT_MODE = 'prototype';
+  var DEFAULT_MODE = 'app';
   var MODES = {
     prototype: {
       label: 'Prototype mode'
     },
     app: {
-      label: 'App mode'
+      label: 'Unified live view'
     }
   };
 
