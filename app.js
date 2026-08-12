@@ -334,7 +334,9 @@ const renderWalletControl = () => {
   if (state.connectionStatus === 'connected' && state.address) {
     const addressPill = document.createElement('span');
     addressPill.className = 'wallet-address-pill';
-    addressPill.textContent = state.address;
+    addressPill.textContent = shortenAddress(state.address);
+    addressPill.title = state.address;
+    addressPill.setAttribute('aria-label', `Connected wallet ${state.address}`);
     row.appendChild(addressPill);
 
     const disconnectBtn = document.createElement('button');
@@ -586,6 +588,33 @@ const renderActivity = () => {
     .join('');
 };
 
+const navigateToSection = (hash) => {
+  const target = document.querySelector(hash);
+  if (!target) {
+    return;
+  }
+
+  target.scrollIntoView({ behavior: 'smooth', block: 'start' });
+  if (window.location.hash !== hash) {
+    window.history.replaceState(null, '', hash);
+  }
+};
+
+const bindUnifiedRouteNavigation = () => {
+  if (document.body?.dataset?.routeVariant !== 'unified-root') {
+    return;
+  }
+
+  document.addEventListener('keydown', (event) => {
+    if (event.key !== 'Escape' || window.location.hash !== '#public-ledger') {
+      return;
+    }
+
+    event.preventDefault();
+    navigateToSection('#fractal-experience');
+  });
+};
+
 const populateFilters = () => {
   if (!trackFilter || !stageFilter) {
     return;
@@ -606,6 +635,7 @@ const populateFilters = () => {
 };
 
 renderModeBadge();
+bindUnifiedRouteNavigation();
 renderAppStatePanel();
 renderWalletControl();
 renderOperationsSessionStatus();

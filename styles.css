@@ -129,6 +129,19 @@ h1 {
   background: var(--surface);
 }
 
+.ledger-return-link {
+  display: inline-flex;
+  align-items: center;
+  min-height: 2rem;
+  color: var(--accent);
+  text-decoration: none;
+  font-size: 0.88rem;
+}
+
+.ledger-return-link:hover {
+  text-decoration: underline;
+}
+
 .site-header .btn {
   border-color: rgba(255, 255, 255, 0.24);
 }
@@ -464,6 +477,16 @@ blockquote {
   align-items: center;
   gap: 0.65rem;
   flex-wrap: wrap;
+  justify-content: space-between;
+}
+
+.ledger-header-actions {
+  display: inline-flex;
+  align-items: center;
+  justify-content: flex-end;
+  gap: 0.65rem;
+  flex-wrap: wrap;
+  margin-left: auto;
 }
 
 .ledger-chip {
@@ -572,7 +595,7 @@ blockquote {
   display: flex;
   align-items: center;
   gap: 0.65rem;
-  flex-wrap: wrap;
+  flex-wrap: nowrap;
   justify-content: flex-end;
 }
 
@@ -602,6 +625,10 @@ blockquote {
   padding: 0.45rem 0.75rem;
   background: var(--surface);
   font-size: 0.9rem;
+  max-width: min(60vw, 18rem);
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
 }
 
 .wallet-warning {
@@ -616,6 +643,15 @@ blockquote {
     top: 0.65rem;
     right: 0.65rem;
   }
+
+  .wallet-control-row,
+  .ledger-header-actions {
+    flex-wrap: wrap;
+  }
+
+  .wallet-address-pill {
+    max-width: calc(100vw - 9rem);
+  }
 }
 
 .btn:focus-visible {
@@ -628,6 +664,13 @@ body {
   min-height: 100%;
 }
 
+html {
+  height: auto;
+  overflow-x: hidden;
+  overflow-y: auto;
+  scroll-behavior: smooth;
+}
+
 body {
   min-height: 100vh;
   height: auto;
@@ -637,8 +680,7 @@ body {
 }
 
 main,
-.site-footer,
-.wallet-control {
+.site-footer {
   position: relative;
   z-index: 1;
 }
@@ -689,6 +731,11 @@ main,
   border-bottom: none;
 }
 
+#fractal-experience,
+#public-ledger {
+  scroll-margin-top: 4.5rem;
+}
+
 .fractal-landing .spiral-shell {
   min-height: 100vh;
 }
@@ -726,6 +773,14 @@ main,
 [data-route-variant="unified-root"] .site-footer {
   background: rgba(15, 23, 42, 0.54);
   backdrop-filter: blur(8px);
+}
+
+[data-route-variant="unified-root"] .wallet-control {
+  position: fixed;
+  top: 0.75rem;
+  right: 0.75rem;
+  z-index: 40;
+  max-width: min(calc(100vw - 1.5rem), 32rem);
 }
 
 .panel-section .eyebrow {
