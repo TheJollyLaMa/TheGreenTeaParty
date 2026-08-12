@@ -760,6 +760,8 @@
   function updateAccessGate(details, accessNotice, gateNotice) {
     var body = details.querySelector('.admin-panel-body');
     var content = body ? body.querySelector('.container') : null;
+    if (body) body.removeAttribute('hidden');
+    if (content) content.removeAttribute('hidden');
     if (!walletReady()) {
       if (accessNotice) accessNotice.textContent = '';
       if (body) body.hidden = false;
@@ -797,6 +799,8 @@
     // Hide the contract content until owner is verified on first open
     var body = details.querySelector('.admin-panel-body');
     var content = body ? body.querySelector('.container') : null;
+    if (body) body.removeAttribute('hidden');
+    if (content) content.removeAttribute('hidden');
     if (content) content.hidden = false;
     var gateNotice = body ? body.querySelector('#admin-access-gate-notice') : null;
     if (gateNotice) gateNotice.textContent = 'Connect your wallet to verify owner access.';
@@ -855,6 +859,7 @@
 
     updateWalletNotice();
     updateWriteButtonsEnabled();
+    refreshContractIntrospection(introspectionMount);
 
     if (GTPAppState && typeof GTPAppState.subscribe === 'function') {
       GTPAppState.subscribe(function () {
