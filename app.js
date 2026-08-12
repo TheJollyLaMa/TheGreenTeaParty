@@ -603,6 +603,21 @@ const navigateToSection = (hash) => {
   target.scrollIntoView({ behavior: 'smooth', block: 'start' });
 };
 
+const isLedgerSectionActive = () => {
+  const ledgerSection = document.querySelector('#public-ledger');
+  if (!ledgerSection) {
+    return false;
+  }
+
+  if (window.location.hash === '#public-ledger') {
+    return true;
+  }
+
+  const rect = ledgerSection.getBoundingClientRect();
+  const viewportHeight = window.innerHeight || document.documentElement.clientHeight || 0;
+  return rect.top < viewportHeight * 0.5 && rect.bottom > 0;
+};
+
 const unbindUnifiedRouteNavigation = () => {
   if (unifiedRouteKeydownHandler) {
     document.removeEventListener('keydown', unifiedRouteKeydownHandler);
@@ -623,7 +638,7 @@ const bindUnifiedRouteNavigation = () => {
 
   unifiedRouteNavigationBound = true;
   unifiedRouteKeydownHandler = (event) => {
-    if (event.key !== 'Escape' || window.location.hash !== '#public-ledger') {
+    if (event.key !== 'Escape' || !isLedgerSectionActive()) {
       return;
     }
 

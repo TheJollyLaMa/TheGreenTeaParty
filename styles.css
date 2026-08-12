@@ -486,7 +486,6 @@ blockquote {
   justify-content: flex-end;
   gap: 0.65rem;
   flex-wrap: wrap;
-  margin-left: auto;
 }
 
 .ledger-chip {
