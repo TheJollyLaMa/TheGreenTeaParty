@@ -4,6 +4,20 @@ var GTPDataAdapterInterface = (function () {
   'use strict';
 
   var REQUIRED_METHODS = ['getProjects', 'getAssociations', 'getMetrics', 'getActivity'];
+  var OPTIONAL_APP_METHODS = [
+    'getContractState',
+    'getProjectRecord',
+    'getProjectBalance',
+    'getProfilePointer',
+    'registerProject',
+    'updateProjectMetadataURI',
+    'updateProjectStatus',
+    'transferProjectSteward',
+    'setProfilePointer',
+    'contribute',
+    'setPayoutAddress',
+    'withdraw'
+  ];
 
   function assertAdapter(adapter, adapterName) {
     if (!adapter) {
@@ -23,6 +37,7 @@ var GTPDataAdapterInterface = (function () {
 
   return {
     REQUIRED_METHODS: REQUIRED_METHODS.slice(),
+    OPTIONAL_APP_METHODS: OPTIONAL_APP_METHODS.slice(),
     assertAdapter: assertAdapter
   };
 }());

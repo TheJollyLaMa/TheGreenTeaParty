@@ -12,9 +12,13 @@ exposes a common set of selectors and a shared filter state.
 No build step is required — the module is a plain IIFE that attaches `GTPData`
 to `window`.
 
-As of v0.41, `GTPData` resolves mode via `scripts/mode-router.js` and hydrates from
+As of v0.43, `GTPData` resolves mode via `scripts/mode-router.js` and hydrates from
 a mode-specific adapter implementing the shared contract:
 `getProjects()`, `getAssociations()`, `getMetrics()`, and `getActivity()`.
+
+App mode also exposes optional contract-facing wrapper methods through
+`scripts/contract-adapter.js` and `scripts/data-adapter/app-adapter.js` for the
+starter `ProjectRegistry`, `Treasury`, and `ProfileRegistry` MVP.
 
 ---
 

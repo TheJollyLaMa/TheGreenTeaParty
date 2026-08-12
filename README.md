@@ -105,6 +105,26 @@ real product path without backend auth.
 - **Rejected connection:** reconnect and approve the wallet permission prompt.
 - **Wrong account shown:** switch account in wallet; account/chain changes are observed live without reload.
 
+## v0.43 — Starter Contracts MVP scaffolding
+
+App mode now includes a minimal contract scaffold for the planned onchain path:
+
+- `contracts/ProjectRegistry.sol`
+- `contracts/Treasury.sol`
+- `contracts/ProfileRegistry.sol`
+- `contracts/interfaces/*.sol`
+- `scripts/contract-adapter.js`
+
+### Current contract adapter behavior
+
+- `scripts/contract-adapter.js` defines human-readable ABI fragments and safe placeholder read/write wrappers for registry, treasury, and profile operations.
+- `scripts/data-adapter/app-adapter.js` forwards those wrappers without changing prototype mode behavior.
+- `scripts/config.js` now reserves per-chain contract address slots for Ethereum (`1`), Optimism (`10`), and Base (`8453`).
+
+No deployment or Solidity toolchain is added in this issue; the repo remains a minimal static site while the contract surface is documented and ready for later wiring.
+
+See [`docs/contracts-mvp.md`](docs/contracts-mvp.md) for architecture notes, trust assumptions, and the MVP storage/event model.
+
 ## Core Principle Test
 
 Before shipping any feature, ask:
