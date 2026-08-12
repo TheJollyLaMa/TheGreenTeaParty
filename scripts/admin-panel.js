@@ -46,11 +46,14 @@
   function contractAddresses() {
     var chainId = currentChainId();
     if (!chainId) return {};
+    if (GTPContractAdapter && typeof GTPContractAdapter.getContractsForChain === 'function') {
+      return GTPContractAdapter.getContractsForChain(chainId) || {};
+    }
     var contracts = GTPConfig && GTPConfig.contracts ? GTPConfig.contracts : {};
     return contracts[chainId] || {};
   }
 
-  var PROJECT_REGISTRY_ABI = [
+  var FALLBACK_PROJECT_REGISTRY_ABI = [
     'function owner() view returns (address)',
     'function paused() view returns (bool)',
     'function projectExists(bytes32) view returns (bool)',
@@ -66,7 +69,7 @@
     'function unpause()'
   ];
 
-  var TREASURY_ABI = [
+  var FALLBACK_TREASURY_ABI = [
     'function owner() view returns (address)',
     'function paused() view returns (bool)',
     'function projectBalances(bytes32) view returns (uint256)',
@@ -79,9 +82,25 @@
     'function unpause()'
   ];
 
-  var PROFILE_REGISTRY_ABI = [
+  var FALLBACK_PROFILE_REGISTRY_ABI = [
     'function getProfileURI(address) view returns (string)',
     'function setProfileURI(string)'
+  ];
+
+  var PROJECT_REGISTRY_ABI = (GTPContractAdapter && GTPContractAdapter.PROJECT_REGISTRY_ABI)
+    ? GTPContractAdapter.PROJECT_REGISTRY_ABI.slice()
+    : FALLBACK_PROJECT_REGISTRY_ABI.slice();
+  var TREASURY_ABI = (GTPContractAdapter && GTPContractAdapter.TREASURY_ABI)
+    ? GTPContractAdapter.TREASURY_ABI.slice()
+    : FALLBACK_TREASURY_ABI.slice();
+  var PROFILE_REGISTRY_ABI = (GTPContractAdapter && GTPContractAdapter.PROFILE_REGISTRY_ABI)
+    ? GTPContractAdapter.PROFILE_REGISTRY_ABI.slice()
+    : FALLBACK_PROFILE_REGISTRY_ABI.slice();
+
+  var CONTRACT_INTROSPECTION_META = [
+    { key: 'projectRegistry', label: 'ProjectRegistry', abi: PROJECT_REGISTRY_ABI },
+    { key: 'treasury', label: 'Treasury', abi: TREASURY_ABI },
+    { key: 'profileRegistry', label: 'ProfileRegistry', abi: PROFILE_REGISTRY_ABI }
   ];
 
   function networkName() {
@@ -89,6 +108,8 @@
     var networks = GTPConfig && GTPConfig.networks ? GTPConfig.networks : {};
     return (networks[chainId] && networks[chainId].name) ? networks[chainId].name : 'Optimism';
   }
+
+  function readContract(abi, addrKey) {
     var addr = contractAddresses()[addrKey];
     if (!addr) throw new Error('Contract address not configured for this network.');
     var provider = getReadProvider();
@@ -144,6 +165,200 @@
   function val(form, name) {
     var el = form.elements[name];
     return el ? (el.value || '').trim() : '';
+  }
+
+  function updateWriteButtonsEnabled() {
+    var disabled = !walletReady();
+    var buttons = document.querySelectorAll('.admin-write-btn');
+    buttons.forEach(function (btn) {
+      btn.disabled = disabled;
+      btn.title = disabled ? ('Connect wallet to ' + networkName() + ' to enable writes.') : '';
+    });
+  }
+
+  function parseFunctionFragments(abi) {
+    try {
+      var iface = new window.ethers.Interface(abi);
+      return {
+        functions: iface.fragments.filter(function (fragment) { return fragment.type === 'function'; }),
+        error: null
+      };
+    } catch (err) {
+      return { functions: [], error: err.message || String(err) };
+    }
+  }
+
+  function describeParams(params) {
+    return params.map(function (param) {
+      return param.name ? (param.type + ' ' + param.name) : param.type;
+    }).join(', ');
+  }
+
+  function renderIntroFunctionCard(fragment, isRead) {
+    var card = document.createElement('div');
+    card.className = 'admin-fn-card' + (isRead ? ' admin-fn-read' : '');
+
+    var title = document.createElement('h4');
+    title.textContent = fragment.name + '(' + describeParams(fragment.inputs || []) + ')';
+    card.appendChild(title);
+
+    var meta = document.createElement('p');
+    meta.className = 'admin-introspection-fn-meta';
+    meta.textContent = 'outputs: '
+      + ((fragment.outputs && fragment.outputs.length) ? describeParams(fragment.outputs) : 'void')
+      + ' · mutability: '
+      + fragment.stateMutability;
+    card.appendChild(meta);
+
+    return card;
+  }
+
+  function renderIntrospectionGroup(label, functions, isRead) {
+    var wrapper = document.createElement('div');
+    var title = document.createElement('p');
+    title.className = 'admin-fn-group-label';
+    title.textContent = label;
+    wrapper.appendChild(title);
+
+    var grid = document.createElement('div');
+    grid.className = 'admin-fn-grid';
+    functions.forEach(function (fragment) {
+      grid.appendChild(renderIntroFunctionCard(fragment, isRead));
+    });
+    wrapper.appendChild(grid);
+    return wrapper;
+  }
+
+  function renderContractIntrospection(container, context) {
+    var chainId = context.chainId;
+    var activeContracts = context.contracts;
+    var providerStatus = context.providerStatus;
+    var providerError = context.providerError;
+    var anyErrors = false;
+    var diagnostics = [];
+
+    CONTRACT_INTROSPECTION_META.forEach(function (meta) {
+      var parse = parseFunctionFragments(meta.abi);
+      var functions = parse.functions;
+      var readFns = functions.filter(function (fn) {
+        return fn.stateMutability === 'view' || fn.stateMutability === 'pure';
+      });
+      var writeFns = functions.filter(function (fn) {
+        return fn.stateMutability === 'nonpayable' || fn.stateMutability === 'payable';
+      });
+      var address = activeContracts && activeContracts[meta.key] ? activeContracts[meta.key] : '';
+
+      var section = document.createElement('section');
+      section.className = 'admin-contract-group admin-introspection-contract-group';
+
+      var header = document.createElement('div');
+      header.className = 'admin-contract-header';
+      var heading = document.createElement('h3');
+      heading.textContent = meta.label + ' (introspection)';
+      header.appendChild(heading);
+
+      var addressPill = document.createElement('span');
+      addressPill.className = 'admin-contract-address admin-contract-address--inline';
+      addressPill.textContent = address || 'address missing';
+      header.appendChild(addressPill);
+      section.appendChild(header);
+
+      var initStatus = 'ready';
+      if (!address || parse.error || providerStatus === 'error') {
+        initStatus = 'error';
+        anyErrors = true;
+      }
+
+      diagnostics.push(
+        meta.label + ' addr=' + (address || 'missing')
+          + ' fn=' + functions.length
+          + ' init=' + initStatus
+      );
+
+      if (!address) {
+        var missingState = document.createElement('p');
+        missingState.className = 'admin-introspection-state admin-introspection-state--error';
+        missingState.textContent = 'Error: contract address not configured for active chain.';
+        section.appendChild(missingState);
+      } else if (parse.error) {
+        var parseState = document.createElement('p');
+        parseState.className = 'admin-introspection-state admin-introspection-state--error';
+        parseState.textContent = 'Error parsing ABI: ' + parse.error;
+        section.appendChild(parseState);
+      } else if (!functions.length) {
+        var emptyState = document.createElement('p');
+        emptyState.className = 'admin-introspection-state admin-introspection-state--empty';
+        emptyState.textContent = 'No callable functions found in ABI.';
+        section.appendChild(emptyState);
+      } else {
+        section.appendChild(renderIntrospectionGroup('Read', readFns, true));
+        section.appendChild(renderIntrospectionGroup('Write', writeFns, false));
+      }
+
+      container.appendChild(section);
+    });
+
+    var diagnosticsLine = document.createElement('p');
+    diagnosticsLine.className = 'admin-introspection-diagnostics';
+    diagnosticsLine.textContent = 'Diagnostics · chainId='
+      + (typeof chainId === 'number' ? chainId : 'n/a')
+      + ' · provider=' + providerStatus
+      + (providerError ? (' (' + providerError + ')') : '')
+      + ' · ' + diagnostics.join(' · ');
+    container.prepend(diagnosticsLine);
+
+    if (anyErrors && providerStatus === 'error') {
+      var providerState = document.createElement('p');
+      providerState.className = 'admin-introspection-state admin-introspection-state--error';
+      providerState.textContent = 'Initialization error: ' + providerError;
+      container.prepend(providerState);
+    }
+  }
+
+  function refreshContractIntrospection(container) {
+    if (!container) return;
+    container.innerHTML = '';
+
+    var loadingState = document.createElement('p');
+    loadingState.className = 'admin-introspection-state admin-introspection-state--loading';
+    loadingState.textContent = 'Loading contract introspection…';
+    container.appendChild(loadingState);
+
+    var chainId = currentChainId();
+    var contracts = contractAddresses();
+    var provider = getReadProvider();
+    if (!provider) {
+      container.innerHTML = '';
+      renderContractIntrospection(container, {
+        chainId: chainId,
+        contracts: contracts,
+        providerStatus: 'error',
+        providerError: chainId
+          ? ('RPC provider unavailable for chainId ' + chainId + '.')
+          : 'No network selected.',
+      });
+      return;
+    }
+
+    provider.getNetwork()
+      .then(function (network) {
+        container.innerHTML = '';
+        renderContractIntrospection(container, {
+          chainId: Number(network.chainId),
+          contracts: contracts,
+          providerStatus: 'ready',
+          providerError: '',
+        });
+      })
+      .catch(function (err) {
+        container.innerHTML = '';
+        renderContractIntrospection(container, {
+          chainId: chainId,
+          contracts: contracts,
+          providerStatus: 'error',
+          providerError: err && err.message ? err.message : 'Could not initialize provider.',
+        });
+      });
   }
 
   // ── Read call wrapper ─────────────────────────────────────────────────────────
@@ -496,9 +711,24 @@
   function updateWalletNotice() {
     var el = document.getElementById('admin-wallet-notice');
     if (!el) return;
-    el.textContent = walletReady()
-      ? ''
-      : 'Connect wallet to ' + networkName() + ' to enable write functions.';
+    if (!GTPAppState || typeof GTPAppState.getSessionIdentity !== 'function') {
+      el.textContent = 'Wallet state unavailable.';
+      return;
+    }
+    var id = GTPAppState.getSessionIdentity();
+    if (id.connectionStatus !== 'connected') {
+      el.textContent = 'Connect wallet to ' + networkName() + ' to enable write functions.';
+      return;
+    }
+    if (!id.isSupportedNetwork) {
+      el.textContent = 'Switch to Optimism Mainnet to enable write functions.';
+      return;
+    }
+    if (typeof id.chainId !== 'number') {
+      el.textContent = 'Wallet chain is unavailable. Reconnect and try again.';
+      return;
+    }
+    el.textContent = '';
   }
 
   // ── Access guard ──────────────────────────────────────────────────────────────
@@ -533,8 +763,8 @@
     if (!walletReady()) {
       if (accessNotice) accessNotice.textContent = '';
       if (body) body.hidden = false;
-      if (content) content.hidden = true;
-      if (gateNotice) gateNotice.textContent = 'Connect your wallet to verify owner access.';
+      if (content) content.hidden = false;
+      if (gateNotice) gateNotice.textContent = 'Connect wallet on Optimism Mainnet for write access.';
       return;
     }
     isOwner().then(function (owner) {
@@ -546,8 +776,8 @@
       } else {
         if (accessNotice) accessNotice.textContent = '';
         if (body) body.hidden = false;
-        if (content) content.hidden = true;
-        if (gateNotice) gateNotice.textContent = 'Access restricted — connected wallet is not the contract owner.';
+        if (content) content.hidden = false;
+        if (gateNotice) gateNotice.textContent = 'Connected wallet is not the ProjectRegistry owner. Writes may fail onchain.';
       }
     });
   }
@@ -567,9 +797,15 @@
     // Hide the contract content until owner is verified on first open
     var body = details.querySelector('.admin-panel-body');
     var content = body ? body.querySelector('.container') : null;
-    if (content) content.hidden = true;
+    if (content) content.hidden = false;
     var gateNotice = body ? body.querySelector('#admin-access-gate-notice') : null;
     if (gateNotice) gateNotice.textContent = 'Connect your wallet to verify owner access.';
+    var introspectionMount = document.createElement('div');
+    introspectionMount.className = 'admin-introspection-root';
+    introspectionMount.id = 'admin-introspection-root';
+    if (content) {
+      content.insertBefore(introspectionMount, content.firstChild);
+    }
 
     var wired = false;
     function wireAll() {
@@ -612,14 +848,19 @@
       if (details.open) {
         updateAccessGate(details, accessNotice, gateNotice);
         wireAll();
+        refreshContractIntrospection(introspectionMount);
+        updateWriteButtonsEnabled();
       }
     });
 
     updateWalletNotice();
+    updateWriteButtonsEnabled();
 
     if (GTPAppState && typeof GTPAppState.subscribe === 'function') {
       GTPAppState.subscribe(function () {
         updateWalletNotice();
+        updateWriteButtonsEnabled();
+        if (details.open) refreshContractIntrospection(introspectionMount);
         // Re-evaluate access whenever wallet state changes while panel is open
         if (details.open) updateAccessGate(details, accessNotice, gateNotice);
       });

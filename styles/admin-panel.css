@@ -327,3 +327,40 @@
 .admin-access-gate-notice:empty {
   display: none;
 }
+
+.admin-introspection-root {
+  display: flex;
+  flex-direction: column;
+  gap: 1rem;
+}
+
+.admin-introspection-diagnostics {
+  margin: 0;
+  font-size: 0.75rem;
+  color: var(--muted);
+  word-break: break-word;
+}
+
+.admin-introspection-state {
+  margin: 0;
+  font-size: 0.8rem;
+  color: var(--muted);
+}
+
+.admin-introspection-state--error {
+  color: #fca5a5;
+}
+
+.admin-introspection-state--empty {
+  color: #facc15;
+}
+
+.admin-introspection-fn-meta {
+  margin: 0;
+  font-size: 0.75rem;
+  color: var(--muted);
+}
+
+.admin-contract-address--inline {
+  pointer-events: none;
+}
