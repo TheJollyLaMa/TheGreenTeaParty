@@ -29,6 +29,14 @@
   const ASSOCIATION_PRIORITY = {
     'parent-child': 4,
     'shared-steward': 3,
+    'shared-tools': 3,
+    'shared-equipment': 3,
+    'shared-materials': 2.4,
+    mentorship: 2.2,
+    'labor-support': 2.1,
+    'funding-support': 2.1,
+    'knowledge-flow': 2,
+    'resource-sharing': 2,
     collaboration: 2,
     'funding-pool': 1.5,
     'research-link': 1,
@@ -56,6 +64,7 @@
   let nodeMap = {};
   let adjacency = {};
   let relationTypes = {};
+  let relationDetailsByPair = {};
   let branchEdges = [];
   let relationEdges = [];
   let parentById = {};
@@ -213,6 +222,7 @@
       nodeMap = {};
       adjacency = {};
       relationTypes = {};
+      relationDetailsByPair = {};
       branchEdges = [];
       relationEdges = [];
       parentById = {};
@@ -260,6 +270,7 @@
     adjacency = {};
     childrenById = {};
     relationTypes = {};
+    relationDetailsByPair = {};
     nodes.forEach((node) => {
       adjacency[node.id] = new Set();
       childrenById[node.id] = [];
@@ -271,12 +282,26 @@
       .map((edge) => {
         adjacency[edge.source].add(edge.target);
         adjacency[edge.target].add(edge.source);
-        relationTypes[relationKey(edge.source, edge.target)] = edge.type;
+        const pairKey = relationKey(edge.source, edge.target);
+        if (!relationTypes[pairKey] || associationPriority(edge.type) > associationPriority(relationTypes[pairKey])) {
+          relationTypes[pairKey] = edge.type;
+        }
+        if (!relationDetailsByPair[pairKey]) relationDetailsByPair[pairKey] = [];
+        relationDetailsByPair[pairKey].push({
+          source: edge.source,
+          target: edge.target,
+          type: edge.type,
+          typeLabel: edge.typeLabel || edge.type.replace(/-/g, ' '),
+          direction: edge.direction || 'bidirectional',
+          weight: Number.isFinite(edge.weight) ? edge.weight : 1,
+          resource: edge.resource || ''
+        });
         return {
           source: nodeMap[edge.source],
           target: nodeMap[edge.target],
           type: edge.type,
-          priority: associationPriority(edge.type)
+          priority: associationPriority(edge.type),
+          weight: Number.isFinite(edge.weight) ? edge.weight : 1
         };
       });
 
@@ -643,7 +668,7 @@
 
   function drawAssociationEdges(focusContext, world) {
     ctx.save();
-    relationEdges.forEach(({ source, target, type, priority }) => {
+    relationEdges.forEach(({ source, target, type, priority, weight }) => {
       if (!edgeVisible(source, target, world)) return;
       const touchesSelection = selectedNode && (source.id === selectedNode.id || target.id === selectedNode.id);
       const inFocusContext = !focusContext || focusContext.has(source.id) || focusContext.has(target.id);
@@ -662,7 +687,8 @@
       ctx.moveTo(source.x, source.y);
       ctx.quadraticCurveTo(mx - dy * bend, my + dx * bend, target.x, target.y);
       ctx.strokeStyle = hexAlpha(color, alpha);
-      ctx.lineWidth = (touchesSelection ? 1.2 : 0.75) / zoom;
+      const weightBoost = 1 + Math.min(Math.max((weight || 1) - 1, 0), 1.6) * 0.38;
+      ctx.lineWidth = ((touchesSelection ? 1.2 : 0.75) * weightBoost) / zoom;
       ctx.setLineDash(type === 'research-link' ? [4 / zoom, 5 / zoom] : []);
       ctx.stroke();
     });
@@ -1273,7 +1299,7 @@
 
     const assocHtml = neighbours.length
       ? `<div class="details-group">
-          <h3>Shared stewardship + domain links (${neighbours.length})</h3>
+          <h3>Resource + knowledge links (${neighbours.length})</h3>
           <ul>${neighbours.slice(0, 8).map((neighbour) =>
             `<li style="border-left:3px solid ${TRACK_COLORS[neighbour.track] || '#94a3b8'}">${escHtml(neighbour.name)} <small>· ${escHtml(relationLabel(node.id, neighbour.id))}</small></li>`
           ).join('')}</ul>
@@ -1501,8 +1527,30 @@
   }
 
   function relationLabel(aId, bId) {
-    const raw = relationTypes[relationKey(aId, bId)] || 'same-track';
-    return raw.replace(/-/g, ' ');
+    const details = relationDetailsByPair[relationKey(aId, bId)] || [];
+    if (!details.length) {
+      const raw = relationTypes[relationKey(aId, bId)] || 'same-track';
+      return raw.replace(/-/g, ' ');
+    }
+
+    const summary = details.slice(0, 2).map((detail) => describeRelationFromPerspective(detail, aId)).join(' · ');
+    return details.length > 2 ? `${summary} (+${details.length - 2} more)` : summary;
+  }
+
+  function describeRelationFromPerspective(detail, projectId) {
+    const base = String(detail.typeLabel || detail.type || 'link');
+    const flow = relationFlowBadge(detail, projectId);
+    const weight = Number.isFinite(detail.weight) && detail.weight !== 1 ? ` · w${Number(detail.weight).toFixed(1)}` : '';
+    const resource = detail.resource ? ` · ${detail.resource}` : '';
+    return `${base}${flow}${weight}${resource}`;
+  }
+
+  function relationFlowBadge(detail, projectId) {
+    if (!detail || detail.direction === 'bidirectional') return ' ↔';
+    const isSource = detail.source === projectId;
+    if (detail.direction === 'source-to-target') return isSource ? ' →' : ' ←';
+    if (detail.direction === 'target-to-source') return isSource ? ' ←' : ' →';
+    return '';
   }
 
   function relationKey(aId, bId) {

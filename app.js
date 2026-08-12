@@ -46,6 +46,74 @@ const formatStatusLabel = (value) => {
     .replace(/\b\w/g, (character) => character.toUpperCase());
 };
 
+const formatAssociationTypeLabel = (value) => {
+  if (!value) {
+    return 'link';
+  }
+  return String(value)
+    .replace(/-/g, ' ')
+    .replace(/\b\w/g, (character) => character.toUpperCase());
+};
+
+const buildAssociationMapByProject = (associations) => {
+  const map = {};
+  (associations || []).forEach((association) => {
+    if (!association || !association.source || !association.target) {
+      return;
+    }
+    if (!map[association.source]) map[association.source] = [];
+    if (!map[association.target]) map[association.target] = [];
+    map[association.source].push(association);
+    map[association.target].push(association);
+  });
+  return map;
+};
+
+const describeAssociationForProject = (association, projectId, projectById) => {
+  const counterpartId = association.source === projectId ? association.target : association.source;
+  const counterpartName = projectById[counterpartId]?.name || counterpartId;
+  const flow = association.direction === 'bidirectional'
+    ? '↔'
+    : association.direction === 'source-to-target'
+      ? (association.source === projectId ? '→' : '←')
+      : (association.source === projectId ? '←' : '→');
+  const typeLabel = formatAssociationTypeLabel(association.typeLabel || association.type);
+  const resource = association.resource ? ` · ${association.resource}` : '';
+  return `${typeLabel} ${flow} ${counterpartName}${resource}`;
+};
+
+const summarizeProjectAssociations = (projectId, associationMap, projectById) => {
+  const associations = associationMap[projectId] || [];
+  if (!associations.length) {
+    return '';
+  }
+
+  const top = [...associations]
+    .sort((a, b) => (Number(b.weight) || 1) - (Number(a.weight) || 1))
+    .slice(0, 2)
+    .map((association) => describeAssociationForProject(association, projectId, projectById))
+    .join(' · ');
+
+  return associations.length > 2 ? `${top} (+${associations.length - 2} more)` : top;
+};
+
+const formatLedgerAssociationContext = (associationContext) => {
+  if (!associationContext || !Array.isArray(associationContext.topLinks) || !associationContext.topLinks.length) {
+    return '';
+  }
+
+  const topLinks = associationContext.topLinks.map((link) => {
+    const flow = link.flow === 'incoming' ? '←' : link.flow === 'outgoing' ? '→' : '↔';
+    const typeLabel = formatAssociationTypeLabel(link.typeLabel || link.type);
+    const resource = link.resource ? ` · ${link.resource}` : '';
+    return `${typeLabel} ${flow} ${link.relatedProjectName}${resource}`;
+  }).join(' · ');
+
+  return associationContext.totalLinks > associationContext.topLinks.length
+    ? `${topLinks} (+${associationContext.totalLinks - associationContext.topLinks.length} more)`
+    : topLinks;
+};
+
 const renderModeBadge = () => {
   if (!modeBadge) {
     return;
@@ -219,7 +287,11 @@ const renderPublicLedger = () => {
     row.appendChild(categoryCell);
 
     const descriptionCell = document.createElement('td');
-    descriptionCell.textContent = entry.description || entry.title || '';
+    const associationContextText = formatLedgerAssociationContext(entry.associationContext);
+    const baseDescription = entry.description || entry.title || '';
+    descriptionCell.textContent = associationContextText
+      ? `${baseDescription} · Context: ${associationContextText}`
+      : baseDescription;
     row.appendChild(descriptionCell);
 
     const notesCell = document.createElement('td');
@@ -429,6 +501,11 @@ const renderProjects = () => {
   }
 
   const filteredProjects = GTPData.filterProjects();
+  const projectById = {};
+  GTPData.getProjects().forEach((project) => {
+    projectById[project.id] = project;
+  });
+  const associationMap = buildAssociationMapByProject(GTPData.getAssociations());
   const displayProjects = isOperationsLanding()
     ? filteredProjects
       .filter((project) => project.status === 'active' || Boolean(project.nextAction))
@@ -459,6 +536,10 @@ const renderProjects = () => {
       const nextActionHtml = project.nextAction
         ? `<p class="project-meta">Next: ${project.nextAction}</p>`
         : '';
+      const associationSummary = summarizeProjectAssociations(project.id, associationMap, projectById);
+      const associationHtml = associationSummary
+        ? `<p class="project-meta">Links: ${associationSummary}</p>`
+        : '';
 
       return `
         <li class="project-card">
@@ -467,6 +548,7 @@ const renderProjects = () => {
           <p>${formatCurrency(project.raised)} / ${formatCurrency(project.goal)}</p>
           <p class="project-meta">Last update: ${project.lastUpdate}</p>
           ${nextActionHtml}
+          ${associationHtml}
           ${links ? `<div class="project-links">${links}</div>` : ''}
         </li>
       `;
@@ -498,10 +580,12 @@ const renderActivity = () => {
   activityList.innerHTML = activity
     .map((entry) => {
       const amount = typeof entry.amount === 'number' ? ` · ${formatCurrency(entry.amount)}` : '';
+      const associationContext = formatLedgerAssociationContext(entry.associationContext);
       return `
         <li class="activity-item">
           <strong>${entry.type}</strong>
           <p>${entry.title}${amount}</p>
+          ${associationContext ? `<p class="activity-meta">Context: ${associationContext}</p>` : ''}
           <p class="activity-meta">${entry.date}</p>
         </li>
       `;
