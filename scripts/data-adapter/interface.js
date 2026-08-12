@@ -10,7 +10,7 @@ var GTPDataAdapterInterface = (function () {
     'getProjectBalance',
     'getProfilePointer',
     'registerProject',
-    'updateProjectMetadata',
+    'updateProjectMetadataURI',
     'updateProjectStatus',
     'transferProjectSteward',
     'setProfilePointer',

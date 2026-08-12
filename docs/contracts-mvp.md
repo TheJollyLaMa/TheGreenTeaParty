@@ -8,7 +8,7 @@ This MVP adds three intentionally small Solidity contracts for app mode:
 - `contracts/Treasury.sol`
 - `contracts/ProfileRegistry.sol`
 
-The goal is one safe, easy-to-reason-about onchain backbone for Green Tea Hut before broader multi-project expansion.
+The goal is one safe, easy-to-reason-about onchain backbone for Green Tea Party before broader multi-project expansion.
 
 ## Storage model
 

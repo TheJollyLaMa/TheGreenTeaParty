@@ -101,6 +101,12 @@ var GTPContractAdapter = (function () {
       return resolveChainId(options);
     }
 
+    function assertCanWrite() {
+      if (GTPAppState && typeof GTPAppState.assertCanWrite === 'function') {
+        GTPAppState.assertCanWrite();
+      }
+    }
+
     return {
       getContractState: function () {
         var chainId = currentChainId();
@@ -128,24 +134,24 @@ var GTPContractAdapter = (function () {
       },
       registerProject: function (projectId, steward, metadataURI) {
         var chainId = currentChainId();
-        GTPAppState.assertCanWrite();
+        assertCanWrite();
         return createPlaceholderResult('registerProject', chainId, {
           projectId: projectId,
           steward: steward,
           metadataURI: metadataURI
         });
       },
-      updateProjectMetadata: function (projectId, metadataURI) {
+      updateProjectMetadataURI: function (projectId, metadataURI) {
         var chainId = currentChainId();
-        GTPAppState.assertCanWrite();
-        return createPlaceholderResult('updateProjectMetadata', chainId, {
+        assertCanWrite();
+        return createPlaceholderResult('updateProjectMetadataURI', chainId, {
           projectId: projectId,
           metadataURI: metadataURI
         });
       },
       updateProjectStatus: function (projectId, nextStatus) {
         var chainId = currentChainId();
-        GTPAppState.assertCanWrite();
+        assertCanWrite();
         return createPlaceholderResult('updateProjectStatus', chainId, {
           projectId: projectId,
           nextStatus: nextStatus
@@ -153,7 +159,7 @@ var GTPContractAdapter = (function () {
       },
       transferProjectSteward: function (projectId, nextSteward) {
         var chainId = currentChainId();
-        GTPAppState.assertCanWrite();
+        assertCanWrite();
         return createPlaceholderResult('transferProjectSteward', chainId, {
           projectId: projectId,
           nextSteward: nextSteward
@@ -161,22 +167,22 @@ var GTPContractAdapter = (function () {
       },
       setProfilePointer: function (profileURI) {
         var chainId = currentChainId();
-        GTPAppState.assertCanWrite();
+        assertCanWrite();
         return createPlaceholderResult('setProfilePointer', chainId, {
           profileURI: profileURI
         });
       },
-      contribute: function (projectId, amountWei) {
+      contribute: function (projectId, contributeOptions) {
         var chainId = currentChainId();
-        GTPAppState.assertCanWrite();
+        assertCanWrite();
         return createPlaceholderResult('contribute', chainId, {
           projectId: projectId,
-          amountWei: amountWei
+          value: contributeOptions && Object.prototype.hasOwnProperty.call(contributeOptions, 'value') ? contributeOptions.value : null
         });
       },
       setPayoutAddress: function (projectId, payoutAddress) {
         var chainId = currentChainId();
-        GTPAppState.assertCanWrite();
+        assertCanWrite();
         return createPlaceholderResult('setPayoutAddress', chainId, {
           projectId: projectId,
           payoutAddress: payoutAddress
@@ -184,7 +190,7 @@ var GTPContractAdapter = (function () {
       },
       withdraw: function (projectId, amountWei) {
         var chainId = currentChainId();
-        GTPAppState.assertCanWrite();
+        assertCanWrite();
         return createPlaceholderResult('withdraw', chainId, {
           projectId: projectId,
           amountWei: amountWei

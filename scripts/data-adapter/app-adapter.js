@@ -49,8 +49,8 @@ var GTPAppDataAdapter = (function () {
       registerProject: function (projectId, steward, metadataURI) {
         return contractAdapter.registerProject(projectId, steward, metadataURI);
       },
-      updateProjectMetadata: function (projectId, metadataURI) {
-        return contractAdapter.updateProjectMetadata(projectId, metadataURI);
+      updateProjectMetadataURI: function (projectId, metadataURI) {
+        return contractAdapter.updateProjectMetadataURI(projectId, metadataURI);
       },
       updateProjectStatus: function (projectId, nextStatus) {
         return contractAdapter.updateProjectStatus(projectId, nextStatus);
@@ -61,8 +61,8 @@ var GTPAppDataAdapter = (function () {
       setProfilePointer: function (profileURI) {
         return contractAdapter.setProfilePointer(profileURI);
       },
-      contribute: function (projectId, amountWei) {
-        return contractAdapter.contribute(projectId, amountWei);
+      contribute: function (projectId, options) {
+        return contractAdapter.contribute(projectId, options);
       },
       setPayoutAddress: function (projectId, payoutAddress) {
         return contractAdapter.setPayoutAddress(projectId, payoutAddress);
