@@ -1,0 +1,86 @@
+// Deploy script: ProjectRegistry → ProfileRegistry → Treasury
+// Usage: npx hardhat run scripts/deploy/01_deploy_all.js --network optimism
+//
+// Required env vars (see .env.example):
+//   DEPLOYER_PRIVATE_KEY
+//   OP_MAINNET_RPC_URL
+//   OPTIMISTIC_ETHERSCAN_API_KEY
+//   INITIAL_OWNER
+
+import { ethers } from 'hardhat';
+import fs from 'fs';
+import path from 'path';
+import { fileURLToPath } from 'url';
+
+const __dirname = path.dirname(fileURLToPath(import.meta.url));
+
+async function main() {
+  const [deployer] = await ethers.getSigners();
+
+  const initialOwner = process.env.INITIAL_OWNER || deployer.address;
+
+  console.log('Deployer  :', deployer.address);
+  console.log('Owner     :', initialOwner);
+  console.log('Network   :', (await ethers.provider.getNetwork()).name);
+
+  // ── 1. ProjectRegistry ──────────────────────────────────────────────────
+  console.log('\n[1/3] Deploying ProjectRegistry…');
+  const ProjectRegistry = await ethers.getContractFactory('ProjectRegistry');
+  const registry = await ProjectRegistry.deploy(initialOwner);
+  await registry.waitForDeployment();
+  const registryAddress = await registry.getAddress();
+  console.log('ProjectRegistry :', registryAddress);
+
+  // ── 2. ProfileRegistry ──────────────────────────────────────────────────
+  console.log('\n[2/3] Deploying ProfileRegistry…');
+  const ProfileRegistry = await ethers.getContractFactory('ProfileRegistry');
+  const profile = await ProfileRegistry.deploy();
+  await profile.waitForDeployment();
+  const profileAddress = await profile.getAddress();
+  console.log('ProfileRegistry :', profileAddress);
+
+  // ── 3. Treasury ─────────────────────────────────────────────────────────
+  console.log('\n[3/3] Deploying Treasury…');
+  const Treasury = await ethers.getContractFactory('Treasury');
+  const treasury = await Treasury.deploy(registryAddress, initialOwner);
+  await treasury.waitForDeployment();
+  const treasuryAddress = await treasury.getAddress();
+  console.log('Treasury        :', treasuryAddress);
+
+  // ── Persist addresses ────────────────────────────────────────────────────
+  const network = await ethers.provider.getNetwork();
+  const chainId = Number(network.chainId);
+
+  const addresses = {
+    chainId,
+    network: network.name,
+    deployedAt: new Date().toISOString(),
+    deployer: deployer.address,
+    owner: initialOwner,
+    contracts: {
+      projectRegistry: registryAddress,
+      profileRegistry: profileAddress,
+      treasury: treasuryAddress
+    }
+  };
+
+  const outPath = path.join(__dirname, '../../config/deployed-addresses.json');
+  fs.mkdirSync(path.dirname(outPath), { recursive: true });
+  fs.writeFileSync(outPath, JSON.stringify(addresses, null, 2));
+  console.log('\nAddresses written to', outPath);
+
+  // ── Summary ──────────────────────────────────────────────────────────────
+  console.log('\n=== Deployment complete ===');
+  console.log('ProjectRegistry :', registryAddress);
+  console.log('ProfileRegistry :', profileAddress);
+  console.log('Treasury        :', treasuryAddress);
+  console.log('\nNext steps:');
+  console.log('  npx hardhat verify --network optimism', registryAddress, `"${initialOwner}"`);
+  console.log('  npx hardhat verify --network optimism', profileAddress);
+  console.log('  npx hardhat verify --network optimism', treasuryAddress, `"${registryAddress}"`, `"${initialOwner}"`);
+}
+
+main().catch((err) => {
+  console.error(err);
+  process.exitCode = 1;
+});

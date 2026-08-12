@@ -1,0 +1,13 @@
+{
+  "chainId": 10,
+  "network": "optimism",
+  "deployedAt": "PENDING",
+  "deployer": "PENDING",
+  "owner": "PENDING",
+  "contracts": {
+    "projectRegistry": "PENDING",
+    "profileRegistry": "PENDING",
+    "treasury": "PENDING"
+  },
+  "_note": "Replace PENDING values after running: npx hardhat run scripts/deploy/01_deploy_all.js --network optimism"
+}
