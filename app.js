@@ -113,7 +113,7 @@ const isSafeHttpUrl = (value) => {
   }
 
   try {
-    const parsed = new URL(value, window.location.href);
+    const parsed = new URL(value);
     return parsed.protocol === 'http:' || parsed.protocol === 'https:';
   } catch (error) {
     return false;
