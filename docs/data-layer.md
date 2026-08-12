@@ -109,26 +109,56 @@ valid project `id`; unknown IDs produce a `console.warn`.
 
 ---
 
-## Activity Schema (`data/activity.json`)
+## Ledger Row Normalization (`data/activity.json` + contract events)
 
-Optional chronological ledger feed.  If the file is absent or unreachable the
-app renders without activity entries and KPI calculations that depend on
-activity data return safe defaults.
+The ledger UI consumes a **canonical row model** produced by
+`GTPData.normalizeActivityRows()`. Input can be either:
+
+- Existing `data/activity.json` entries, or
+- Contract event-shaped records (`eventName`/`event`, optional `args`,
+  `txHash`/`transactionHash`, `logIndex`, `blockNumber`, `timestamp`).
+
+If the source file is absent or unreachable the app renders without ledger
+rows and KPI calculations that depend on activity return safe defaults.
+
+### Canonical ledger row schema
 
 | Field | Type | Description |
 |---|---|---|
-| `type` | `string` | Entry type (see below) |
-| `date` | `string` (ISO date) | Date of the activity (`YYYY-MM-DD`) |
-| `id` | `string` | Optional explicit ledger id (auto-generated when omitted) |
-| `direction` | `"incoming"` \| `"outgoing"` | Optional flow direction (auto-derived from amount when omitted) |
-| `status` | `string` | Optional status label for ledger badges (defaults to `confirmed`) |
-| `category` | `string` | Optional category displayed in ledger table |
-| `description` | `string` | Optional detailed description shown in ledger table |
-| `notes` | `string` | Optional steward notes |
-| `proofUrl` | `string` | Optional HTTP/HTTPS link to external proof |
-| `title` | `string` | Human-readable description |
-| `amount` | `number` | Optional monetary amount (USD) |
-| `projectId` | `string` | Optional link to a project `id` |
+| `id` | `string` | Stable row id (`raw.id` when present; otherwise deterministic event-derived id) |
+| `type` | `string` | Canonical row type used by UI |
+| `eventName` | `string \| null` | Original contract event name when provided |
+| `title` | `string` | Short human-readable title |
+| `amount` | `number \| null` | Normalized numeric amount |
+| `date` | `string` | Normalized display date (`YYYY-MM-DD`) |
+| `timestamp` | `string \| null` | ISO timestamp when parseable |
+| `projectId` | `string \| null` | Linked project id |
+| `direction` | `"incoming"` \| `"outgoing"` | Flow direction for ledger type/amount rendering |
+| `status` | `string` | Canonical status label (for badge styling) |
+| `category` | `string` | Ledger category |
+| `description` | `string` | Detailed ledger description |
+| `notes` | `string` | Steward notes |
+| `proofUrl` | `string \| null` | Optional external proof URL |
+| `sortTime` | `number` | Millisecond sort key (0 for missing/invalid timestamps) |
+| `sortIndex` | `number` | Original source index tie-breaker |
+
+### Mapping rules
+
+- Known contract events are mapped to canonical `type`/`category`/`direction`:
+  - `ProjectRegistered`, `ProjectMetadataUpdated`, `ProjectStatusUpdated`,
+    `ProjectStewardTransferred`
+  - `ContributionReceived`, `PayoutAddressUpdated`, `Withdrawal`
+  - `ProfileURIUpdated`
+- Timestamp normalization accepts `timestamp`, `blockTimestamp`, or `date`.
+  - Parseable values become `timestamp` (ISO) + `date` (`YYYY-MM-DD`).
+  - Missing/invalid values are kept non-fatal (`date` fallback, `sortTime=0`) with warnings.
+- Amount normalization accepts numeric/string values from `amount` or `args.amount`.
+- Status normalization folds aliases (e.g. `success` → `confirmed`,
+  `processing` → `pending`, `error` → `failed`).
+- Rows are always sorted deterministically: newest first, then `id`, then source index.
+- Duplicate ids are disambiguated by deterministic suffixes (`--2`, `--3`, …).
+- Malformed records log `console.warn` and are skipped only when minimum identity
+  (`type`/event name) is missing; ledger UI never throws due to bad records.
 
 ### Entry types
 
@@ -203,6 +233,8 @@ GTPData.load()                 // → Promise<{projects, associations, activity}
 GTPData.getProjects()          // → normalised project[]
 GTPData.getAssociations()      // → normalised association[]
 GTPData.getActivity()          // → normalised activity[]
+GTPData.normalizeActivityRow(raw, index)   // → canonical ledger row | null
+GTPData.normalizeActivityRows(rows)        // → canonical ledger row[] (sorted)
 
 // Lookup helpers
 GTPData.getProjectById(id)     // → project | null

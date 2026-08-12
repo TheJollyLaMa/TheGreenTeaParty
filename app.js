@@ -125,23 +125,7 @@ const statusClassName = (value) => String(value || 'unknown')
   .replace(/[^a-z0-9]+/g, '-')
   .replace(/(^-|-$)/g, '') || 'unknown';
 
-const getDeterministicLedgerEntries = () => GTPData.getActivity()
-  .slice()
-  .sort((entryA, entryB) => {
-    const timeA = Date.parse(entryA.date) || 0;
-    const timeB = Date.parse(entryB.date) || 0;
-    if (timeA !== timeB) {
-      return timeB - timeA;
-    }
-
-    const idA = String(entryA.id || '');
-    const idB = String(entryB.id || '');
-    if (idA !== idB) {
-      return idA.localeCompare(idB);
-    }
-
-    return Number(entryA.sortIndex || 0) - Number(entryB.sortIndex || 0);
-  });
+const getDeterministicLedgerEntries = () => GTPData.getActivity().slice();
 
 const renderLedgerWalletNetworkChip = () => {
   if (!ledgerWalletNetworkChip || !modeInfo.isApp) {
