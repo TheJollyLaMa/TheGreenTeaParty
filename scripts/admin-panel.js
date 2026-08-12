@@ -529,18 +529,26 @@
    */
   function updateAccessGate(details, accessNotice) {
     var body = details.querySelector('.admin-panel-body');
+    var content = body ? body.querySelector('.container') : null;
+    var gateNotice = document.getElementById('admin-access-gate-notice');
     if (!walletReady()) {
-      if (accessNotice) accessNotice.textContent = '— connect wallet to verify access';
-      if (body) body.hidden = true;
+      if (accessNotice) accessNotice.textContent = '';
+      if (body) body.hidden = false;
+      if (content) content.hidden = true;
+      if (gateNotice) gateNotice.textContent = 'Connect your wallet to verify owner access.';
       return;
     }
     isOwner().then(function (owner) {
       if (owner) {
         if (accessNotice) accessNotice.textContent = '';
         if (body) body.hidden = false;
+        if (content) content.hidden = false;
+        if (gateNotice) gateNotice.textContent = '';
       } else {
-        if (accessNotice) accessNotice.textContent = '— connected wallet is not the contract owner';
-        if (body) body.hidden = true;
+        if (accessNotice) accessNotice.textContent = '';
+        if (body) body.hidden = false;
+        if (content) content.hidden = true;
+        if (gateNotice) gateNotice.textContent = 'Access restricted — connected wallet is not the contract owner.';
       }
     });
   }
@@ -557,9 +565,12 @@
     var summary = details.querySelector('summary');
     if (summary) summary.appendChild(accessNotice);
 
-    // Hide body until owner is verified on first open
+    // Hide the contract content until owner is verified on first open
     var body = details.querySelector('.admin-panel-body');
-    if (body) body.hidden = true;
+    var content = body ? body.querySelector('.container') : null;
+    if (content) content.hidden = true;
+    var gateNotice = document.getElementById('admin-access-gate-notice');
+    if (gateNotice) gateNotice.textContent = 'Connect your wallet to verify owner access.';
 
     var wired = false;
     function wireAll() {
