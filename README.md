@@ -64,10 +64,11 @@ The site runs in two parallel modes behind a shared UI contract:
 | Mode | Route | Data source |
 |---|---|---|
 | **Prototype** | `/prototype/` or `?mode=prototype` | Local JSON fixtures via `GTPMockDataAdapter` |
-| **App** | `/app/` or `?mode=app` | `GTPAppDataAdapter` stubs for wallet/contract-backed flows |
+| **App** | `/app/` or `?mode=app` | `GTPAppDataAdapter` using wallet-aware, fixture-backed fund snapshots until live contract reads are wired |
 
 - `index.html` defaults to **prototype mode** when no mode is supplied.
-- Path routes (`/prototype/`, `/app/`) redirect to `index.html?mode=...` for static-host compatibility.
+- `/app/` is a dedicated Green Tea Party Fund operations landing page with wallet/session status, fund snapshot cards, project links, and public ledger activity.
+- `/prototype/` redirects to `index.html?mode=prototype` for static-host compatibility.
 - `views/spiral.html` is preserved as a **Vision Prototype (Mock Data)** page and always renders from local mock fixtures.
 
 ### Mode architecture

@@ -3,7 +3,20 @@
 var GTPAppDataAdapter = (function () {
   'use strict';
 
+  // Keeps the operations landing aligned with the existing mock dashboard's $9,200 available-funds placeholder.
+  var FIXTURE_AVAILABLE_FUNDS_USD = 9200;
+
+  function fetchJson(url) {
+    return fetch(url).then(function (res) {
+      if (!res.ok) {
+        throw new Error('[GTPAppDataAdapter] Failed to load ' + url + ' (HTTP ' + res.status + ')');
+      }
+      return res.json();
+    });
+  }
+
   function create(options) {
+    var basePath = (options && options.basePath) || '';
     var appState = options && options.appState;
     var contractAdapter = GTPContractAdapter.create({
       chainId: appState && typeof appState.getSessionIdentity === 'function'
@@ -13,13 +26,22 @@ var GTPAppDataAdapter = (function () {
 
     return {
       getProjects: function () {
-        return Promise.resolve([]);
+        return fetchJson(basePath + 'data/projects.json');
       },
       getAssociations: function () {
-        return Promise.resolve([]);
+        return fetchJson(basePath + 'data/associations.json');
       },
       getActivity: function () {
-        return Promise.resolve([]);
+        return fetch(basePath + 'data/activity.json').then(function (res) {
+          if (!res.ok) {
+            console.warn('[GTPAppDataAdapter] Activity feed unavailable at ' + (basePath + 'data/activity.json') + ' (HTTP ' + res.status + ')');
+            return [];
+          }
+          return res.json();
+        }).catch(function () {
+          console.warn('[GTPAppDataAdapter] Activity feed request failed. Returning empty activity list.');
+          return [];
+        });
       },
       getMetrics: function () {
         var readiness = appState && typeof appState.getReadiness === 'function'
@@ -27,10 +49,11 @@ var GTPAppDataAdapter = (function () {
           : { ready: false, reason: 'Wallet state unavailable.' };
 
         return contractAdapter.getContractState().then(function (contractState) {
+          var baseReason = readiness.reason || contractState.reason || 'Wallet connection required to load live contract data.';
           return {
-            availableFunds: 0,
+            availableFunds: FIXTURE_AVAILABLE_FUNDS_USD,
             placeholder: true,
-            reason: readiness.reason || contractState.reason || 'Wallet connection required to load app data.'
+            reason: baseReason + ' Showing a fixture-backed fund snapshot until live contract reads are configured.'
           };
         });
       },
