@@ -2233,5 +2233,27 @@
     "lastUpdate": "2026-07-28",
     "stewards": 4,
     "description": "Scoping community-led wetland restoration as a carbon credit opportunity to fund ongoing stewardship."
+  },
+  {
+    "id": "proj-202",
+    "name": "Green Tea Tool Library (Placeholder)",
+    "track": "Green Tea",
+    "status": "planning",
+    "raised": 0,
+    "goal": 3000,
+    "lastUpdate": "2026-08-01",
+    "stewards": 2,
+    "description": "Future shared tool and equipment lending pod for tea cultivation and processing stewards."
+  },
+  {
+    "id": "proj-203",
+    "name": "Neighborhood Skill Exchange (Placeholder)",
+    "track": "Green Tea",
+    "status": "planning",
+    "raised": 0,
+    "goal": 2500,
+    "lastUpdate": "2026-08-01",
+    "stewards": 2,
+    "description": "Future mentorship and labor exchange pod for onboarding new Green Tea Party project stewards."
   }
 ]

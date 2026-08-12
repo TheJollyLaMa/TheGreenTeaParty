@@ -14,6 +14,22 @@ var GTPData = (function () {
 
   var REQUIRED_PROJECT_FIELDS = ['id', 'name', 'track', 'status', 'raised', 'goal'];
   var REQUIRED_ASSOCIATION_FIELDS = ['source', 'target'];
+  var ASSOCIATION_TYPE_TAXONOMY = Object.freeze({
+    'parent-child': { label: 'Parent child', direction: 'source-to-target' },
+    'shared-steward': { label: 'Shared steward', direction: 'bidirectional' },
+    collaboration: { label: 'Collaboration', direction: 'bidirectional' },
+    'funding-pool': { label: 'Funding pool', direction: 'bidirectional' },
+    'research-link': { label: 'Research link', direction: 'source-to-target' },
+    'same-track': { label: 'Same track', direction: 'bidirectional' },
+    'shared-tools': { label: 'Shared tools', direction: 'bidirectional', weighted: true },
+    'shared-equipment': { label: 'Shared equipment', direction: 'bidirectional', weighted: true },
+    'shared-materials': { label: 'Shared materials', direction: 'source-to-target', weighted: true },
+    'knowledge-flow': { label: 'Knowledge flow', direction: 'source-to-target', weighted: true },
+    mentorship: { label: 'Mentorship', direction: 'source-to-target', weighted: true },
+    'labor-support': { label: 'Labor support', direction: 'source-to-target', weighted: true },
+    'funding-support': { label: 'Funding support', direction: 'source-to-target', weighted: true },
+    'resource-sharing': { label: 'Resource sharing', direction: 'bidirectional', weighted: true }
+  });
   var FRESHNESS_WINDOW_DAYS = 30;
   var AT_RISK_STALE_DAYS = 21;
   var CONTRACT_EVENT_MAP = {
@@ -108,15 +124,40 @@ var GTPData = (function () {
 
   function normalizeAssociation(raw, index) {
     if (!validateAssociation(raw, index)) return null;
+    var type = String(raw.type || 'collaboration').trim().toLowerCase();
+    var taxonomy = ASSOCIATION_TYPE_TAXONOMY[type] || null;
+    var direction = normalizeAssociationDirection(raw.direction, taxonomy && taxonomy.direction);
+    var weight = normalizeAssociationWeight(raw.weight);
     return {
       source: String(raw.source),
       target: String(raw.target),
-      type: String(raw.type || 'collaboration')
+      type: type,
+      typeLabel: String(raw.typeLabel || (taxonomy && taxonomy.label) || type.replace(/-/g, ' ')),
+      direction: direction,
+      weight: weight,
+      resource: String(raw.resource || raw.context || ''),
+      notes: String(raw.notes || '')
     };
   }
 
   function getSafeObject(value) {
     return value && typeof value === 'object' ? value : {};
+  }
+
+  function normalizeAssociationDirection(rawDirection, fallbackDirection) {
+    var normalized = String(rawDirection || fallbackDirection || 'bidirectional').trim().toLowerCase();
+    if (normalized === 'source-to-target' || normalized === 'forward' || normalized === 'one-way' || normalized === 'outgoing') {
+      return 'source-to-target';
+    }
+    if (normalized === 'target-to-source' || normalized === 'reverse' || normalized === 'incoming') {
+      return 'target-to-source';
+    }
+    return 'bidirectional';
+  }
+
+  function normalizeAssociationWeight(rawWeight) {
+    var parsed = toFiniteNumber(rawWeight);
+    return parsed !== null && parsed > 0 ? parsed : 1;
   }
 
   function toFiniteNumber(value) {
@@ -315,6 +356,75 @@ var GTPData = (function () {
     return normalized;
   }
 
+  function buildAssociationIndex(associations) {
+    var index = {};
+    associations.forEach(function (association) {
+      if (!association || !association.source || !association.target) return;
+      if (!index[association.source]) index[association.source] = [];
+      if (!index[association.target]) index[association.target] = [];
+      index[association.source].push(association);
+      index[association.target].push(association);
+    });
+    return index;
+  }
+
+  function getAssociationFlowForProject(projectId, association) {
+    if (!association || !projectId) return 'shared';
+    if (association.direction === 'bidirectional') return 'shared';
+
+    var sourceIsProject = association.source === projectId;
+    if (association.direction === 'source-to-target') {
+      return sourceIsProject ? 'outgoing' : 'incoming';
+    }
+    return sourceIsProject ? 'incoming' : 'outgoing';
+  }
+
+  function buildActivityAssociationContext(entry, associationIndex, knownProjects) {
+    if (!entry || !entry.projectId || !associationIndex[entry.projectId]) {
+      return null;
+    }
+
+    var links = associationIndex[entry.projectId]
+      .map(function (association) {
+        var counterpartId = association.source === entry.projectId ? association.target : association.source;
+        return {
+          relatedProjectId: counterpartId,
+          relatedProjectName: knownProjects[counterpartId] ? knownProjects[counterpartId].name : counterpartId,
+          type: association.type,
+          typeLabel: association.typeLabel,
+          direction: association.direction,
+          flow: getAssociationFlowForProject(entry.projectId, association),
+          weight: association.weight,
+          resource: association.resource
+        };
+      })
+      .sort(function (a, b) {
+        if (b.weight !== a.weight) return b.weight - a.weight;
+        return String(a.relatedProjectName || '').localeCompare(String(b.relatedProjectName || ''));
+      });
+
+    return {
+      projectId: entry.projectId,
+      projectName: knownProjects[entry.projectId] ? knownProjects[entry.projectId].name : entry.projectId,
+      totalLinks: links.length,
+      topLinks: links.slice(0, 3)
+    };
+  }
+
+  function attachAssociationContextToActivityRows(activityRows, associations, projects) {
+    var associationIndex = buildAssociationIndex(associations || []);
+    var knownProjects = {};
+    (projects || []).forEach(function (project) {
+      knownProjects[project.id] = project;
+    });
+
+    return (activityRows || []).map(function (entry) {
+      var context = buildActivityAssociationContext(entry, associationIndex, knownProjects);
+      if (!context) return entry;
+      return Object.assign({}, entry, { associationContext: context });
+    });
+  }
+
   function createAdapter(basePath) {
     _modeInfo = GTPModeRouter.getModeInfo(window.location);
 
@@ -366,7 +476,11 @@ var GTPData = (function () {
         }
       });
 
-      _activity = normalizeActivityRows(rawActivity);
+      _activity = attachAssociationContextToActivityRows(
+        normalizeActivityRows(rawActivity),
+        _associations,
+        _projects
+      );
 
       return { projects: _projects, associations: _associations, activity: _activity };
     }).catch(function (err) {
@@ -393,6 +507,14 @@ var GTPData = (function () {
 
   function getProjectById(id) {
     return _projects.find(function (p) { return p.id === id; }) || null;
+  }
+
+  function getAssociationTypeTaxonomy() {
+    var taxonomy = {};
+    Object.keys(ASSOCIATION_TYPE_TAXONOMY).forEach(function (key) {
+      taxonomy[key] = Object.assign({}, ASSOCIATION_TYPE_TAXONOMY[key]);
+    });
+    return taxonomy;
   }
 
   function getNeighborIds(id) {
@@ -485,8 +607,10 @@ var GTPData = (function () {
     getAdapterMetrics: getAdapterMetrics,
 
     getProjectById: getProjectById,
+    getAssociationTypeTaxonomy: getAssociationTypeTaxonomy,
     getNeighborIds: getNeighborIds,
     buildAdjacency: buildAdjacency,
+    buildAssociationIndex: buildAssociationIndex,
 
     getTotals: getTotals,
     getStatusCounts: getStatusCounts,
@@ -501,6 +625,7 @@ var GTPData = (function () {
     onFilterChange: onFilterChange,
 
     FRESHNESS_WINDOW_DAYS: FRESHNESS_WINDOW_DAYS,
-    AT_RISK_STALE_DAYS: AT_RISK_STALE_DAYS
+    AT_RISK_STALE_DAYS: AT_RISK_STALE_DAYS,
+    ASSOCIATION_TYPE_TAXONOMY: ASSOCIATION_TYPE_TAXONOMY
   };
 }());

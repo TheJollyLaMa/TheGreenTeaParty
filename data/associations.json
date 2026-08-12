@@ -2043,5 +2043,45 @@
     "source": "proj-184",
     "target": "proj-101",
     "type": "collaboration"
+  },
+  {
+    "source": "proj-202",
+    "target": "proj-001",
+    "type": "shared-tools",
+    "direction": "source-to-target",
+    "weight": 1.4,
+    "resource": "Tea processing tool kits"
+  },
+  {
+    "source": "proj-001",
+    "target": "proj-203",
+    "type": "mentorship",
+    "direction": "source-to-target",
+    "weight": 1.2,
+    "resource": "Steward onboarding support"
+  },
+  {
+    "source": "proj-203",
+    "target": "proj-202",
+    "type": "labor-support",
+    "direction": "source-to-target",
+    "weight": 0.9,
+    "resource": "Volunteer repair crews"
+  },
+  {
+    "source": "proj-203",
+    "target": "proj-001",
+    "type": "knowledge-flow",
+    "direction": "source-to-target",
+    "weight": 1.1,
+    "resource": "Community tea process playbooks"
+  },
+  {
+    "source": "proj-202",
+    "target": "proj-203",
+    "type": "funding-support",
+    "direction": "source-to-target",
+    "weight": 0.8,
+    "resource": "Micro-grant coordination"
   }
 ]

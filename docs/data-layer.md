@@ -95,6 +95,9 @@ valid project `id`; unknown IDs produce a `console.warn`.
 | `source` | `string` | ID of the source project |
 | `target` | `string` | ID of the target project |
 | `type` | `string` | Relationship type (see below) |
+| `direction` | `string` | Optional link direction: `bidirectional` · `source-to-target` · `target-to-source` |
+| `weight` | `number` | Optional relative link strength (defaults to `1`; values `< 1` are weaker than baseline, values `> 1` are stronger) |
+| `resource` | `string` | Optional short label for shared resource/knowledge flow |
 
 ### Relationship types
 
@@ -105,6 +108,14 @@ valid project `id`; unknown IDs produce a `console.warn`.
 | `collaboration` | Active collaboration between projects |
 | `funding-pool` | Projects draw from a shared funding pool |
 | `research-link` | One project informs or studies the other |
+| `shared-tools` | Shared tools or tool-lending relationship |
+| `shared-equipment` | Shared equipment pool or access |
+| `shared-materials` | Material transfer or supply sharing |
+| `knowledge-flow` | Know-how/playbook transfer between projects |
+| `mentorship` | Steward guidance or coaching support |
+| `labor-support` | Volunteer or staff labor support flow |
+| `funding-support` | One project helps unlock funds for another |
+| `resource-sharing` | General resource sharing relationship |
 | `same-track` | Implicit same-track grouping (lowest priority) |
 
 ---
@@ -139,6 +150,7 @@ rows and KPI calculations that depend on activity return safe defaults.
 | `description` | `string` | Detailed ledger description |
 | `notes` | `string` | Steward notes |
 | `proofUrl` | `string \| null` | Optional external proof URL |
+| `associationContext` | `object \| null` | Optional inferred cross-project context for `projectId` entries (top related links, flow direction, and resource labels) |
 | `sortTime` | `number` | Millisecond sort key (0 for missing/invalid timestamps) |
 | `sortIndex` | `number` | Original source index tie-breaker |
 
