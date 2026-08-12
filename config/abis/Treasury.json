@@ -285,7 +285,7 @@
     "name": "registry",
     "outputs": [
       {
-        "internalType": "contract IProjectRegistry",
+        "internalType": "contract IProjectRegistryLike",
         "name": "",
         "type": "address"
       }
