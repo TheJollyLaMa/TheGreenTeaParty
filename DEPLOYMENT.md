@@ -9,8 +9,8 @@ the Green Tea Party ledger contracts on Optimism Mainnet.
 
 | Contract | Purpose |
 |---|---|
-| `ProjectRegistry` | Register projects, assign stewards, manage lifecycle status |
-| `ProfileRegistry` | Store per-address IPFS profile URI pointers |
+| `TheGreenTeaPartyProjectRegistry` | Register projects, assign stewards, manage lifecycle status |
+| `TheGreenTeaPartyProfileRegistry` | Store per-address IPFS profile URI pointers |
 | `TheGreenTeaPartyTreasury` | Hold ETH by project, route contributions and steward withdrawals |
 
 ---
@@ -34,7 +34,7 @@ the Green Tea Party ledger contracts on Optimism Mainnet.
 | `DEPLOYER_PRIVATE_KEY` | 64-char hex private key of the deployer wallet (no `0x` prefix) |
 | `OP_MAINNET_RPC_URL` | Optimism Mainnet RPC endpoint (Alchemy / Infura / public) |
 | `OPTIMISTIC_ETHERSCAN_API_KEY` | API key from [optimistic.etherscan.io](https://optimistic.etherscan.io/apis) |
-| `INITIAL_OWNER` | Wallet address that will own `ProjectRegistry` and `TheGreenTeaPartyTreasury` (defaults to deployer) |
+| `INITIAL_OWNER` | Wallet address that will own `TheGreenTeaPartyProjectRegistry` and `TheGreenTeaPartyTreasury` (defaults to deployer) |
 
 > **Never commit `.env` to source control.** It is listed in `.gitignore`.
 
@@ -67,10 +67,10 @@ All tests must pass before deploying.
 The contracts are packaged to compile cleanly as standalone files in Remix for
 manual deployment. You do **not** deploy interfaces separately.
 
-- Deploy `ProjectRegistry.sol` first with `initialOwner`
-- Deploy `ProfileRegistry.sol`
+- Deploy `TheGreenTeaPartyProjectRegistry.sol` first with `initialOwner`
+- Deploy `TheGreenTeaPartyProfileRegistry.sol`
 - Deploy `TheGreenTeaPartyTreasury.sol` with `registryAddress` set to the deployed
-  `ProjectRegistry` address and `initialOwner`
+  `TheGreenTeaPartyProjectRegistry` address and `initialOwner`
 
 If you upload files into Remix manually, `TheGreenTeaPartyTreasury.sol` already embeds the small
 registry interface it needs for cross-contract calls, so no extra interface file
@@ -84,8 +84,8 @@ npx hardhat run scripts/deploy/01_deploy_all.js --network optimism
 
 The script deploys in order:
 
-1. `ProjectRegistry(initialOwner)`
-2. `ProfileRegistry()` — no constructor args
+1. `TheGreenTeaPartyProjectRegistry(initialOwner)`
+2. `TheGreenTeaPartyProfileRegistry()` — no constructor args
 3. `TheGreenTeaPartyTreasury(registryAddress, initialOwner)`
 
 On success it writes `config/deployed-addresses.json` with all addresses.
@@ -95,9 +95,9 @@ On success it writes `config/deployed-addresses.json` with all addresses.
 **Option A — automated (requires `@nomicfoundation/hardhat-verify` plugin):**
 
 ```bash
-npx hardhat verify --network optimism <ProjectRegistry address> "<INITIAL_OWNER>"
-npx hardhat verify --network optimism <ProfileRegistry address>
-npx hardhat verify --network optimism <TheGreenTeaPartyTreasury address> "<ProjectRegistry address>" "<INITIAL_OWNER>"
+npx hardhat verify --network optimism <TheGreenTeaPartyProjectRegistry address> "<INITIAL_OWNER>"
+npx hardhat verify --network optimism <TheGreenTeaPartyProfileRegistry address>
+npx hardhat verify --network optimism <TheGreenTeaPartyTreasury address> "<TheGreenTeaPartyProjectRegistry address>" "<INITIAL_OWNER>"
 ```
 
 **Option B — via script (reads `config/deployed-addresses.json` automatically):**
@@ -129,8 +129,8 @@ Commit this change. GitHub Pages will serve the updated config automatically.
 
 | Contract | Address | Etherscan |
 |---|---|---|
-| `ProjectRegistry` | PENDING | — |
-| `ProfileRegistry` | PENDING | — |
+| `TheGreenTeaPartyProjectRegistry` | PENDING | — |
+| `TheGreenTeaPartyProfileRegistry` | PENDING | — |
 | `TheGreenTeaPartyTreasury` | PENDING | — |
 
 See `config/deployed-addresses.json` for the machine-readable record.
@@ -143,7 +143,7 @@ See `config/deployed-addresses.json` for the machine-readable record.
 - [ ] `config/deployed-addresses.json` committed
 - [ ] `scripts/config.js` updated with live addresses
 - [ ] Frontend reads ledger data in app mode (chainId 10)
-- [ ] Initial `ProjectRegistry` entries seeded for v0.57:
+- [ ] Initial `TheGreenTeaPartyProjectRegistry` entries seeded for v0.57:
   - [ ] Seed funding pending entry
   - [ ] Equipment rental request (GreenTeaHut_01 → GreenTeaParty)
   - [ ] Labor payout entry
@@ -158,7 +158,7 @@ To roll back:
 
 1. **Pause** the affected contracts immediately:
    ```bash
-   # Call pause() on TheGreenTeaPartyTreasury and/or ProjectRegistry via the owner wallet
+   # Call pause() on TheGreenTeaPartyTreasury and/or TheGreenTeaPartyProjectRegistry via the owner wallet
    ```
 
 2. **Deploy new contract versions** with the corrected logic.
@@ -205,8 +205,8 @@ from the steward wallet.
 
 ### What existed
 
-Three Solidity contracts scaffolded in a prior issue: `ProjectRegistry`,
-`ProfileRegistry`, and `TheGreenTeaPartyTreasury`, plus their frontend ABI stubs.
+Three Solidity contracts scaffolded in a prior issue: `TheGreenTeaPartyProjectRegistry`,
+`TheGreenTeaPartyProfileRegistry`, and `TheGreenTeaPartyTreasury`, plus their frontend ABI stubs.
 No toolchain, deploy scripts, or tests existed.
 
 ### What changed for v0.56
@@ -226,8 +226,8 @@ No toolchain, deploy scripts, or tests existed.
 
 | Item | Status |
 |---|---|
-| `ProjectRegistry` | ✅ Deploy now |
-| `ProfileRegistry` | ✅ Deploy now |
+| `TheGreenTeaPartyProjectRegistry` | ✅ Deploy now |
+| `TheGreenTeaPartyProfileRegistry` | ✅ Deploy now |
 | `TheGreenTeaPartyTreasury` | ✅ Deploy now |
 | Governance token | ⏸ Deferred — out of scope for v0.56 |
 | Multi-chain deployment | ⏸ Deferred — out of scope for v0.56 |

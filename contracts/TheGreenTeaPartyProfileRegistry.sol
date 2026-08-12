@@ -1,7 +1,7 @@
 // SPDX-License-Identifier: MIT
 pragma solidity ^0.8.24;
 
-contract ProfileRegistry {
+contract TheGreenTeaPartyProfileRegistry {
     mapping(address => string) private profileURIs;
 
     event ProfileURIUpdated(address indexed account, string profileURI);

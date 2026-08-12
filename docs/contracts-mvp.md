@@ -4,15 +4,15 @@
 
 This MVP adds three intentionally small Solidity contracts for app mode:
 
-- `contracts/ProjectRegistry.sol`
+- `contracts/TheGreenTeaPartyProjectRegistry.sol`
 - `contracts/TheGreenTeaPartyTreasury.sol`
-- `contracts/ProfileRegistry.sol`
+- `contracts/TheGreenTeaPartyProfileRegistry.sol`
 
 The goal is one safe, easy-to-reason-about onchain backbone for Green Tea Party before broader multi-project expansion.
 
 ## Storage model
 
-### `ProjectRegistry`
+### `TheGreenTeaPartyProjectRegistry`
 
 - `mapping(bytes32 => Project)` keyed by deterministic `projectId`
 - `Project` stores:
@@ -22,7 +22,7 @@ The goal is one safe, easy-to-reason-about onchain backbone for Green Tea Party 
   - `exists`
 - contract-wide `owner` for initial registration / emergency pause
 
-### `ProfileRegistry`
+### `TheGreenTeaPartyProfileRegistry`
 
 - `mapping(address => string)` from wallet address to profile metadata URI
 - each caller owns and updates only their own pointer

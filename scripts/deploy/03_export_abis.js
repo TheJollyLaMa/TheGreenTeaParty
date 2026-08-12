@@ -7,7 +7,7 @@ const __dirname = path.dirname(fileURLToPath(import.meta.url));
 const artifactsDir = path.join(__dirname, '../../artifacts/contracts');
 const outDir = path.join(__dirname, '../../config/abis');
 
-const CONTRACTS = ['ProjectRegistry', 'ProfileRegistry', 'TheGreenTeaPartyTreasury'];
+const CONTRACTS = ['TheGreenTeaPartyProjectRegistry', 'TheGreenTeaPartyProfileRegistry', 'TheGreenTeaPartyTreasury'];
 
 function main() {
   if (!fs.existsSync(artifactsDir)) {

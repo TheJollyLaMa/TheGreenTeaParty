@@ -1,4 +1,4 @@
-// Deploy script: ProjectRegistry → ProfileRegistry → TheGreenTeaPartyTreasury
+// Deploy script: TheGreenTeaPartyProjectRegistry → TheGreenTeaPartyProfileRegistry → TheGreenTeaPartyTreasury
 // Usage: npx hardhat run scripts/deploy/01_deploy_all.js --network optimism
 //
 // Required env vars (see .env.example):
@@ -23,21 +23,21 @@ async function main() {
   console.log('Owner     :', initialOwner);
   console.log('Network   :', (await ethers.provider.getNetwork()).name);
 
-  // ── 1. ProjectRegistry ──────────────────────────────────────────────────
-  console.log('\n[1/3] Deploying ProjectRegistry…');
-  const ProjectRegistry = await ethers.getContractFactory('ProjectRegistry');
-  const registry = await ProjectRegistry.deploy(initialOwner);
+  // ── 1. TheGreenTeaPartyProjectRegistry ──────────────────────────────────────────────────
+  console.log('\n[1/3] Deploying TheGreenTeaPartyProjectRegistry…');
+  const TheGreenTeaPartyProjectRegistry = await ethers.getContractFactory('TheGreenTeaPartyProjectRegistry');
+  const registry = await TheGreenTeaPartyProjectRegistry.deploy(initialOwner);
   await registry.waitForDeployment();
   const registryAddress = await registry.getAddress();
-  console.log('ProjectRegistry :', registryAddress);
+  console.log('TheGreenTeaPartyProjectRegistry :', registryAddress);
 
-  // ── 2. ProfileRegistry ──────────────────────────────────────────────────
-  console.log('\n[2/3] Deploying ProfileRegistry…');
-  const ProfileRegistry = await ethers.getContractFactory('ProfileRegistry');
-  const profile = await ProfileRegistry.deploy();
+  // ── 2. TheGreenTeaPartyProfileRegistry ──────────────────────────────────────────────────
+  console.log('\n[2/3] Deploying TheGreenTeaPartyProfileRegistry…');
+  const TheGreenTeaPartyProfileRegistry = await ethers.getContractFactory('TheGreenTeaPartyProfileRegistry');
+  const profile = await TheGreenTeaPartyProfileRegistry.deploy();
   await profile.waitForDeployment();
   const profileAddress = await profile.getAddress();
-  console.log('ProfileRegistry :', profileAddress);
+  console.log('TheGreenTeaPartyProfileRegistry :', profileAddress);
 
   // ── 3. TheGreenTeaPartyTreasury ─────────────────────────────────────────
   console.log('\n[3/3] Deploying TheGreenTeaPartyTreasury…');
@@ -71,8 +71,8 @@ async function main() {
 
   // ── Summary ──────────────────────────────────────────────────────────────
   console.log('\n=== Deployment complete ===');
-  console.log('ProjectRegistry :', registryAddress);
-  console.log('ProfileRegistry :', profileAddress);
+  console.log('TheGreenTeaPartyProjectRegistry :', registryAddress);
+  console.log('TheGreenTeaPartyProfileRegistry :', profileAddress);
   console.log('TheGreenTeaPartyTreasury :', treasuryAddress);
   console.log('\nNext steps:');
   console.log('  npx hardhat verify --network optimism', registryAddress, `"${initialOwner}"`);

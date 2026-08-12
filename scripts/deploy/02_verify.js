@@ -23,15 +23,15 @@ async function main() {
   console.log('Verifying on chain', data.chainId, '/', data.network);
   console.log('Addresses:', JSON.stringify(contracts, null, 2));
 
-  // ProjectRegistry
-  console.log('\n[1/3] Verifying ProjectRegistry…');
+  // TheGreenTeaPartyProjectRegistry
+  console.log('\n[1/3] Verifying TheGreenTeaPartyProjectRegistry…');
   await run('verify:verify', {
     address: contracts.projectRegistry,
     constructorArguments: [initialOwner]
   });
 
-  // ProfileRegistry (no constructor args)
-  console.log('\n[2/3] Verifying ProfileRegistry…');
+  // TheGreenTeaPartyProfileRegistry (no constructor args)
+  console.log('\n[2/3] Verifying TheGreenTeaPartyProfileRegistry…');
   await run('verify:verify', {
     address: contracts.profileRegistry,
     constructorArguments: []

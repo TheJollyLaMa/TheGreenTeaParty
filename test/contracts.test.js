@@ -19,7 +19,7 @@ async function expectRevert(promise, pattern) {
   }
 }
 
-describe('ProjectRegistry', function () {
+describe('TheGreenTeaPartyProjectRegistry', function () {
   let ethers, registry;
   let owner, steward, other;
   let PID, META;
@@ -33,7 +33,7 @@ describe('ProjectRegistry', function () {
 
   beforeEach(async function () {
     [owner, steward, other] = await ethers.getSigners();
-    const Factory = await ethers.getContractFactory('ProjectRegistry');
+    const Factory = await ethers.getContractFactory('TheGreenTeaPartyProjectRegistry');
     registry = await Factory.deploy(owner.address);
   });
 
@@ -154,7 +154,7 @@ describe('ProjectRegistry', function () {
   });
 });
 
-describe('ProfileRegistry', function () {
+describe('TheGreenTeaPartyProfileRegistry', function () {
   let ethers, profile;
   let user, other;
 
@@ -165,7 +165,7 @@ describe('ProfileRegistry', function () {
 
   beforeEach(async function () {
     [user, other] = await ethers.getSigners();
-    const Factory = await ethers.getContractFactory('ProfileRegistry');
+    const Factory = await ethers.getContractFactory('TheGreenTeaPartyProfileRegistry');
     profile = await Factory.deploy();
   });
 
@@ -205,7 +205,7 @@ describe('TheGreenTeaPartyTreasury', function () {
   beforeEach(async function () {
     [owner, steward, contributor, other] = await ethers.getSigners();
 
-    const RegistryFactory = await ethers.getContractFactory('ProjectRegistry');
+    const RegistryFactory = await ethers.getContractFactory('TheGreenTeaPartyProjectRegistry');
     registry = await RegistryFactory.deploy(owner.address);
 
     const TreasuryFactory = await ethers.getContractFactory('TheGreenTeaPartyTreasury');
