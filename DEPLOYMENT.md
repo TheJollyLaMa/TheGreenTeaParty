@@ -62,6 +62,20 @@ npx hardhat test
 
 All tests must pass before deploying.
 
+### Remix manual deployment note
+
+The contracts are packaged to compile cleanly as standalone files in Remix for
+manual deployment. You do **not** deploy interfaces separately.
+
+- Deploy `ProjectRegistry.sol` first with `initialOwner`
+- Deploy `ProfileRegistry.sol`
+- Deploy `Treasury.sol` with `registryAddress` set to the deployed
+  `ProjectRegistry` address and `initialOwner`
+
+If you upload files into Remix manually, `Treasury.sol` already embeds the small
+registry interface it needs for cross-contract calls, so no extra interface file
+deployment step is required.
+
 ### 3. Deploy to Optimism Mainnet
 
 ```bash

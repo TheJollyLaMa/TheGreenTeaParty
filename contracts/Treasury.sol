@@ -1,19 +1,22 @@
 // SPDX-License-Identifier: MIT
 pragma solidity ^0.8.24;
 
-import "./interfaces/IProjectRegistry.sol";
-import "./interfaces/ITreasury.sol";
+interface IProjectRegistryLike {
+    function projectExists(bytes32 projectId) external view returns (bool);
+    function getSteward(bytes32 projectId) external view returns (address);
+    function getStatus(bytes32 projectId) external view returns (uint8);
+}
 
-contract Treasury is ITreasury {
+contract Treasury {
     uint8 private constant STATUS_ACTIVE = 1;
 
-    IProjectRegistry public immutable registry;
+    IProjectRegistryLike public immutable registry;
     address public owner;
     bool public paused;
     bool private locked;
 
-    mapping(bytes32 => uint256) public override projectBalances;
-    mapping(bytes32 => address) public override payoutAddresses;
+    mapping(bytes32 => uint256) public projectBalances;
+    mapping(bytes32 => address) public payoutAddresses;
 
     event OwnershipTransferred(address indexed previousOwner, address indexed nextOwner);
     event TreasuryPaused(address indexed account);
@@ -55,7 +58,7 @@ contract Treasury is ITreasury {
         if (registryAddress == address(0)) revert InvalidRegistry();
         if (initialOwner == address(0)) revert InvalidOwner();
 
-        registry = IProjectRegistry(registryAddress);
+        registry = IProjectRegistryLike(registryAddress);
         owner = initialOwner;
 
         emit OwnershipTransferred(address(0), initialOwner);
@@ -78,7 +81,7 @@ contract Treasury is ITreasury {
         emit TreasuryUnpaused(msg.sender);
     }
 
-    function contribute(bytes32 projectId) external payable override whenNotPaused {
+    function contribute(bytes32 projectId) external payable whenNotPaused {
         _requireProject(projectId);
         if (registry.getStatus(projectId) != STATUS_ACTIVE) revert InvalidProjectState();
         if (msg.value == 0) revert InvalidAmount();
@@ -87,7 +90,7 @@ contract Treasury is ITreasury {
         emit ContributionReceived(projectId, msg.sender, msg.value, projectBalances[projectId]);
     }
 
-    function setPayoutAddress(bytes32 projectId, address payoutAddress) external override whenNotPaused {
+    function setPayoutAddress(bytes32 projectId, address payoutAddress) external whenNotPaused {
         _requireProject(projectId);
         if (msg.sender != registry.getSteward(projectId)) revert Unauthorized();
         if (payoutAddress == address(0)) revert InvalidPayoutAddress();
@@ -96,7 +99,7 @@ contract Treasury is ITreasury {
         emit PayoutAddressUpdated(projectId, payoutAddress);
     }
 
-    function withdraw(bytes32 projectId, uint256 amount) external override whenNotPaused nonReentrant {
+    function withdraw(bytes32 projectId, uint256 amount) external whenNotPaused nonReentrant {
         _requireProject(projectId);
         if (amount == 0) revert InvalidAmount();
         if (projectBalances[projectId] < amount) revert InsufficientProjectBalance();
