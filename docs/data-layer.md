@@ -96,7 +96,7 @@ valid project `id`; unknown IDs produce a `console.warn`.
 | `target` | `string` | ID of the target project |
 | `type` | `string` | Relationship type (see below) |
 | `direction` | `string` | Optional link direction: `bidirectional` · `source-to-target` · `target-to-source` |
-| `weight` | `number` | Optional relative link strength (defaults to `1`) |
+| `weight` | `number` | Optional relative link strength (defaults to `1`; values `< 1` are weaker than baseline, values `> 1` are stronger) |
 | `resource` | `string` | Optional short label for shared resource/knowledge flow |
 
 ### Relationship types

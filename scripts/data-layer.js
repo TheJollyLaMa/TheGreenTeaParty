@@ -124,7 +124,7 @@ var GTPData = (function () {
 
   function normalizeAssociation(raw, index) {
     if (!validateAssociation(raw, index)) return null;
-    var type = String(raw.type || 'collaboration').trim().toLowerCase() || 'collaboration';
+    var type = String(raw.type || 'collaboration').trim().toLowerCase();
     var taxonomy = ASSOCIATION_TYPE_TAXONOMY[type] || null;
     var direction = normalizeAssociationDirection(raw.direction, taxonomy && taxonomy.direction);
     var weight = normalizeAssociationWeight(raw.weight);
@@ -373,8 +373,7 @@ var GTPData = (function () {
     if (association.direction === 'bidirectional') return 'shared';
 
     var sourceIsProject = association.source === projectId;
-    var direction = association.direction === 'target-to-source' ? 'target-to-source' : 'source-to-target';
-    if (direction === 'source-to-target') {
+    if (association.direction === 'source-to-target') {
       return sourceIsProject ? 'outgoing' : 'incoming';
     }
     return sourceIsProject ? 'incoming' : 'outgoing';
@@ -611,6 +610,7 @@ var GTPData = (function () {
     getAssociationTypeTaxonomy: getAssociationTypeTaxonomy,
     getNeighborIds: getNeighborIds,
     buildAdjacency: buildAdjacency,
+    buildAssociationIndex: buildAssociationIndex,
 
     getTotals: getTotals,
     getStatusCounts: getStatusCounts,

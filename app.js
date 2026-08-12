@@ -55,20 +55,6 @@ const formatAssociationTypeLabel = (value) => {
     .replace(/\b\w/g, (character) => character.toUpperCase());
 };
 
-const buildAssociationMapByProject = (associations) => {
-  const map = {};
-  (associations || []).forEach((association) => {
-    if (!association || !association.source || !association.target) {
-      return;
-    }
-    if (!map[association.source]) map[association.source] = [];
-    if (!map[association.target]) map[association.target] = [];
-    map[association.source].push(association);
-    map[association.target].push(association);
-  });
-  return map;
-};
-
 const describeAssociationForProject = (association, projectId, projectById) => {
   const counterpartId = association.source === projectId ? association.target : association.source;
   const counterpartName = projectById[counterpartId]?.name || counterpartId;
@@ -288,10 +274,15 @@ const renderPublicLedger = () => {
 
     const descriptionCell = document.createElement('td');
     const associationContextText = formatLedgerAssociationContext(entry.associationContext);
-    const baseDescription = entry.description || entry.title || '';
-    descriptionCell.textContent = associationContextText
-      ? `${baseDescription} · Context: ${associationContextText}`
-      : baseDescription;
+    const baseDescription = document.createElement('span');
+    baseDescription.textContent = entry.description || entry.title || '';
+    descriptionCell.appendChild(baseDescription);
+    if (associationContextText) {
+      const contextMeta = document.createElement('p');
+      contextMeta.className = 'activity-meta';
+      contextMeta.textContent = `Context: ${associationContextText}`;
+      descriptionCell.appendChild(contextMeta);
+    }
     row.appendChild(descriptionCell);
 
     const notesCell = document.createElement('td');
@@ -505,7 +496,9 @@ const renderProjects = () => {
   GTPData.getProjects().forEach((project) => {
     projectById[project.id] = project;
   });
-  const associationMap = buildAssociationMapByProject(GTPData.getAssociations());
+  const associationMap = typeof GTPData.buildAssociationIndex === 'function'
+    ? GTPData.buildAssociationIndex(GTPData.getAssociations())
+    : {};
   const displayProjects = isOperationsLanding()
     ? filteredProjects
       .filter((project) => project.status === 'active' || Boolean(project.nextAction))
