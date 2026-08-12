@@ -103,6 +103,10 @@
     { key: 'profileRegistry', label: 'ProfileRegistry', abi: PROFILE_REGISTRY_ABI }
   ];
 
+  var OWNABLE_READ_ABI = [
+    'function owner() view returns (address)'
+  ];
+
   function networkName() {
     var chainId = currentChainId();
     var networks = GTPConfig && GTPConfig.networks ? GTPConfig.networks : {};
@@ -743,7 +747,7 @@
     var connectedAddress = id && id.address ? id.address.toLowerCase() : null;
     if (!connectedAddress) return Promise.resolve(false);
     try {
-      return readContract(PROJECT_REGISTRY_ABI, 'projectRegistry').owner()
+      return readContract(OWNABLE_READ_ABI, 'projectRegistry').owner()
         .then(function (ownerAddr) {
           return ownerAddr.toLowerCase() === connectedAddress;
         })
