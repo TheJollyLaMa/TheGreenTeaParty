@@ -19,6 +19,7 @@ const modeInfo = GTPModeRouter.getModeInfo(window.location);
 const dataBasePath = new URL('.', document.baseURI).href;
 const LEDGER_PAGE_SIZE = 8;
 let ledgerVisibleCount = LEDGER_PAGE_SIZE;
+let unifiedRouteNavigationBound = false;
 
 const formatCurrency = (value) =>
   new Intl.NumberFormat('en-US', {
@@ -594,17 +595,18 @@ const navigateToSection = (hash) => {
     return;
   }
 
-  target.scrollIntoView({ behavior: 'smooth', block: 'start' });
   if (window.location.hash !== hash) {
     window.history.replaceState(null, '', hash);
   }
+  target.scrollIntoView({ behavior: 'smooth', block: 'start' });
 };
 
 const bindUnifiedRouteNavigation = () => {
-  if (document.body?.dataset?.routeVariant !== 'unified-root') {
+  if (document.body?.dataset?.routeVariant !== 'unified-root' || unifiedRouteNavigationBound) {
     return;
   }
 
+  unifiedRouteNavigationBound = true;
   document.addEventListener('keydown', (event) => {
     if (event.key !== 'Escape' || window.location.hash !== '#public-ledger') {
       return;
