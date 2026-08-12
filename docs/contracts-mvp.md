@@ -1,4 +1,4 @@
-# Contracts MVP — Project Registry, TheGreenTeaPartyTreasury, Profile Pointers
+# Contracts MVP — TheGreenTeaPartyProjectRegistry, TheGreenTeaPartyTreasury, TheGreenTeaPartyProfileRegistry
 
 ## Scope
 

@@ -259,7 +259,7 @@ describe('TheGreenTeaPartyTreasury', function () {
       const before = await ethers.provider.getBalance(steward.address);
       const tx = await treasury.connect(steward).withdraw(PID, deposit);
       const receipt = await tx.wait();
-      const gasUsed = receipt.gasUsed * tx.gasPrice;
+      const gasUsed = receipt.gasUsed * receipt.gasPrice;
       const after = await ethers.provider.getBalance(steward.address);
       expect(after + gasUsed).to.be.greaterThanOrEqual(before + deposit - ethers.parseEther('0.001'));
       expect(await treasury.projectBalances(PID)).to.equal(0n);
