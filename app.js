@@ -596,15 +596,11 @@ const navigateToSection = (hash) => {
     return;
   }
 
-  const performScroll = () => {
-    target.scrollIntoView({ behavior: 'smooth', block: 'start' });
-  };
-
   if (window.location.hash !== hash) {
-    window.location.hash = hash;
+    window.history.pushState(null, '', hash);
   }
 
-  performScroll();
+  target.scrollIntoView({ behavior: 'smooth', block: 'start' });
 };
 
 const unbindUnifiedRouteNavigation = () => {
