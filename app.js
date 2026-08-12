@@ -20,6 +20,7 @@ const dataBasePath = new URL('.', document.baseURI).href;
 const LEDGER_PAGE_SIZE = 8;
 let ledgerVisibleCount = LEDGER_PAGE_SIZE;
 let unifiedRouteNavigationBound = false;
+let unifiedRouteKeydownHandler = null;
 
 const formatCurrency = (value) =>
   new Intl.NumberFormat('en-US', {
@@ -595,15 +596,21 @@ const navigateToSection = (hash) => {
     return;
   }
 
+  const performScroll = () => {
+    target.scrollIntoView({ behavior: 'smooth', block: 'start' });
+  };
+
   if (window.location.hash !== hash) {
+    const handleHashChange = () => {
+      window.removeEventListener('hashchange', handleHashChange);
+      performScroll();
+    };
+    window.addEventListener('hashchange', handleHashChange);
     window.location.hash = hash;
-    window.requestAnimationFrame(() => {
-      target.scrollIntoView({ behavior: 'smooth', block: 'start' });
-    });
     return;
   }
 
-  target.scrollIntoView({ behavior: 'smooth', block: 'start' });
+  performScroll();
 };
 
 const bindUnifiedRouteNavigation = () => {
@@ -612,14 +619,15 @@ const bindUnifiedRouteNavigation = () => {
   }
 
   unifiedRouteNavigationBound = true;
-  document.addEventListener('keydown', (event) => {
+  unifiedRouteKeydownHandler = (event) => {
     if (event.key !== 'Escape' || window.location.hash !== '#public-ledger') {
       return;
     }
 
     event.preventDefault();
     navigateToSection('#fractal-experience');
-  });
+  };
+  document.addEventListener('keydown', unifiedRouteKeydownHandler);
 };
 
 const populateFilters = () => {
