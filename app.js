@@ -597,6 +597,9 @@ const navigateToSection = (hash) => {
 
   if (window.location.hash !== hash) {
     window.location.hash = hash;
+    window.requestAnimationFrame(() => {
+      target.scrollIntoView({ behavior: 'smooth', block: 'start' });
+    });
     return;
   }
 
