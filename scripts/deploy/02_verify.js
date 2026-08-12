@@ -37,8 +37,8 @@ async function main() {
     constructorArguments: []
   });
 
-  // Treasury
-  console.log('\n[3/3] Verifying Treasury…');
+  // TheGreenTeaPartyTreasury
+  console.log('\n[3/3] Verifying TheGreenTeaPartyTreasury…');
   await run('verify:verify', {
     address: contracts.treasury,
     constructorArguments: [contracts.projectRegistry, initialOwner]

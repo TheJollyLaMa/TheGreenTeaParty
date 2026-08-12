@@ -1,4 +1,4 @@
-// Deploy script: ProjectRegistry → ProfileRegistry → Treasury
+// Deploy script: ProjectRegistry → ProfileRegistry → TheGreenTeaPartyTreasury
 // Usage: npx hardhat run scripts/deploy/01_deploy_all.js --network optimism
 //
 // Required env vars (see .env.example):
@@ -39,13 +39,13 @@ async function main() {
   const profileAddress = await profile.getAddress();
   console.log('ProfileRegistry :', profileAddress);
 
-  // ── 3. Treasury ─────────────────────────────────────────────────────────
-  console.log('\n[3/3] Deploying Treasury…');
-  const Treasury = await ethers.getContractFactory('Treasury');
-  const treasury = await Treasury.deploy(registryAddress, initialOwner);
+  // ── 3. TheGreenTeaPartyTreasury ─────────────────────────────────────────
+  console.log('\n[3/3] Deploying TheGreenTeaPartyTreasury…');
+  const TheGreenTeaPartyTreasury = await ethers.getContractFactory('TheGreenTeaPartyTreasury');
+  const treasury = await TheGreenTeaPartyTreasury.deploy(registryAddress, initialOwner);
   await treasury.waitForDeployment();
   const treasuryAddress = await treasury.getAddress();
-  console.log('Treasury        :', treasuryAddress);
+  console.log('TheGreenTeaPartyTreasury :', treasuryAddress);
 
   // ── Persist addresses ────────────────────────────────────────────────────
   const network = await ethers.provider.getNetwork();
@@ -73,7 +73,7 @@ async function main() {
   console.log('\n=== Deployment complete ===');
   console.log('ProjectRegistry :', registryAddress);
   console.log('ProfileRegistry :', profileAddress);
-  console.log('Treasury        :', treasuryAddress);
+  console.log('TheGreenTeaPartyTreasury :', treasuryAddress);
   console.log('\nNext steps:');
   console.log('  npx hardhat verify --network optimism', registryAddress, `"${initialOwner}"`);
   console.log('  npx hardhat verify --network optimism', profileAddress);

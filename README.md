@@ -115,9 +115,8 @@ real product path without backend auth.
 App mode now includes a minimal contract scaffold for the planned onchain path:
 
 - `contracts/ProjectRegistry.sol`
-- `contracts/Treasury.sol`
+- `contracts/TheGreenTeaPartyTreasury.sol`
 - `contracts/ProfileRegistry.sol`
-- `contracts/interfaces/*.sol`
 - `scripts/contract-adapter.js`
 
 ### Current contract adapter behavior

@@ -11,7 +11,7 @@ the Green Tea Party ledger contracts on Optimism Mainnet.
 |---|---|
 | `ProjectRegistry` | Register projects, assign stewards, manage lifecycle status |
 | `ProfileRegistry` | Store per-address IPFS profile URI pointers |
-| `Treasury` | Hold ETH by project, route contributions and steward withdrawals |
+| `TheGreenTeaPartyTreasury` | Hold ETH by project, route contributions and steward withdrawals |
 
 ---
 
@@ -34,7 +34,7 @@ the Green Tea Party ledger contracts on Optimism Mainnet.
 | `DEPLOYER_PRIVATE_KEY` | 64-char hex private key of the deployer wallet (no `0x` prefix) |
 | `OP_MAINNET_RPC_URL` | Optimism Mainnet RPC endpoint (Alchemy / Infura / public) |
 | `OPTIMISTIC_ETHERSCAN_API_KEY` | API key from [optimistic.etherscan.io](https://optimistic.etherscan.io/apis) |
-| `INITIAL_OWNER` | Wallet address that will own `ProjectRegistry` and `Treasury` (defaults to deployer) |
+| `INITIAL_OWNER` | Wallet address that will own `ProjectRegistry` and `TheGreenTeaPartyTreasury` (defaults to deployer) |
 
 > **Never commit `.env` to source control.** It is listed in `.gitignore`.
 
@@ -69,10 +69,10 @@ manual deployment. You do **not** deploy interfaces separately.
 
 - Deploy `ProjectRegistry.sol` first with `initialOwner`
 - Deploy `ProfileRegistry.sol`
-- Deploy `Treasury.sol` with `registryAddress` set to the deployed
+- Deploy `TheGreenTeaPartyTreasury.sol` with `registryAddress` set to the deployed
   `ProjectRegistry` address and `initialOwner`
 
-If you upload files into Remix manually, `Treasury.sol` already embeds the small
+If you upload files into Remix manually, `TheGreenTeaPartyTreasury.sol` already embeds the small
 registry interface it needs for cross-contract calls, so no extra interface file
 deployment step is required.
 
@@ -86,7 +86,7 @@ The script deploys in order:
 
 1. `ProjectRegistry(initialOwner)`
 2. `ProfileRegistry()` — no constructor args
-3. `Treasury(registryAddress, initialOwner)`
+3. `TheGreenTeaPartyTreasury(registryAddress, initialOwner)`
 
 On success it writes `config/deployed-addresses.json` with all addresses.
 
@@ -97,7 +97,7 @@ On success it writes `config/deployed-addresses.json` with all addresses.
 ```bash
 npx hardhat verify --network optimism <ProjectRegistry address> "<INITIAL_OWNER>"
 npx hardhat verify --network optimism <ProfileRegistry address>
-npx hardhat verify --network optimism <Treasury address> "<ProjectRegistry address>" "<INITIAL_OWNER>"
+npx hardhat verify --network optimism <TheGreenTeaPartyTreasury address> "<ProjectRegistry address>" "<INITIAL_OWNER>"
 ```
 
 **Option B — via script (reads `config/deployed-addresses.json` automatically):**
@@ -131,7 +131,7 @@ Commit this change. GitHub Pages will serve the updated config automatically.
 |---|---|---|
 | `ProjectRegistry` | PENDING | — |
 | `ProfileRegistry` | PENDING | — |
-| `Treasury` | PENDING | — |
+| `TheGreenTeaPartyTreasury` | PENDING | — |
 
 See `config/deployed-addresses.json` for the machine-readable record.
 
@@ -158,20 +158,20 @@ To roll back:
 
 1. **Pause** the affected contracts immediately:
    ```bash
-   # Call pause() on Treasury and/or ProjectRegistry via the owner wallet
+   # Call pause() on TheGreenTeaPartyTreasury and/or ProjectRegistry via the owner wallet
    ```
 
 2. **Deploy new contract versions** with the corrected logic.
 
 3. **Migrate project state** explicitly — re-register projects in the new registry
-   using the same `projectId` bytes, then update `Treasury` with the new registry address.
+   using the same `projectId` bytes, then update `TheGreenTeaPartyTreasury` with the new registry address.
 
 4. **Update `scripts/config.js`** with the new contract addresses and redeploy
    the GitHub Pages site.
 
 5. **Communicate** the migration to all active project stewards.
 
-> Because project balances live in `Treasury`, migration of funds requires either
+> Because project balances live in `TheGreenTeaPartyTreasury`, migration of funds requires either
 > steward withdrawals before migration or a separate transfer mechanism.
 > Plan this carefully before deploying a replacement.
 
@@ -206,7 +206,7 @@ from the steward wallet.
 ### What existed
 
 Three Solidity contracts scaffolded in a prior issue: `ProjectRegistry`,
-`ProfileRegistry`, and `Treasury`, plus their interfaces and frontend ABI stubs.
+`ProfileRegistry`, and `TheGreenTeaPartyTreasury`, plus their frontend ABI stubs.
 No toolchain, deploy scripts, or tests existed.
 
 ### What changed for v0.56
@@ -228,7 +228,7 @@ No toolchain, deploy scripts, or tests existed.
 |---|---|
 | `ProjectRegistry` | ✅ Deploy now |
 | `ProfileRegistry` | ✅ Deploy now |
-| `Treasury` | ✅ Deploy now |
+| `TheGreenTeaPartyTreasury` | ✅ Deploy now |
 | Governance token | ⏸ Deferred — out of scope for v0.56 |
 | Multi-chain deployment | ⏸ Deferred — out of scope for v0.56 |
 | Admin moderation dashboard | ⏸ Deferred — out of scope for v0.56 |

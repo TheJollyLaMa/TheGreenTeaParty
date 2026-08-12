@@ -190,7 +190,7 @@ describe('ProfileRegistry', function () {
   });
 });
 
-describe('Treasury', function () {
+describe('TheGreenTeaPartyTreasury', function () {
   let ethers, registry, treasury;
   let owner, steward, contributor, other;
   let PID, META;
@@ -208,7 +208,7 @@ describe('Treasury', function () {
     const RegistryFactory = await ethers.getContractFactory('ProjectRegistry');
     registry = await RegistryFactory.deploy(owner.address);
 
-    const TreasuryFactory = await ethers.getContractFactory('Treasury');
+    const TreasuryFactory = await ethers.getContractFactory('TheGreenTeaPartyTreasury');
     treasury = await TreasuryFactory.deploy(await registry.getAddress(), owner.address);
 
     await registry.connect(owner).registerProject(PID, steward.address, META);
@@ -323,7 +323,7 @@ describe('Treasury', function () {
 
   describe('constructor validation', function () {
     it('reverts with zero registry address', async function () {
-      const Factory = await ethers.getContractFactory('Treasury');
+      const Factory = await ethers.getContractFactory('TheGreenTeaPartyTreasury');
       await expectRevert(
         Factory.deploy(ethers.ZeroAddress, owner.address),
         'InvalidRegistry'

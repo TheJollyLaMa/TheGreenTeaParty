@@ -18,7 +18,7 @@ a mode-specific adapter implementing the shared contract:
 
 App mode also exposes optional contract-facing wrapper methods through
 `scripts/contract-adapter.js` and `scripts/data-adapter/app-adapter.js` for the
-starter `ProjectRegistry`, `Treasury`, and `ProfileRegistry` MVP.
+starter `ProjectRegistry`, `TheGreenTeaPartyTreasury`, and `ProfileRegistry` MVP.
 
 ---
 

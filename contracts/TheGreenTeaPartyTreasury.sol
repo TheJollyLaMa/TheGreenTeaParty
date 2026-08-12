@@ -7,7 +7,7 @@ interface IProjectRegistryLike {
     function getStatus(bytes32 projectId) external view returns (uint8);
 }
 
-contract Treasury {
+contract TheGreenTeaPartyTreasury {
     uint8 private constant STATUS_ACTIVE = 1;
 
     IProjectRegistryLike public immutable registry;
