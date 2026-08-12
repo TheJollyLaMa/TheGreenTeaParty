@@ -5,6 +5,8 @@ var GTPAppDataAdapter = (function () {
 
   var DEFAULT_CHAIN_ID = 10;
 
+  var CONTRACT_STATUS_TO_LABEL = { 0: 'draft', 1: 'active', 2: 'paused', 3: 'completed' };
+
   function fetchJson(url) {
     return fetch(url).then(function (res) {
       if (!res.ok) {
@@ -12,6 +14,190 @@ var GTPAppDataAdapter = (function () {
       }
       return res.json();
     });
+  }
+
+  // ---- Live project list from ProjectRegistry --------------------------------
+
+  /**
+   * Returns a Promise<Object[]> of project objects built from on-chain data.
+   *
+   * Strategy:
+   *  1. Query all ProjectRegistered events to enumerate project IDs.
+   *  2. For each ID, call getProject() to read the current state.
+   *  3. Resolve metadataURI — if it starts with "{" parse it as inline JSON;
+   *     if it is an HTTP/IPFS URL, fetch it; otherwise treat it as a label.
+   *  4. Merge on-chain fields (steward, status) with metadata fields.
+   *
+   * Required project shape for data-layer.js:
+   *   { id, name, track, status, raised, goal }
+   * All other fields are optional but surfaced if present in the metadata.
+   */
+  function fetchProjectsFromRegistry(chainId) {
+    if (typeof window === 'undefined' || typeof window.ethers === 'undefined') {
+      console.warn('[GTPAppDataAdapter] ethers.js not loaded — returning empty project list.');
+      return Promise.resolve([]);
+    }
+
+    var networks = GTPConfig && GTPConfig.networks ? GTPConfig.networks : {};
+    var net = networks[chainId];
+    if (!net || !net.rpcUrl) {
+      console.warn('[GTPAppDataAdapter] No RPC URL for chainId ' + chainId + ' — returning empty project list.');
+      return Promise.resolve([]);
+    }
+
+    var contractsCfg = GTPConfig && GTPConfig.contracts ? (GTPConfig.contracts[chainId] || {}) : {};
+    if (!contractsCfg.projectRegistry) {
+      console.warn('[GTPAppDataAdapter] ProjectRegistry address not configured for chainId ' + chainId);
+      return Promise.resolve([]);
+    }
+
+    var fromBlock = typeof contractsCfg.fromBlock === 'number' ? contractsCfg.fromBlock : 0;
+    var PROJECT_REGISTRY_ABI = GTPContractAdapter.PROJECT_REGISTRY_ABI;
+
+    var provider;
+    try {
+      provider = new window.ethers.JsonRpcProvider(net.rpcUrl, chainId);
+    } catch (e) {
+      console.warn('[GTPAppDataAdapter] Could not create provider for project fetch:', e);
+      return Promise.resolve([]);
+    }
+
+    var registry = new window.ethers.Contract(contractsCfg.projectRegistry, PROJECT_REGISTRY_ABI, provider);
+
+    return registry.queryFilter(registry.filters.ProjectRegistered(), fromBlock, 'latest')
+      .then(function (logs) {
+        if (!logs.length) return [];
+
+        // De-duplicate by projectId, keeping the last (highest-index) event per ID.
+        // The contract prevents re-registration, but this guards against edge cases.
+        var latestByProjectId = {};
+        logs.forEach(function (log) {
+          var pid = log.args && log.args.projectId ? log.args.projectId : null;
+          if (pid) {
+            latestByProjectId[pid] = log;
+          }
+        });
+        var uniqueLogs = Object.values(latestByProjectId);
+
+        // Fetch current on-chain state for each project
+        var stateFetches = uniqueLogs.map(function (log) {
+          var projectId = log.args.projectId;
+          return registry.getProject(projectId)
+            .then(function (result) {
+              return {
+                projectId: projectId,
+                steward: result.steward,
+                metadataURI: result.metadataURI,
+                status: Number(result.status)
+              };
+            })
+            .catch(function (err) {
+              console.warn('[GTPAppDataAdapter] getProject(' + projectId + ') failed:', err);
+              return null;
+            });
+        });
+
+        return Promise.all(stateFetches);
+      })
+      .then(function (records) {
+        var metaFetches = records
+          .filter(function (r) { return r !== null; })
+          .map(function (record) {
+            return resolveMetadata(record.metadataURI)
+              .then(function (meta) {
+                return buildProjectObject(record, meta);
+              })
+              .catch(function (err) {
+                console.warn('[GTPAppDataAdapter] resolveMetadata failed for ' + record.projectId, err);
+                return buildProjectObject(record, {});
+              });
+          });
+
+        return Promise.all(metaFetches);
+      })
+      .then(function (projects) {
+        return projects.filter(function (p) { return p !== null; });
+      })
+      .catch(function (err) {
+        console.warn('[GTPAppDataAdapter] fetchProjectsFromRegistry failed:', err);
+        return [];
+      });
+  }
+
+  /**
+   * Resolves a metadataURI to a plain object.
+   * - Inline JSON  ("{ ... }"): parsed directly.
+   * - IPFS URI     ("ipfs://..."): fetched via public gateway.
+   * - HTTP(S) URL  ("https://..."): fetched directly.
+   * - Anything else: treated as the project name.
+   */
+  function resolveMetadata(uri) {
+    if (!uri) return Promise.resolve({});
+
+    var trimmed = uri.trim();
+
+    // Inline JSON
+    if (trimmed.charAt(0) === '{') {
+      try {
+        return Promise.resolve(JSON.parse(trimmed));
+      } catch (e) {
+        return Promise.resolve({});
+      }
+    }
+
+    // IPFS URI → public gateway (overridable via GTPConfig.ipfsGateway)
+    if (trimmed.indexOf('ipfs://') === 0) {
+      var cid = trimmed.slice(7);
+      var ipfsGateway = (GTPConfig && GTPConfig.ipfsGateway) || 'https://ipfs.io/ipfs/';
+      var gatewayUrl = ipfsGateway.replace(/\/?$/, '/') + cid;
+      return fetch(gatewayUrl)
+        .then(function (res) { return res.ok ? res.json() : {}; })
+        .catch(function () { return {}; });
+    }
+
+    // HTTP(S) URL
+    if (trimmed.indexOf('http://') === 0 || trimmed.indexOf('https://') === 0) {
+      return fetch(trimmed)
+        .then(function (res) { return res.ok ? res.json() : {}; })
+        .catch(function () { return {}; });
+    }
+
+    // Plain string — treat as project name
+    return Promise.resolve({ name: trimmed });
+  }
+
+  /**
+   * Merges on-chain record fields with resolved metadata into the project shape
+   * expected by GTPData.normalizeProject().
+   * On-chain status is authoritative; metadata status is ignored.
+   */
+  function buildProjectObject(record, meta) {
+    var statusLabel = CONTRACT_STATUS_TO_LABEL[record.status] || 'draft';
+
+    // Use the hex projectId as the canonical id, falling back to a metadata id field
+    var id = (meta && meta.id) ? String(meta.id) : record.projectId;
+
+    return {
+      id: id,
+      name: String((meta && meta.name) || id),
+      track: String((meta && meta.track) || 'Green Tea'),
+      // On-chain status is the source of truth; metadata.status is not used.
+      status: statusLabel,
+      raised: (meta && typeof meta.raised === 'number') ? meta.raised : 0,
+      goal: (meta && typeof meta.goal === 'number') ? meta.goal : 0,
+      lastUpdate: (meta && meta.lastUpdate) || null,
+      publicUpdate: (meta && (meta.publicUpdate || meta.lastUpdate)) || null,
+      stewards: (meta && typeof meta.stewards === 'number') ? meta.stewards : 1,
+      description: String((meta && meta.description) || ''),
+      repoUrl: (meta && meta.repoUrl) || null,
+      artizenUrl: (meta && meta.artizenUrl) || null,
+      nextAction: (meta && meta.nextAction) || null,
+      location: (meta && meta.location) || null,
+      // On-chain fields surfaced for the panel/detail views
+      onChainSteward: record.steward,
+      onChainStatus: record.status,
+      projectId: record.projectId
+    };
   }
 
   // ---- Live event feed -------------------------------------------------------
@@ -225,10 +411,15 @@ var GTPAppDataAdapter = (function () {
 
     return {
       getProjects: function () {
-        return fetchJson(basePath + 'data/projects.json');
+        return fetchProjectsFromRegistry(resolvedChainId()).catch(function (err) {
+          console.warn('[GTPAppDataAdapter] fetchProjectsFromRegistry failed:', err);
+          return [];
+        });
       },
       getAssociations: function () {
-        return fetchJson(basePath + 'data/associations.json');
+        // Associations in app mode come from on-chain metadata when registered.
+        // Return empty until projects are present and carry association metadata.
+        return Promise.resolve([]);
       },
       getActivity: function () {
         return fetchLiveActivity(resolvedChainId()).catch(function (err) {

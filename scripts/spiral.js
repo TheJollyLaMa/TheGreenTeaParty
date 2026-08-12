@@ -177,6 +177,14 @@
 
     if (loadingEl) loadingEl.style.display = 'none';
 
+    if (allProjects.length === 0 && emptyEl) {
+      const modeInfo = typeof GTPData !== 'undefined' ? GTPData.getModeInfo() : null;
+      if (modeInfo && modeInfo.isApp) {
+        emptyEl.querySelector('strong').textContent = 'Project registry is empty.';
+        emptyEl.querySelector('p').textContent = 'No projects have been registered on-chain yet. Register The Green Tea Hut #1 to see it appear here.';
+      }
+    }
+
     populateFilters();
     buildLayout();
     applyHomeCamera(false);
