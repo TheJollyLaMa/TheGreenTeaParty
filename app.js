@@ -9,8 +9,11 @@ const kpiPanel = document.querySelector('#kpi-panel');
 const modeBadge = document.querySelector('#mode-badge');
 const appStatePanel = document.querySelector('#app-state-panel');
 const walletControl = document.querySelector('#wallet-control');
+const operationsSessionStatus = document.querySelector('#operations-session-status');
+const operationsSnapshotGrid = document.querySelector('#operations-snapshot-grid');
 
 const modeInfo = GTPModeRouter.getModeInfo(window.location);
+const dataBasePath = new URL('.', document.baseURI).href;
 
 const formatCurrency = (value) =>
   new Intl.NumberFormat('en-US', {
@@ -24,6 +27,18 @@ const shortenAddress = (address) => {
     return address || '';
   }
   return `${address.slice(0, 6)}…${address.slice(-4)}`;
+};
+
+const isOperationsLanding = () => modeInfo.isApp && !!operationsSnapshotGrid;
+
+const formatStatusLabel = (value) => {
+  if (!value) {
+    return 'unknown';
+  }
+
+  return String(value)
+    .replace(/-/g, ' ')
+    .replace(/\b\w/g, (character) => character.toUpperCase());
 };
 
 const renderModeBadge = () => {
@@ -51,7 +66,7 @@ const renderAppStatePanel = () => {
 
   appStatePanel.hidden = false;
   appStatePanel.innerHTML = `
-    <strong>App mode bootstrap</strong>
+    <strong>Wallet session</strong>
     <p class="app-state-meta">Wallet: ${state.connectionStatus}</p>
     <p class="app-state-meta">Address: ${state.address ? shortenAddress(state.address) : 'not connected'}</p>
     <p class="app-state-meta">Network: ${state.chainId || 'not selected'}</p>
@@ -60,6 +75,31 @@ const renderAppStatePanel = () => {
     ${readiness.ready ? '' : `<p class="app-state-warning">${readiness.reason}</p>`}
     ${state.lastError ? `<p class="app-state-warning">${state.lastError}</p>` : ''}
   `;
+};
+
+const renderOperationsSessionStatus = () => {
+  if (!operationsSessionStatus || !modeInfo.isApp) {
+    return;
+  }
+
+  const state = GTPAppState.getState();
+  const readiness = GTPAppState.getReadiness();
+  const statusParts = [
+    `Wallet ${formatStatusLabel(state.connectionStatus)}`
+  ];
+
+  if (state.address) {
+    statusParts.push(`Session ${shortenAddress(state.address)}`);
+  }
+
+  if (typeof state.chainId === 'number') {
+    statusParts.push(`Network ${state.chainId}${state.isSupportedNetwork ? '' : ' unsupported'}`);
+  } else {
+    statusParts.push('Network not selected');
+  }
+
+  statusParts.push(readiness.ready ? 'Ready for contract-backed actions' : readiness.reason);
+  operationsSessionStatus.textContent = statusParts.join(' · ');
 };
 
 let connectIconFailed = false;
@@ -165,19 +205,80 @@ const updateMetrics = (filteredProjects) => {
     .join('');
 };
 
-const renderProjects = () => {
-  if (!projectGrid || !trackFilter || !stageFilter) {
+const renderOperationsSnapshots = () => {
+  if (!operationsSnapshotGrid || !modeInfo.isApp) {
     return;
   }
 
-  GTPData.setFilter('track', trackFilter.value);
-  GTPData.setFilter('status', stageFilter.value);
+  const projects = GTPData.getProjects();
+  const metrics = GTPData.getMetrics(projects);
+  const readiness = GTPAppState.getReadiness();
+  const activity = GTPData.getActivity();
+  const activeProjects = projects.filter((project) => project.status === 'active').length;
+  const pendingActions = projects.filter(
+    (project) => project.status !== 'completed' && Boolean(project.nextAction)
+  ).length;
+  const treasuryMeta = metrics.placeholder
+    ? `${readiness.reason ? `${readiness.reason} ` : ''}Showing fixture-backed treasury visibility until live contract reads are configured.`
+    : `${activity.length} public ledger updates are available below.`;
+
+  const snapshotItems = [
+    {
+      label: 'Treasury',
+      value: formatCurrency(metrics.availableFunds),
+      meta: treasuryMeta
+    },
+    {
+      label: 'Active projects',
+      value: String(activeProjects),
+      meta: `${projects.length} registered projects are currently visible in the fund path.`
+    },
+    {
+      label: 'Pending actions',
+      value: String(pendingActions),
+      meta: pendingActions
+        ? 'Projects with a recorded next action need follow-through.'
+        : 'No pending follow-up items are currently recorded.'
+    }
+  ];
+
+  operationsSnapshotGrid.innerHTML = snapshotItems
+    .map(
+      (item) => `
+        <li class="metric-card operations-snapshot-card">
+          <div class="metric-label">${item.label}</div>
+          <p class="metric-value">${item.value}</p>
+          <p class="project-meta">${item.meta}</p>
+        </li>
+      `
+    )
+    .join('');
+};
+
+const renderProjects = () => {
+  if (!projectGrid) {
+    return;
+  }
+
+  if (trackFilter) {
+    GTPData.setFilter('track', trackFilter.value);
+  }
+
+  if (stageFilter) {
+    GTPData.setFilter('status', stageFilter.value);
+  }
 
   const filteredProjects = GTPData.filterProjects();
+  const displayProjects = isOperationsLanding()
+    ? filteredProjects
+      .filter((project) => project.status === 'active' || Boolean(project.nextAction))
+      .sort((projectA, projectB) => Number(Boolean(projectB.nextAction)) - Number(Boolean(projectA.nextAction)))
+      .slice(0, 6)
+    : filteredProjects;
 
   updateMetrics(filteredProjects);
 
-  if (filteredProjects.length === 0) {
+  if (displayProjects.length === 0) {
     const emptyMessage = modeInfo.isApp
       ? 'No app projects loaded yet. Connect wallet, select network, and create profile to continue.'
       : 'No projects match this filter yet.';
@@ -186,7 +287,7 @@ const renderProjects = () => {
     return;
   }
 
-  projectGrid.innerHTML = filteredProjects
+  projectGrid.innerHTML = displayProjects
     .map((project) => {
       const links = [
         project.repoUrl ? `<a href="${project.repoUrl}" target="_blank" rel="noreferrer">Repo</a>` : '',
@@ -265,9 +366,11 @@ const populateFilters = () => {
 renderModeBadge();
 renderAppStatePanel();
 renderWalletControl();
+renderOperationsSessionStatus();
 
-GTPData.load().then(() => {
+GTPData.load(dataBasePath).then(() => {
   populateFilters();
+  renderOperationsSnapshots();
   renderProjects();
   renderActivity();
   if (kpiPanel) GTPKpi.render(kpiPanel);
@@ -299,10 +402,14 @@ if (modeInfo.isApp) {
   GTPWallet.init().then(() => {
     renderAppStatePanel();
     renderWalletControl();
+    renderOperationsSessionStatus();
+    renderOperationsSnapshots();
   });
 }
 
 GTPAppState.subscribe(() => {
   renderAppStatePanel();
   renderWalletControl();
+  renderOperationsSessionStatus();
+  renderOperationsSnapshots();
 });

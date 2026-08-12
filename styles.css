@@ -403,6 +403,12 @@ blockquote {
   color: #3b82f6;
 }
 
+.operations-session-status {
+  margin: 1rem 0 0;
+  color: rgba(248, 250, 252, 0.88);
+  font-weight: 600;
+}
+
 .app-state-panel {
   margin-top: 1rem;
   margin-bottom: 1rem;
@@ -416,6 +422,41 @@ blockquote {
   margin: 0.3rem 0 0;
   color: var(--muted);
   font-size: 0.9rem;
+}
+
+.operations-snapshot-grid {
+  list-style: none;
+  padding: 0;
+  margin: 1rem 0 0;
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(220px, 1fr));
+  gap: 0.75rem;
+}
+
+.operations-snapshot-card {
+  min-height: 100%;
+}
+
+.operations-link-grid {
+  margin-top: 1rem;
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(220px, 1fr));
+  gap: 0.75rem;
+}
+
+.operations-link-card {
+  display: grid;
+  gap: 0.45rem;
+  text-decoration: none;
+  color: inherit;
+  background: var(--surface);
+  border: 1px solid var(--border);
+  border-radius: 0.6rem;
+  padding: 0.9rem;
+}
+
+.operations-link-card span {
+  color: var(--muted);
 }
 
 .app-state-warning {
