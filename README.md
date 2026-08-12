@@ -68,6 +68,7 @@ The site runs in two parallel modes behind a shared UI contract:
 
 - `index.html` defaults to **prototype mode** when no mode is supplied.
 - Path routes (`/prototype/`, `/app/`) redirect to `index.html?mode=...` for static-host compatibility.
+- `views/spiral.html` is preserved as a **Vision Prototype (Mock Data)** page and always renders from local mock fixtures.
 
 ### Mode architecture
 

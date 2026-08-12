@@ -14,6 +14,7 @@
   --accent-dark: #16a34a;
   --border: #374151;
   --danger: #ef4444;
+  --prototype-note-top: 5.1rem;
 }
 
 :root.light {
@@ -189,6 +190,29 @@ body {
   gap: 0.35rem;
   margin-top: 0.1rem;
   min-height: 2rem;
+}
+
+.prototype-vision-note {
+  position: absolute;
+  top: var(--prototype-note-top);
+  left: 0.85rem;
+  z-index: 18;
+  max-width: min(640px, calc(100% - 1.7rem));
+  padding: 0.6rem 0.75rem;
+  border: 1px solid rgba(34, 197, 94, 0.45);
+  border-radius: 0.6rem;
+  background: rgba(15, 23, 42, 0.88);
+}
+
+.prototype-vision-note p {
+  margin: 0;
+  font-size: 0.76rem;
+  line-height: 1.45;
+  color: var(--muted);
+}
+
+.prototype-vision-note a {
+  color: var(--accent);
 }
 
 .crumb-btn {
@@ -636,6 +660,10 @@ body {
 
 /* ---- Responsive ---- */
 @media (max-width: 600px) {
+  :root {
+    --prototype-note-top: 7.5rem;
+  }
+
   .spiral-toolbar {
     padding: 0.5rem 0.6rem;
     gap: 0.45rem;
