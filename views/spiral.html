@@ -21,7 +21,7 @@
           🍵 <span>Green Tea Party</span>
         </a>
 
-        <span id="mode-badge" class="mode-badge" aria-live="polite"></span>
+        <span class="mode-badge mode-badge--prototype" aria-live="polite">Vision Prototype (Mock Data)</span>
 
         <div class="toolbar-sep" role="separator"></div>
 
@@ -112,6 +112,14 @@
           aria-label="Navigation context"
         ></div>
       </nav>
+
+      <aside class="prototype-vision-note" aria-label="Prototype explainer">
+        <p>
+          This page is a long-term DecentCanopy vision demo showing how multi-project canopy behavior may look at scale.
+          Data here is static mock fixture data only.
+          <a href="app/" data-mode-link="app">Go to App Mode for real fund operations →</a>
+        </p>
+      </aside>
 
       <!-- ---- Canvas ---- -->
       <div class="spiral-canvas-wrap" role="region" aria-label="Interactive project constellation">
@@ -208,14 +216,31 @@
         panel?.setAttribute('aria-hidden', 'true');
       });
     </script>
-    <script src="scripts/config.js"></script>
-    <script src="scripts/mode-router.js"></script>
-    <script src="scripts/app-state.js"></script>
-    <script src="scripts/mode-ui.js"></script>
+    <script>
+      const fixedModeRouter = Object.freeze({
+        resolveMode: function () {
+          return { mode: 'prototype', source: 'spiral-vision' };
+        },
+        getModeInfo: function () {
+          return {
+            mode: 'prototype',
+            source: 'spiral-vision',
+            label: 'Vision Prototype (Mock Data)',
+            isPrototype: true,
+            isApp: false
+          };
+        }
+      });
+
+      Object.defineProperty(window, 'GTPModeRouter', {
+        value: fixedModeRouter,
+        enumerable: true,
+        writable: false,
+        configurable: false
+      });
+    </script>
     <script src="scripts/data-adapter/interface.js"></script>
     <script src="scripts/data-adapter/mock-adapter.js"></script>
-    <script src="scripts/contract-adapter.js"></script>
-    <script src="scripts/data-adapter/app-adapter.js"></script>
     <script src="scripts/data-layer.js"></script>
     <script src="scripts/spiral.js"></script>
   </body>
