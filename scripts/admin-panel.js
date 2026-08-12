@@ -527,10 +527,9 @@
    * Shows or hides the panel body based on owner check.
    * Renders a notice inside the summary when access is denied.
    */
-  function updateAccessGate(details, accessNotice) {
+  function updateAccessGate(details, accessNotice, gateNotice) {
     var body = details.querySelector('.admin-panel-body');
     var content = body ? body.querySelector('.container') : null;
-    var gateNotice = document.getElementById('admin-access-gate-notice');
     if (!walletReady()) {
       if (accessNotice) accessNotice.textContent = '';
       if (body) body.hidden = false;
@@ -569,7 +568,7 @@
     var body = details.querySelector('.admin-panel-body');
     var content = body ? body.querySelector('.container') : null;
     if (content) content.hidden = true;
-    var gateNotice = document.getElementById('admin-access-gate-notice');
+    var gateNotice = body ? body.querySelector('#admin-access-gate-notice') : null;
     if (gateNotice) gateNotice.textContent = 'Connect your wallet to verify owner access.';
 
     var wired = false;
@@ -611,7 +610,7 @@
 
     details.addEventListener('toggle', function () {
       if (details.open) {
-        updateAccessGate(details, accessNotice);
+        updateAccessGate(details, accessNotice, gateNotice);
         wireAll();
       }
     });
@@ -622,7 +621,7 @@
       GTPAppState.subscribe(function () {
         updateWalletNotice();
         // Re-evaluate access whenever wallet state changes while panel is open
-        if (details.open) updateAccessGate(details, accessNotice);
+        if (details.open) updateAccessGate(details, accessNotice, gateNotice);
       });
     }
   }
