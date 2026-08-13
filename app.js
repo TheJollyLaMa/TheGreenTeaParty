@@ -535,8 +535,9 @@ const renderProjects = () => {
         .filter(Boolean)
         .join('');
 
+      const hasNextAction = project.nextAction !== null && project.nextAction !== undefined && String(project.nextAction).trim() !== '';
       const nextActionText = formatTextValue(project.nextAction);
-      const nextActionHtml = `<p class="project-meta${nextActionText === 'Not provided' ? ' project-meta--placeholder' : ''}">Next: ${nextActionText}</p>`;
+      const nextActionHtml = `<p class="project-meta${hasNextAction ? '' : ' project-meta--placeholder'}">Next: ${nextActionText}</p>`;
       const associationSummary = summarizeProjectAssociations(project.id, associationMap, projectById);
       const associationHtml = associationSummary
         ? `<p class="project-meta">Links: ${associationSummary}</p>`
