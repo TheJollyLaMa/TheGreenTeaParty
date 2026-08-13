@@ -508,20 +508,21 @@ const renderProjects = () => {
     ? GTPData.buildAssociationIndex(GTPData.getAssociations())
     : {};
   const displayProjects = isOperationsLanding()
-    ? filteredProjects
-      .filter((project) => project.status === 'active' || Boolean(project.nextAction))
-      .sort((projectA, projectB) => Number(Boolean(projectB.nextAction)) - Number(Boolean(projectA.nextAction)))
-      .slice(0, 6)
+    ? [...filteredProjects].sort((projectA, projectB) => {
+        const priorityA = Number(projectA.status === 'active') + Number(Boolean(projectA.nextAction));
+        const priorityB = Number(projectB.status === 'active') + Number(Boolean(projectB.nextAction));
+        return priorityB - priorityA || projectA.name.localeCompare(projectB.name);
+      }).slice(0, 6)
     : filteredProjects;
 
   updateMetrics(filteredProjects);
 
   if (displayProjects.length === 0) {
     const emptyMessage = modeInfo.isApp
-      ? 'No app projects loaded yet. Connect wallet, select network, and create profile to continue.'
+      ? 'No on-chain projects loaded yet. Register a project in the Steward Panel to see it here.'
       : 'No projects match this filter yet.';
 
-    projectGrid.innerHTML = `<li class="project-card"><p class="project-meta">${emptyMessage}</p></li>`;
+    projectGrid.innerHTML = `<li class="project-card"><p class="project-meta project-meta--placeholder">${emptyMessage}</p></li>`;
     return;
   }
 
@@ -534,8 +535,9 @@ const renderProjects = () => {
         .filter(Boolean)
         .join('');
 
-      const nextActionHtml = project.nextAction
-        ? `<p class="project-meta">Next: ${project.nextAction}</p>`
+      const hasNextAction = hasTextValue(project.nextAction);
+      const nextActionHtml = hasNextAction
+        ? `<p class="project-meta">Next: ${formatTextValue(project.nextAction)}</p>`
         : '';
       const associationSummary = summarizeProjectAssociations(project.id, associationMap, projectById);
       const associationHtml = associationSummary
@@ -547,7 +549,7 @@ const renderProjects = () => {
           <h4 class="project-title">${project.name}</h4>
           <p class="project-meta">${project.track} · ${project.status}</p>
           <p>${formatCurrency(project.raised)} / ${formatCurrency(project.goal)}</p>
-          <p class="project-meta">Last update: ${project.lastUpdate}</p>
+          <p class="project-meta">Last update: ${formatTextValue(project.lastUpdate)}</p>
           ${nextActionHtml}
           ${associationHtml}
           ${links ? `<div class="project-links">${links}</div>` : ''}

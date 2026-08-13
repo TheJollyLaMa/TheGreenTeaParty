@@ -23,6 +23,43 @@ var GTPAppDataAdapter = (function () {
     return String(err);
   }
 
+  function toFiniteNumber(value, fallback) {
+    if (typeof value === 'number' && Number.isFinite(value)) return value;
+    if (typeof value === 'bigint') {
+      if (value >= BigInt(Number.MIN_SAFE_INTEGER) && value <= BigInt(Number.MAX_SAFE_INTEGER)) {
+        return Number(value);
+      }
+      return fallback;
+    }
+    if (typeof value === 'string' && value.trim()) {
+      var parsed = Number(value);
+      if (Number.isFinite(parsed)) return parsed;
+    }
+    return fallback;
+  }
+
+  var DEFAULT_TRACK_LABEL = 'Green Tea';
+
+  function normalizeTrackLabel(value) {
+    var track = String(value || '').trim();
+    return track || DEFAULT_TRACK_LABEL;
+  }
+
+  function getCanonicalTrackLabel(value) {
+    var canonicalLabels = window.GTPTrackLabels || [];
+    var track = String(value || '').trim().toLowerCase();
+    for (var i = 0; i < canonicalLabels.length; i += 1) {
+      if (canonicalLabels[i].toLowerCase() === track) {
+        return canonicalLabels[i];
+      }
+    }
+    return null;
+  }
+
+  function resolveLayoutTrack(value) {
+    return getCanonicalTrackLabel(value) || DEFAULT_TRACK_LABEL;
+  }
+
   function isBlockRangeTooLargeError(err) {
     var msg = errorMessage(err).toLowerCase();
     return msg.indexOf('block range is too large') !== -1
@@ -113,7 +150,19 @@ var GTPAppDataAdapter = (function () {
 
     var registry = new window.ethers.Contract(contractsCfg.projectRegistry, PROJECT_REGISTRY_ABI, provider);
 
-    return queryFilterResilient(registry, registry.filters.ProjectRegistered(), fromBlock, 'latest', provider)
+    function loadProjectRegistrationLogs(startBlock) {
+      return queryFilterResilient(registry, registry.filters.ProjectRegistered(), startBlock, 'latest', provider);
+    }
+
+    return loadProjectRegistrationLogs(fromBlock)
+      .then(function (logs) {
+        if (logs.length || fromBlock <= 0) {
+          return logs;
+        }
+
+        console.warn('[GTPAppDataAdapter] No ProjectRegistered logs found from block ' + fromBlock + '; retrying from genesis.');
+        return loadProjectRegistrationLogs(0);
+      })
       .then(function (logs) {
         if (!logs.length) return [];
 
@@ -128,21 +177,35 @@ var GTPAppDataAdapter = (function () {
         });
         var uniqueLogs = Object.values(latestByProjectId);
 
-        // Fetch current on-chain state for each project
+        // Build project records from the registration event first.
+        // Fall back to getProject() only when the event payload is incomplete.
         var stateFetches = uniqueLogs.map(function (log) {
           var projectId = log.args.projectId;
+          var eventRecord = {
+            projectId: projectId,
+            steward: log.args && log.args.steward ? log.args.steward : null,
+            metadataURI: log.args && Object.prototype.hasOwnProperty.call(log.args, 'metadataURI')
+              ? log.args.metadataURI
+              : null,
+            status: Number(log.args && log.args.status !== undefined ? log.args.status : 0)
+          };
+
+          if (eventRecord.steward && eventRecord.metadataURI !== null) {
+            return Promise.resolve(eventRecord);
+          }
+
           return registry.getProject(projectId)
             .then(function (result) {
               return {
                 projectId: projectId,
-                steward: result.steward,
-                metadataURI: result.metadataURI,
-                status: Number(result.status)
+                steward: result.steward || eventRecord.steward,
+                metadataURI: result.metadataURI || eventRecord.metadataURI,
+                status: Number(result.status !== undefined ? result.status : eventRecord.status)
               };
             })
             .catch(function (err) {
-              console.warn('[GTPAppDataAdapter] getProject(' + projectId + ') failed:', err);
-              return null;
+              console.warn('[GTPAppDataAdapter] getProject(' + projectId + ') failed; using event payload only:', err);
+              return eventRecord;
             });
         });
 
@@ -221,19 +284,23 @@ var GTPAppDataAdapter = (function () {
    * On-chain status is authoritative; metadata status is ignored.
    */
   function buildProjectObject(record, meta) {
-    var statusLabel = CONTRACT_STATUS_TO_LABEL[record.status] || 'draft';
+    var statusCode = toFiniteNumber(record && record.status, 0);
+    var statusLabel = CONTRACT_STATUS_TO_LABEL[statusCode] || 'draft';
 
     // Use the hex projectId as the canonical id, falling back to a metadata id field
-    var id = (meta && meta.id) ? String(meta.id) : record.projectId;
+    var id = (meta && meta.id) ? String(meta.id) : String(record.projectId);
+    var raised = toFiniteNumber(meta && meta.raised, 0);
+    var goal = toFiniteNumber(meta && meta.goal, 0);
 
     return {
       id: id,
       name: String((meta && meta.name) || id),
-      track: String((meta && meta.track) || 'Green Tea'),
+      track: normalizeTrackLabel(meta && meta.track),
+      layoutTrack: resolveLayoutTrack(meta && meta.track),
       // On-chain status is the source of truth; metadata.status is not used.
       status: statusLabel,
-      raised: (meta && typeof meta.raised === 'number') ? meta.raised : 0,
-      goal: (meta && typeof meta.goal === 'number') ? meta.goal : 0,
+      raised: raised,
+      goal: goal,
       lastUpdate: (meta && meta.lastUpdate) || null,
       publicUpdate: (meta && (meta.publicUpdate || meta.lastUpdate)) || null,
       stewards: (meta && typeof meta.stewards === 'number') ? meta.stewards : 1,

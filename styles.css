@@ -232,6 +232,10 @@ blockquote {
   font-size: 0.92rem;
 }
 
+.project-meta--placeholder {
+  opacity: 0.8;
+}
+
 .metric-value {
   margin: 0.25rem 0 0;
   font-size: 1.4rem;
