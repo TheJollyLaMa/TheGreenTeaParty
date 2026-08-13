@@ -16,6 +16,55 @@ var GTPAppDataAdapter = (function () {
     });
   }
 
+  function errorMessage(err) {
+    if (!err) return '';
+    if (typeof err.message === 'string') return err.message;
+    if (err.error && typeof err.error.message === 'string') return err.error.message;
+    return String(err);
+  }
+
+  function isBlockRangeTooLargeError(err) {
+    var msg = errorMessage(err).toLowerCase();
+    return msg.indexOf('block range is too large') !== -1
+      || (msg.indexOf('block range') !== -1 && msg.indexOf('too large') !== -1)
+      || msg.indexOf('eth_getlogs is limited') !== -1
+      || (msg.indexOf('eth_getlogs') !== -1 && msg.indexOf('limited') !== -1)
+      || msg.indexOf('limited to a 10,000') !== -1
+      || msg.indexOf('10,000 range') !== -1;
+  }
+
+  function queryFilterResilient(contract, filter, fromBlock, toBlock, provider) {
+    function queryRange(startBlock, endBlock) {
+      if (startBlock > endBlock) return Promise.resolve([]);
+      return contract.queryFilter(filter, startBlock, endBlock).catch(function (err) {
+        if (!isBlockRangeTooLargeError(err)) throw err;
+        if (startBlock >= endBlock) return [];
+        var mid = Math.floor((startBlock + endBlock) / 2);
+        return queryRange(startBlock, mid).then(function (leftLogs) {
+          return queryRange(mid + 1, endBlock).then(function (rightLogs) {
+            return leftLogs.concat(rightLogs);
+          });
+        });
+      });
+    }
+
+    var normalizedFromBlock = Number(fromBlock);
+    if (!Number.isFinite(normalizedFromBlock) || normalizedFromBlock < 0) {
+      normalizedFromBlock = 0;
+    }
+
+    if (toBlock === 'latest') {
+      return provider.getBlockNumber().then(function (latestBlock) {
+        if (!Number.isFinite(latestBlock) || normalizedFromBlock > latestBlock) return [];
+        return queryRange(normalizedFromBlock, latestBlock);
+      });
+    }
+
+    var normalizedToBlock = Number(toBlock);
+    if (!Number.isFinite(normalizedToBlock) || normalizedFromBlock > normalizedToBlock) return [];
+    return queryRange(normalizedFromBlock, normalizedToBlock);
+  }
+
   // ---- Live project list from ProjectRegistry --------------------------------
 
   /**
@@ -64,7 +113,7 @@ var GTPAppDataAdapter = (function () {
 
     var registry = new window.ethers.Contract(contractsCfg.projectRegistry, PROJECT_REGISTRY_ABI, provider);
 
-    return registry.queryFilter(registry.filters.ProjectRegistered(), fromBlock, 'latest')
+    return queryFilterResilient(registry, registry.filters.ProjectRegistered(), fromBlock, 'latest', provider)
       .then(function (logs) {
         if (!logs.length) return [];
 
@@ -263,7 +312,7 @@ var GTPAppDataAdapter = (function () {
     ];
 
     var queries = eventQueries.map(function (q) {
-      return q.contract.queryFilter(q.contract.filters[q.event](), fromBlock, 'latest')
+      return queryFilterResilient(q.contract, q.contract.filters[q.event](), fromBlock, 'latest', provider)
         .then(function (logs) {
           return logs.map(function (log) {
             return mapLogToActivity(log, q.event, chainId);
@@ -486,4 +535,3 @@ var GTPAppDataAdapter = (function () {
 }());
 
 window.GTPAppDataAdapter = GTPAppDataAdapter;
-

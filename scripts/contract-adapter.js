@@ -4,6 +4,8 @@ var GTPContractAdapter = (function () {
   'use strict';
 
   var PROJECT_REGISTRY_ABI = [
+    'function owner() view returns (address)',
+    'function paused() view returns (bool)',
     'function projectExists(bytes32 projectId) view returns (bool)',
     'function getSteward(bytes32 projectId) view returns (address)',
     'function getStatus(bytes32 projectId) view returns (uint8)',
@@ -12,6 +14,9 @@ var GTPContractAdapter = (function () {
     'function updateProjectMetadataURI(bytes32 projectId, string metadataURI)',
     'function updateProjectStatus(bytes32 projectId, uint8 nextStatus)',
     'function transferSteward(bytes32 projectId, address nextSteward)',
+    'function transferOwnership(address nextOwner)',
+    'function pause()',
+    'function unpause()',
     'event ProjectRegistered(bytes32 indexed projectId, address indexed steward, string metadataURI, uint8 status)',
     'event ProjectMetadataUpdated(bytes32 indexed projectId, string metadataURI)',
     'event ProjectStatusUpdated(bytes32 indexed projectId, uint8 previousStatus, uint8 nextStatus)',
@@ -25,11 +30,16 @@ var GTPContractAdapter = (function () {
   ];
 
   var TREASURY_ABI = [
+    'function owner() view returns (address)',
+    'function paused() view returns (bool)',
     'function projectBalances(bytes32 projectId) view returns (uint256)',
     'function payoutAddresses(bytes32 projectId) view returns (address)',
     'function contribute(bytes32 projectId) payable',
     'function setPayoutAddress(bytes32 projectId, address payoutAddress)',
     'function withdraw(bytes32 projectId, uint256 amount)',
+    'function transferOwnership(address nextOwner)',
+    'function pause()',
+    'function unpause()',
     'event ContributionReceived(bytes32 indexed projectId, address indexed contributor, uint256 amount, uint256 newBalance)',
     'event PayoutAddressUpdated(bytes32 indexed projectId, address indexed payoutAddress)',
     'event Withdrawal(bytes32 indexed projectId, address indexed recipient, uint256 amount, uint256 newBalance)'
@@ -425,4 +435,3 @@ var GTPContractAdapter = (function () {
 }());
 
 window.GTPContractAdapter = GTPContractAdapter;
-
