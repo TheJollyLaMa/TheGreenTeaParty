@@ -5,6 +5,9 @@
 .admin-panel-details {
   border-top: 1px solid var(--border);
   background: var(--bg);
+  position: relative;
+  z-index: 50;
+  isolation: isolate;
 }
 
 .admin-panel-summary {
@@ -37,10 +40,12 @@
 .admin-panel-summary .admin-lock {
   font-size: 1rem;
   line-height: 1;
+  color: var(--text);
 }
 
 .admin-panel-summary .admin-label {
   flex: 1;
+  color: var(--text);
 }
 
 .admin-panel-summary .admin-chevron {
@@ -48,6 +53,7 @@
   font-style: normal;
   transition: transform 0.2s ease;
   font-size: 0.75rem;
+  color: var(--text);
 }
 
 .admin-panel-details[open] .admin-panel-summary {
@@ -73,6 +79,7 @@
 .admin-panel-body {
   padding: clamp(1.5rem, 4vw, 2.5rem) clamp(1rem, 4vw, 2.5rem);
   background: var(--bg-soft);
+  color: var(--text);
 }
 
 .admin-panel-body .container {
