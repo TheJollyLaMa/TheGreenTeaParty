@@ -12,5 +12,10 @@
     return text ? text : fallback;
   }
 
+  function hasTextValue(value) {
+    return value !== null && value !== undefined && String(value).trim() !== '';
+  }
+
   window.formatTextValue = formatTextValue;
+  window.hasTextValue = hasTextValue;
 }());
