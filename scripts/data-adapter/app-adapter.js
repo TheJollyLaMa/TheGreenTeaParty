@@ -128,7 +128,19 @@ var GTPAppDataAdapter = (function () {
 
     var registry = new window.ethers.Contract(contractsCfg.projectRegistry, PROJECT_REGISTRY_ABI, provider);
 
-    return queryFilterResilient(registry, registry.filters.ProjectRegistered(), fromBlock, 'latest', provider)
+    function loadProjectRegistrationLogs(startBlock) {
+      return queryFilterResilient(registry, registry.filters.ProjectRegistered(), startBlock, 'latest', provider);
+    }
+
+    return loadProjectRegistrationLogs(fromBlock)
+      .then(function (logs) {
+        if (logs.length || fromBlock <= 0) {
+          return logs;
+        }
+
+        console.warn('[GTPAppDataAdapter] No ProjectRegistered logs found from block ' + fromBlock + '; retrying from genesis.');
+        return loadProjectRegistrationLogs(0);
+      })
       .then(function (logs) {
         if (!logs.length) return [];
 

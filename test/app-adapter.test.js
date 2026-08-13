@@ -125,4 +125,40 @@ describe('GTPAppDataAdapter', function () {
       goal: 12000
     });
   });
+
+  it('retries the registry scan from genesis when the configured start block misses the project', async function () {
+    const sandbox = await loadAppAdapterSandbox();
+    const queryCalls = [];
+
+    sandbox.setRegistryStub({
+      filters: {
+        ProjectRegistered: function () {
+          return {};
+        }
+      },
+      queryFilter: async function (filter, fromBlock, toBlock) {
+        queryCalls.push({ fromBlock, toBlock });
+        if (fromBlock === 0) {
+          return [
+            {
+              args: { projectId: '0xproject1' }
+            }
+          ];
+        }
+        return [];
+      },
+      getProject: async function () {
+        return {
+          steward: '0x0000000000000000000000000000000000000002',
+          metadataURI: '{"id":"green-tea-hut-01","name":"The Green Tea Hut #1","track":"Green Tea","goal":"12000"}',
+          status: 0n
+        };
+      }
+    });
+
+    const projects = await sandbox.adapter.create({}).getProjects();
+
+    expect(projects).to.have.lengthOf(1);
+    expect(queryCalls.some(({ fromBlock }) => fromBlock === 0)).to.equal(true);
+  });
 });
