@@ -521,7 +521,7 @@ const renderProjects = () => {
         const priorityA = Number(projectA.status === 'active') + Number(Boolean(projectA.nextAction));
         const priorityB = Number(projectB.status === 'active') + Number(Boolean(projectB.nextAction));
         return priorityB - priorityA || projectA.name.localeCompare(projectB.name);
-      })
+      }).slice(0, 6)
     : filteredProjects;
 
   updateMetrics(filteredProjects);
@@ -544,7 +544,8 @@ const renderProjects = () => {
         .filter(Boolean)
         .join('');
 
-      const nextActionHtml = `<p class="project-meta">Next: ${formatTextValue(project.nextAction)}</p>`;
+      const nextActionText = formatTextValue(project.nextAction);
+      const nextActionHtml = `<p class="project-meta${nextActionText === 'Not provided' ? ' project-meta--placeholder' : ''}">Next: ${nextActionText}</p>`;
       const associationSummary = summarizeProjectAssociations(project.id, associationMap, projectById);
       const associationHtml = associationSummary
         ? `<p class="project-meta">Links: ${associationSummary}</p>`
