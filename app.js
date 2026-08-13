@@ -517,10 +517,11 @@ const renderProjects = () => {
     ? GTPData.buildAssociationIndex(GTPData.getAssociations())
     : {};
   const displayProjects = isOperationsLanding()
-    ? filteredProjects
-      .filter((project) => project.status === 'active' || Boolean(project.nextAction))
-      .sort((projectA, projectB) => Number(Boolean(projectB.nextAction)) - Number(Boolean(projectA.nextAction)))
-      .slice(0, 6)
+    ? [...filteredProjects].sort((projectA, projectB) => {
+        const priorityA = Number(projectA.status === 'active') + Number(Boolean(projectA.nextAction));
+        const priorityB = Number(projectB.status === 'active') + Number(Boolean(projectB.nextAction));
+        return priorityB - priorityA || projectA.name.localeCompare(projectB.name);
+      })
     : filteredProjects;
 
   updateMetrics(filteredProjects);
@@ -543,9 +544,7 @@ const renderProjects = () => {
         .filter(Boolean)
         .join('');
 
-      const nextActionHtml = project.nextAction
-        ? `<p class="project-meta">Next: ${project.nextAction}</p>`
-        : '';
+      const nextActionHtml = `<p class="project-meta">Next: ${formatTextValue(project.nextAction)}</p>`;
       const associationSummary = summarizeProjectAssociations(project.id, associationMap, projectById);
       const associationHtml = associationSummary
         ? `<p class="project-meta">Links: ${associationSummary}</p>`
@@ -557,9 +556,7 @@ const renderProjects = () => {
           <p class="project-meta">${project.track} · ${project.status}</p>
           <p>${formatCurrency(project.raised)} / ${formatCurrency(project.goal)}</p>
           <p class="project-meta">Last update: ${formatTextValue(project.lastUpdate)}</p>
-          ${project.nextAction
-            ? nextActionHtml
-            : '<p class="project-meta">Next: Not provided</p>'}
+          ${nextActionHtml}
           ${associationHtml}
           ${links ? `<div class="project-links">${links}</div>` : ''}
         </li>
