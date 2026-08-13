@@ -155,21 +155,33 @@ var GTPAppDataAdapter = (function () {
         });
         var uniqueLogs = Object.values(latestByProjectId);
 
-        // Fetch current on-chain state for each project
+        // Build project records from the registration event first.
+        // Fall back to getProject() only when the event payload is incomplete.
         var stateFetches = uniqueLogs.map(function (log) {
           var projectId = log.args.projectId;
+          var eventRecord = {
+            projectId: projectId,
+            steward: log.args && log.args.steward ? log.args.steward : null,
+            metadataURI: log.args && log.args.metadataURI ? log.args.metadataURI : '',
+            status: Number(log.args && log.args.status !== undefined ? log.args.status : 0)
+          };
+
+          if (eventRecord.steward && eventRecord.metadataURI) {
+            return Promise.resolve(eventRecord);
+          }
+
           return registry.getProject(projectId)
             .then(function (result) {
               return {
                 projectId: projectId,
-                steward: result.steward,
-                metadataURI: result.metadataURI,
-                status: Number(result.status)
+                steward: result.steward || eventRecord.steward,
+                metadataURI: result.metadataURI || eventRecord.metadataURI,
+                status: Number(result.status !== undefined ? result.status : eventRecord.status)
               };
             })
             .catch(function (err) {
-              console.warn('[GTPAppDataAdapter] getProject(' + projectId + ') failed:', err);
-              return null;
+              console.warn('[GTPAppDataAdapter] getProject(' + projectId + ') failed; using event payload only:', err);
+              return eventRecord;
             });
         });
 

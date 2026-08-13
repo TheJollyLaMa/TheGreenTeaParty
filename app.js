@@ -519,7 +519,7 @@ const renderProjects = () => {
 
   if (displayProjects.length === 0) {
     const emptyMessage = modeInfo.isApp
-      ? 'No app projects loaded yet. Connect wallet, select network, and create profile to continue.'
+      ? 'No on-chain projects loaded yet. Check the registry config or seed a project to continue.'
       : 'No projects match this filter yet.';
 
     projectGrid.innerHTML = `<li class="project-card"><p class="project-meta">${emptyMessage}</p></li>`;
