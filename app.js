@@ -30,15 +30,6 @@ const formatCurrency = (value) =>
     maximumFractionDigits: 0
   }).format(value);
 
-const formatTextValue = (value, fallback = 'Not provided') => {
-  if (value === null || value === undefined) {
-    return fallback;
-  }
-
-  const text = String(value).trim();
-  return text ? text : fallback;
-};
-
 const shortenAddress = (address) => {
   if (!address || typeof address !== 'string' || address.length < 10) {
     return address || '';

@@ -1664,15 +1664,6 @@
       .replace(/"/g, '&quot;');
   }
 
-  function formatTextValue(value, fallback = 'Not provided') {
-    if (value === null || value === undefined) {
-      return fallback;
-    }
-
-    const text = String(value).trim();
-    return text ? text : fallback;
-  }
-
   function escAttr(text) {
     return String(text).replace(/"/g, '%22');
   }
