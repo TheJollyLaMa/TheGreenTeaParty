@@ -1374,11 +1374,11 @@
         `<h3>What needs action now</h3>` +
         `<p>${escHtml(primaryAction(node))}</p>` +
       `</div>` +
-      `<p class="details-desc">${escHtml(node.description || '')}</p>` +
+      `<p class="details-desc">${escHtml(formatTextValue(node.description))}</p>` +
       `<div class="details-meta">` +
         `<span class="badge badge-${node.status}">${capitalize(node.status)}</span>` +
         `<span>${node.stewards} steward${node.stewards !== 1 ? 's' : ''}</span>` +
-        `<span>Updated ${escHtml(node.lastUpdate)}</span>` +
+        `<span>Updated ${escHtml(formatTextValue(node.lastUpdate, 'Not recorded'))}</span>` +
       `</div>` +
       `<div class="details-funding">` +
         `<div class="funding-bar-track">` +
@@ -1662,6 +1662,15 @@
       .replace(/</g, '&lt;')
       .replace(/>/g, '&gt;')
       .replace(/"/g, '&quot;');
+  }
+
+  function formatTextValue(value, fallback = 'Not provided') {
+    if (value === null || value === undefined) {
+      return fallback;
+    }
+
+    const text = String(value).trim();
+    return text ? text : fallback;
   }
 
   function escAttr(text) {

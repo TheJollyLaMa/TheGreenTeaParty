@@ -30,6 +30,15 @@ const formatCurrency = (value) =>
     maximumFractionDigits: 0
   }).format(value);
 
+const formatTextValue = (value, fallback = 'Not provided') => {
+  if (value === null || value === undefined) {
+    return fallback;
+  }
+
+  const text = String(value).trim();
+  return text ? text : fallback;
+};
+
 const shortenAddress = (address) => {
   if (!address || typeof address !== 'string' || address.length < 10) {
     return address || '';
@@ -547,8 +556,10 @@ const renderProjects = () => {
           <h4 class="project-title">${project.name}</h4>
           <p class="project-meta">${project.track} · ${project.status}</p>
           <p>${formatCurrency(project.raised)} / ${formatCurrency(project.goal)}</p>
-          <p class="project-meta">Last update: ${project.lastUpdate}</p>
-          ${nextActionHtml}
+          <p class="project-meta">Last update: ${formatTextValue(project.lastUpdate)}</p>
+          ${project.nextAction
+            ? nextActionHtml
+            : '<p class="project-meta">Next: Not provided</p>'}
           ${associationHtml}
           ${links ? `<div class="project-links">${links}</div>` : ''}
         </li>
