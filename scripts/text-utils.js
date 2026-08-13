@@ -16,6 +16,7 @@
     return value !== null && value !== undefined && String(value).trim() !== '';
   }
 
+  window.GTPTrackLabels = ['Green Tea', 'Blue Tea', 'Red Rice', 'Purple Sage', 'Golden Root', 'Silver Stream'];
   window.formatTextValue = formatTextValue;
   window.hasTextValue = hasTextValue;
 }());

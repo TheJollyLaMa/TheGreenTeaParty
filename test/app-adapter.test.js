@@ -126,6 +126,52 @@ describe('GTPAppDataAdapter', function () {
     });
   });
 
+  it('uses the registration event payload when it is complete', async function () {
+    const sandbox = await loadAppAdapterSandbox();
+    let getProjectCalled = false;
+
+    sandbox.setRegistryStub({
+      filters: {
+        ProjectRegistered: function () {
+          return {};
+        }
+      },
+      queryFilter: async function () {
+        return [
+          {
+            args: {
+              projectId: '0xproject1',
+              steward: '0x0000000000000000000000000000000000000002',
+              metadataURI: '{"id":"green-tea-hut-01","name":"The Green Tea Hut #1","track":"Green Tea","goal":"12000"}',
+              status: 1
+            }
+          }
+        ];
+      },
+      getProject: async function () {
+        getProjectCalled = true;
+        return {
+          steward: '0x0000000000000000000000000000000000000002',
+          metadataURI: '{"id":"green-tea-hut-01","name":"The Green Tea Hut #1","track":"Green Tea","goal":"12000"}',
+          status: 1n
+        };
+      }
+    });
+
+    const projects = await sandbox.adapter.create({}).getProjects();
+
+    expect(getProjectCalled).to.equal(false);
+    expect(projects).to.have.lengthOf(1);
+    expect(projects[0]).to.include({
+      id: 'green-tea-hut-01',
+      name: 'The Green Tea Hut #1',
+      track: 'Green Tea',
+      status: 'active',
+      raised: 0,
+      goal: 12000
+    });
+  });
+
   it('retries the registry scan from genesis when the configured start block misses the project', async function () {
     const sandbox = await loadAppAdapterSandbox();
     const queryCalls = [];

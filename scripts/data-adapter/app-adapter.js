@@ -38,6 +38,28 @@ var GTPAppDataAdapter = (function () {
     return fallback;
   }
 
+  var DEFAULT_TRACK_LABEL = 'Green Tea';
+
+  function normalizeTrackLabel(value) {
+    var track = String(value || '').trim();
+    return track || DEFAULT_TRACK_LABEL;
+  }
+
+  function getCanonicalTrackLabel(value) {
+    var canonicalLabels = window.GTPTrackLabels || [];
+    var track = String(value || '').trim().toLowerCase();
+    for (var i = 0; i < canonicalLabels.length; i += 1) {
+      if (canonicalLabels[i].toLowerCase() === track) {
+        return canonicalLabels[i];
+      }
+    }
+    return null;
+  }
+
+  function resolveLayoutTrack(value) {
+    return getCanonicalTrackLabel(value) || DEFAULT_TRACK_LABEL;
+  }
+
   function isBlockRangeTooLargeError(err) {
     var msg = errorMessage(err).toLowerCase();
     return msg.indexOf('block range is too large') !== -1
@@ -162,11 +184,13 @@ var GTPAppDataAdapter = (function () {
           var eventRecord = {
             projectId: projectId,
             steward: log.args && log.args.steward ? log.args.steward : null,
-            metadataURI: log.args && log.args.metadataURI ? log.args.metadataURI : '',
+            metadataURI: log.args && Object.prototype.hasOwnProperty.call(log.args, 'metadataURI')
+              ? log.args.metadataURI
+              : null,
             status: Number(log.args && log.args.status !== undefined ? log.args.status : 0)
           };
 
-          if (eventRecord.steward && eventRecord.metadataURI) {
+          if (eventRecord.steward && eventRecord.metadataURI !== null) {
             return Promise.resolve(eventRecord);
           }
 
@@ -231,16 +255,6 @@ var GTPAppDataAdapter = (function () {
       } catch (e) {
         return Promise.resolve({});
       }
-
-      function normalizeTrackLabel(value) {
-        var track = String(value || '').trim().toLowerCase();
-        if (track === 'blue tea') return 'Blue Tea';
-        if (track === 'red rice') return 'Red Rice';
-        if (track === 'purple sage') return 'Purple Sage';
-        if (track === 'golden root') return 'Golden Root';
-        if (track === 'silver stream') return 'Silver Stream';
-        return 'Green Tea';
-      }
     }
 
     // IPFS URI → public gateway (overridable via GTPConfig.ipfsGateway)
@@ -282,6 +296,7 @@ var GTPAppDataAdapter = (function () {
       id: id,
       name: String((meta && meta.name) || id),
       track: normalizeTrackLabel(meta && meta.track),
+      layoutTrack: resolveLayoutTrack(meta && meta.track),
       // On-chain status is the source of truth; metadata.status is not used.
       status: statusLabel,
       raised: raised,

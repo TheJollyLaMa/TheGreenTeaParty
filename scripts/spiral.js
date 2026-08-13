@@ -17,7 +17,7 @@
     'Silver Stream': '#94a3b8'
   };
 
-  const TRACK_ORDER = Object.keys(TRACK_COLORS);
+  const TRACK_ORDER = window.GTPTrackLabels || Object.keys(TRACK_COLORS);
 
   const STATUS_COLORS = {
     active: '#22c55e',
@@ -261,15 +261,17 @@
 
     nodes = sorted.map((project) => {
       const progress = project.goal > 0 ? project.raised / project.goal : 0;
+      const layoutTrack = project.layoutTrack || project.track;
       const size = 6 + Math.min(progress, 1) * 7;
       return {
         ...project,
+        layoutTrack,
         x: 0,
         y: 0,
         size,
         degree: 0,
         depth: 0,
-        trackIndex: TRACK_ORDER.indexOf(project.track),
+        trackIndex: TRACK_ORDER.indexOf(layoutTrack),
         screenX: 0,
         screenY: 0
       };
@@ -332,7 +334,7 @@
     trackClusters = [];
 
     const groups = TRACK_ORDER
-      .map((track) => nodes.filter((node) => node.track === track))
+      .map((track) => nodes.filter((node) => (node.layoutTrack || node.track) === track))
       .filter((group) => group.length > 0);
 
     groups.forEach((group, index) => buildTrackHierarchy(group, index, groups.length));

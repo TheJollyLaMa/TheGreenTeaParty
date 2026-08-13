@@ -519,10 +519,10 @@ const renderProjects = () => {
 
   if (displayProjects.length === 0) {
     const emptyMessage = modeInfo.isApp
-      ? 'No on-chain projects loaded yet. Check the registry config or seed a project to continue.'
+      ? 'No on-chain projects loaded yet. Register a project in the Steward Panel to see it here.'
       : 'No projects match this filter yet.';
 
-    projectGrid.innerHTML = `<li class="project-card"><p class="project-meta">${emptyMessage}</p></li>`;
+    projectGrid.innerHTML = `<li class="project-card"><p class="project-meta project-meta--placeholder">${emptyMessage}</p></li>`;
     return;
   }
 
