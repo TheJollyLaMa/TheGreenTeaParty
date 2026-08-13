@@ -25,6 +25,12 @@ var GTPAppDataAdapter = (function () {
 
   function toFiniteNumber(value, fallback) {
     if (typeof value === 'number' && Number.isFinite(value)) return value;
+    if (typeof value === 'bigint') {
+      if (value >= BigInt(Number.MIN_SAFE_INTEGER) && value <= BigInt(Number.MAX_SAFE_INTEGER)) {
+        return Number(value);
+      }
+      return fallback;
+    }
     if (typeof value === 'string' && value.trim()) {
       var parsed = Number(value);
       if (Number.isFinite(parsed)) return parsed;
