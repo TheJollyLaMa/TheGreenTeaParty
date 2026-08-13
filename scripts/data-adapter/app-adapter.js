@@ -26,7 +26,11 @@ var GTPAppDataAdapter = (function () {
   function isBlockRangeTooLargeError(err) {
     var msg = errorMessage(err).toLowerCase();
     return msg.indexOf('block range is too large') !== -1
-      || (msg.indexOf('block range') !== -1 && msg.indexOf('too large') !== -1);
+      || (msg.indexOf('block range') !== -1 && msg.indexOf('too large') !== -1)
+      || msg.indexOf('eth_getlogs is limited') !== -1
+      || (msg.indexOf('eth_getlogs') !== -1 && msg.indexOf('limited') !== -1)
+      || msg.indexOf('limited to a 10,000') !== -1
+      || msg.indexOf('10,000 range') !== -1;
   }
 
   function queryFilterResilient(contract, filter, fromBlock, toBlock, provider) {
