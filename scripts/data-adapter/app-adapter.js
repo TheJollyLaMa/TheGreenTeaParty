@@ -23,6 +23,15 @@ var GTPAppDataAdapter = (function () {
     return String(err);
   }
 
+  function toFiniteNumber(value, fallback) {
+    if (typeof value === 'number' && Number.isFinite(value)) return value;
+    if (typeof value === 'string' && value.trim()) {
+      var parsed = Number(value);
+      if (Number.isFinite(parsed)) return parsed;
+    }
+    return fallback;
+  }
+
   function isBlockRangeTooLargeError(err) {
     var msg = errorMessage(err).toLowerCase();
     return msg.indexOf('block range is too large') !== -1
@@ -221,10 +230,13 @@ var GTPAppDataAdapter = (function () {
    * On-chain status is authoritative; metadata status is ignored.
    */
   function buildProjectObject(record, meta) {
-    var statusLabel = CONTRACT_STATUS_TO_LABEL[record.status] || 'draft';
+    var statusCode = toFiniteNumber(record && record.status, 0);
+    var statusLabel = CONTRACT_STATUS_TO_LABEL[statusCode] || 'draft';
 
     // Use the hex projectId as the canonical id, falling back to a metadata id field
-    var id = (meta && meta.id) ? String(meta.id) : record.projectId;
+    var id = (meta && meta.id) ? String(meta.id) : String(record.projectId);
+    var raised = toFiniteNumber(meta && meta.raised, 0);
+    var goal = toFiniteNumber(meta && meta.goal, 0);
 
     return {
       id: id,
@@ -232,8 +244,8 @@ var GTPAppDataAdapter = (function () {
       track: String((meta && meta.track) || 'Green Tea'),
       // On-chain status is the source of truth; metadata.status is not used.
       status: statusLabel,
-      raised: (meta && typeof meta.raised === 'number') ? meta.raised : 0,
-      goal: (meta && typeof meta.goal === 'number') ? meta.goal : 0,
+      raised: raised,
+      goal: goal,
       lastUpdate: (meta && meta.lastUpdate) || null,
       publicUpdate: (meta && (meta.publicUpdate || meta.lastUpdate)) || null,
       stewards: (meta && typeof meta.stewards === 'number') ? meta.stewards : 1,
