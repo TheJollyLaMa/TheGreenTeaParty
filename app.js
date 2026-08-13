@@ -536,8 +536,9 @@ const renderProjects = () => {
         .join('');
 
       const hasNextAction = hasTextValue(project.nextAction);
-      const nextActionText = formatTextValue(project.nextAction);
-      const nextActionHtml = `<p class="project-meta${hasNextAction ? '' : ' project-meta--placeholder'}">Next: ${nextActionText}</p>`;
+      const nextActionHtml = hasNextAction
+        ? `<p class="project-meta">Next: ${formatTextValue(project.nextAction)}</p>`
+        : '';
       const associationSummary = summarizeProjectAssociations(project.id, associationMap, projectById);
       const associationHtml = associationSummary
         ? `<p class="project-meta">Links: ${associationSummary}</p>`

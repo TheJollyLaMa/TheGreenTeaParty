@@ -231,6 +231,16 @@ var GTPAppDataAdapter = (function () {
       } catch (e) {
         return Promise.resolve({});
       }
+
+      function normalizeTrackLabel(value) {
+        var track = String(value || '').trim().toLowerCase();
+        if (track === 'blue tea') return 'Blue Tea';
+        if (track === 'red rice') return 'Red Rice';
+        if (track === 'purple sage') return 'Purple Sage';
+        if (track === 'golden root') return 'Golden Root';
+        if (track === 'silver stream') return 'Silver Stream';
+        return 'Green Tea';
+      }
     }
 
     // IPFS URI → public gateway (overridable via GTPConfig.ipfsGateway)
@@ -271,7 +281,7 @@ var GTPAppDataAdapter = (function () {
     return {
       id: id,
       name: String((meta && meta.name) || id),
-      track: String((meta && meta.track) || 'Green Tea'),
+      track: normalizeTrackLabel(meta && meta.track),
       // On-chain status is the source of truth; metadata.status is not used.
       status: statusLabel,
       raised: raised,
