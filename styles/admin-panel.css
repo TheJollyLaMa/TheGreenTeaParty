@@ -15,12 +15,13 @@
   align-items: center;
   gap: 0.6rem;
   padding: 0.9rem clamp(1rem, 4vw, 2.5rem);
-  font-size: 0.85rem;
-  font-weight: 600;
-  letter-spacing: 0.04em;
-  color: var(--muted);
-  background: var(--bg);
-  border-bottom: 1px solid transparent;
+  font-size: 1rem;
+  font-weight: 700;
+  letter-spacing: 0.06em;
+  text-transform: uppercase;
+  color: var(--text);
+  background: var(--bg-soft);
+  border-bottom: 1px solid var(--border);
   transition: color 0.15s, background 0.15s;
 }
 
@@ -59,6 +60,15 @@
 }
 
 /* ── Panel body ──────────────────────────────────────────────────────────── */
+
+.admin-panel-title {
+  font-size: 1.4rem;
+  font-weight: 700;
+  color: var(--text);
+  margin: 0 0 1.2rem;
+  padding-bottom: 0.6rem;
+  border-bottom: 2px solid var(--border);
+}
 
 .admin-panel-body {
   padding: clamp(1.5rem, 4vw, 2.5rem) clamp(1rem, 4vw, 2.5rem);
