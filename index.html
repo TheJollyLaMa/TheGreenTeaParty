@@ -731,9 +731,9 @@
             <div class="admin-contract-header">
               <h3>Treasury</h3>
               <a class="admin-contract-address"
-                 href="https://optimistic.etherscan.io/address/0xA77967362b97bACf49d189CD30793D402030BAA7"
+                 href="https://optimistic.etherscan.io/address/0x14c1E69309C96569bBA0423507DA6AFE6FD30DdC"
                  target="_blank" rel="noopener noreferrer">
-                0xA7796736…BAA7
+                0x14c1E693…0DdC
               </a>
             </div>
 
@@ -914,6 +914,50 @@
                   <label>
                     Amount (ETH)
                     <input type="number" name="tr-withdraw-amount" placeholder="0.01" min="0" step="any" required />
+                  </label>
+                  <div class="admin-fn-actions">
+                    <button type="submit" class="admin-write-btn">Send</button>
+                    <button type="reset" class="admin-clear-btn">Clear</button>
+                  </div>
+                  <div class="admin-fn-status" aria-live="polite"></div>
+                </form>
+              </div>
+
+              <!-- sweepUnassignedETH -->
+              <div class="admin-fn-card">
+                <h4>sweepUnassignedETH(recipient, amount)</h4>
+                <form id="admin-tr-sweepeth-form" class="admin-fn-form" novalidate>
+                  <label>
+                    Recipient address
+                    <input type="text" name="tr-sweepeth-recipient" placeholder="0x…" required autocomplete="off" />
+                  </label>
+                  <label>
+                    Amount (ETH)
+                    <input type="number" name="tr-sweepeth-amount" placeholder="0.01" min="0" step="any" required />
+                  </label>
+                  <div class="admin-fn-actions">
+                    <button type="submit" class="admin-write-btn">Send</button>
+                    <button type="reset" class="admin-clear-btn">Clear</button>
+                  </div>
+                  <div class="admin-fn-status" aria-live="polite"></div>
+                </form>
+              </div>
+
+              <!-- sweepERC20 -->
+              <div class="admin-fn-card">
+                <h4>sweepERC20(token, recipient, amount)</h4>
+                <form id="admin-tr-sweepertc-form" class="admin-fn-form" novalidate>
+                  <label>
+                    Token address
+                    <input type="text" name="tr-sweepertc-token" placeholder="0x…" required autocomplete="off" />
+                  </label>
+                  <label>
+                    Recipient address
+                    <input type="text" name="tr-sweepertc-recipient" placeholder="0x…" required autocomplete="off" />
+                  </label>
+                  <label>
+                    Amount (token units)
+                    <input type="text" name="tr-sweepertc-amount" placeholder="100" required autocomplete="off" />
                   </label>
                   <div class="admin-fn-actions">
                     <button type="submit" class="admin-write-btn">Send</button>

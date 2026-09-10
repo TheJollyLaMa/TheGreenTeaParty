@@ -91,6 +91,8 @@
     'function withdraw(bytes32, uint256)',
     'function updateRegistry(address)',
     'function updateProfileRegistry(address)',
+    'function sweepUnassignedETH(address payable, uint256)',
+    'function sweepERC20(address, address, uint256)',
     'function transferOwnership(address)',
     'function pause()',
     'function unpause()'
@@ -745,6 +747,33 @@
     });
   }
 
+  function initTRSweepETH() {
+    bindWrite('admin-tr-sweepeth-form', function (form) {
+      var recipient = val(form, 'tr-sweepeth-recipient');
+      var amountEth = val(form, 'tr-sweepeth-amount');
+      if (!recipient) throw new Error('Recipient address is required.');
+      if (!amountEth || Number(amountEth) <= 0) throw new Error('Enter a positive ETH amount.');
+      var amountWei = window.ethers.parseEther(amountEth);
+      return writeContract(TREASURY_ABI, 'treasury').then(function (c) {
+        return c.sweepUnassignedETH(recipient, amountWei);
+      });
+    });
+  }
+
+  function initTRSweepERC20() {
+    bindWrite('admin-tr-sweepertc-form', function (form) {
+      var token = val(form, 'tr-sweepertc-token');
+      var recipient = val(form, 'tr-sweepertc-recipient');
+      var amount = val(form, 'tr-sweepertc-amount');
+      if (!token) throw new Error('Token address is required.');
+      if (!recipient) throw new Error('Recipient address is required.');
+      if (!amount || Number(amount) <= 0) throw new Error('Enter a positive token amount.');
+      return writeContract(TREASURY_ABI, 'treasury').then(function (c) {
+        return c.sweepERC20(token, recipient, amount);
+      });
+    });
+  }
+
   function initTRUpdateRegistry() {
     bindWrite('admin-tr-updateregistry-form', function (form) {
       var addr = val(form, 'tr-updateregistry-addr');
@@ -926,6 +955,8 @@
       initTRTransferOwnership();
       initTRUpdateRegistry();
       initTRUpdateProfileRegistry();
+      initTRSweepETH();
+      initTRSweepERC20();
       initTRPause();
       initTRUnpause();
 

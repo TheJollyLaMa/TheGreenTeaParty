@@ -384,7 +384,16 @@ const renderWalletControl = () => {
     const orbit = document.createElement('div');
     orbit.className = 'wallet-address-orbit';
     orbit.setAttribute('aria-hidden', 'true');
-    orbit.textContent = `${state.address.slice(0, 6)}🦊🦊🦊🦊${state.address.slice(-4)}`;
+    const orbitText = `${state.address.slice(0, 6)}🦊🦊🦊🦊${state.address.slice(-4)}`;
+    const orbitChars = Array.from(orbitText);
+    orbit.style.setProperty('--char-count', String(orbitChars.length));
+    orbitChars.forEach((char, index) => {
+      const span = document.createElement('span');
+      span.className = 'wallet-address-orbit-char';
+      span.style.setProperty('--char-index', String(index));
+      span.textContent = char;
+      orbit.appendChild(span);
+    });
     control.appendChild(orbit);
   }
 

@@ -662,18 +662,16 @@ blockquote {
 
 .wallet-address-orbit {
   position: absolute;
-  inset: -1.15rem;
-  display: grid;
-  place-items: center;
+  inset: -1.45rem;
   border-radius: 999px;
-  font-size: 0.61rem;
-  letter-spacing: 0.11em;
+  --char-count: 14;
+  --orbit-radius: 1.3rem;
+  --orbit-size: 0.92rem;
   color: var(--accent);
   text-shadow: 0 0 10px rgba(34, 197, 94, 0.45);
-  animation: wallet-orbit 14s linear infinite;
   pointer-events: none;
-  white-space: nowrap;
   z-index: 0;
+  animation: wallet-orbit 14s linear infinite;
 }
 
 .wallet-address-orbit::before {
@@ -682,6 +680,23 @@ blockquote {
   inset: 0;
   border-radius: inherit;
   border: 1px solid rgba(34, 197, 94, 0.18);
+}
+
+.wallet-address-orbit-char {
+  position: absolute;
+  top: 50%;
+  left: 50%;
+  width: var(--orbit-size);
+  height: var(--orbit-size);
+  margin: calc(var(--orbit-size) * -0.5);
+  display: grid;
+  place-items: center;
+  font-size: 0.55rem;
+  line-height: 1;
+  transform:
+    rotate(calc((360deg / var(--char-count)) * var(--char-index)))
+    translateY(calc(-1 * var(--orbit-radius)))
+    rotate(calc((360deg / var(--char-count)) * var(--char-index) * -1));
 }
 
 @keyframes wallet-orbit {

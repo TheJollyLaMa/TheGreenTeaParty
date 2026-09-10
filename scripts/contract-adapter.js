@@ -45,14 +45,19 @@ var GTPContractAdapter = (function () {
     'function withdraw(bytes32 projectId, uint256 amount)',
     'function updateRegistry(address newRegistry)',
     'function updateProfileRegistry(address newProfileRegistry)',
+    'function sweepUnassignedETH(address payable recipient, uint256 amount)',
+    'function sweepERC20(address token, address recipient, uint256 amount)',
     'function transferOwnership(address nextOwner)',
     'function pause()',
     'function unpause()',
+    'event DirectDepositReceived(address indexed sender, uint256 amount)',
     'event ContributionReceived(bytes32 indexed projectId, address indexed contributor, uint256 amount, uint256 newBalance)',
     'event PayoutAddressUpdated(bytes32 indexed projectId, address indexed payoutAddress)',
     'event Withdrawal(bytes32 indexed projectId, address indexed recipient, uint256 amount, uint256 newBalance)',
     'event RegistryUpdated(address indexed previousRegistry, address indexed nextRegistry)',
-    'event ProfileRegistryUpdated(address indexed previousProfileRegistry, address indexed nextProfileRegistry)'
+    'event ProfileRegistryUpdated(address indexed previousProfileRegistry, address indexed nextProfileRegistry)',
+    'event UnassignedETHSwept(address indexed recipient, uint256 amount)',
+    'event ERC20TokensSwept(address indexed token, address indexed recipient, uint256 amount)'
   ];
 
   function getContractsForChain(chainId) {
@@ -459,6 +464,36 @@ var GTPContractAdapter = (function () {
         }).catch(function (err) {
           console.warn('[GTPContractAdapter] updateProfileRegistry error', err);
           return { ok: false, placeholder: false, action: 'updateProfileRegistry', chainId: chainId, error: err.message };
+        });
+      },
+
+      sweepUnassignedETH: function (recipient, amount) {
+        assertCanWrite();
+        var chainId = currentChainId();
+        var contracts = getContractsForChain(chainId);
+        return getSignerProvider().getSigner().then(function (signer) {
+          var treasury = new window.ethers.Contract(contracts.treasury, TREASURY_ABI, signer);
+          return treasury.sweepUnassignedETH(recipient, amount);
+        }).then(function (tx) {
+          return { ok: true, placeholder: false, action: 'sweepUnassignedETH', tx: tx };
+        }).catch(function (err) {
+          console.warn('[GTPContractAdapter] sweepUnassignedETH error', err);
+          return { ok: false, placeholder: false, action: 'sweepUnassignedETH', chainId: chainId, error: err.message };
+        });
+      },
+
+      sweepERC20: function (token, recipient, amount) {
+        assertCanWrite();
+        var chainId = currentChainId();
+        var contracts = getContractsForChain(chainId);
+        return getSignerProvider().getSigner().then(function (signer) {
+          var treasury = new window.ethers.Contract(contracts.treasury, TREASURY_ABI, signer);
+          return treasury.sweepERC20(token, recipient, amount);
+        }).then(function (tx) {
+          return { ok: true, placeholder: false, action: 'sweepERC20', tx: tx };
+        }).catch(function (err) {
+          console.warn('[GTPContractAdapter] sweepERC20 error', err);
+          return { ok: false, placeholder: false, action: 'sweepERC20', chainId: chainId, error: err.message };
         });
       }
     };

@@ -37,9 +37,12 @@ var GTPData = (function () {
     ProjectMetadataUpdated: { type: 'project-metadata-updated', category: 'project-registry', direction: 'incoming' },
     ProjectStatusUpdated: { type: 'project-status-updated', category: 'project-registry', direction: 'incoming' },
     ProjectStewardTransferred: { type: 'project-steward-transferred', category: 'project-registry', direction: 'incoming' },
+    DirectDepositReceived: { type: 'direct-deposit-received', category: 'treasury', direction: 'incoming' },
     ContributionReceived: { type: 'contribution-received', category: 'treasury', direction: 'incoming' },
     PayoutAddressUpdated: { type: 'payout-address-updated', category: 'treasury', direction: 'incoming' },
     Withdrawal: { type: 'withdrawal', category: 'treasury', direction: 'outgoing' },
+    UnassignedETHSwept: { type: 'unassigned-eth-swept', category: 'treasury', direction: 'outgoing' },
+    ERC20TokensSwept: { type: 'erc20-tokens-swept', category: 'treasury', direction: 'outgoing' },
     ProfileURIUpdated: { type: 'profile-uri-updated', category: 'profile-registry', direction: 'incoming' }
   };
   var PROJECT_STATUS_BY_CODE = {
@@ -226,8 +229,14 @@ var GTPData = (function () {
     switch (eventName) {
       case 'ContributionReceived':
         return projectId ? 'Contribution received for project ' + projectId : 'Contribution received';
+      case 'DirectDepositReceived':
+        return 'Direct deposit received by treasury';
       case 'Withdrawal':
         return projectId ? 'Withdrawal executed for project ' + projectId : 'Withdrawal executed';
+      case 'UnassignedETHSwept':
+        return 'Unassigned ETH swept from treasury';
+      case 'ERC20TokensSwept':
+        return 'ERC-20 tokens swept from treasury';
       case 'ProjectStatusUpdated':
         if (projectId && statusLabel) return 'Project ' + projectId + ' status updated to ' + statusLabel;
         return projectId ? 'Project ' + projectId + ' status updated' : 'Project status updated';
@@ -647,6 +656,10 @@ var GTPData = (function () {
     contribute: function (projectId, options) { return callAdapter('contribute', projectId, options); },
     setPayoutAddress: function (projectId, payoutAddress) { return callAdapter('setPayoutAddress', projectId, payoutAddress); },
     withdraw: function (projectId, amountWei) { return callAdapter('withdraw', projectId, amountWei); },
+    updateRegistry: function (newRegistry) { return callAdapter('updateRegistry', newRegistry); },
+    updateProfileRegistry: function (newProfileRegistry) { return callAdapter('updateProfileRegistry', newProfileRegistry); },
+    sweepUnassignedETH: function (recipient, amount) { return callAdapter('sweepUnassignedETH', recipient, amount); },
+    sweepERC20: function (token, recipient, amount) { return callAdapter('sweepERC20', token, recipient, amount); },
     getProjectRecord: function (projectId) { return callAdapter('getProjectRecord', projectId); },
     getProjectBalance: function (projectId) { return callAdapter('getProjectBalance', projectId); },
     getProfilePointer: function (account) { return callAdapter('getProfilePointer', account); },

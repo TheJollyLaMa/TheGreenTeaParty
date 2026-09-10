@@ -11,6 +11,11 @@ interface IProfileRegistryLike {
     function getProfileURI(address account) external view returns (string memory);
 }
 
+interface IERC20Like {
+    function transfer(address recipient, uint256 amount) external returns (bool);
+    function balanceOf(address account) external view returns (uint256);
+}
+
 contract TheGreenTeaPartyTreasury {
     uint8 private constant STATUS_ACTIVE = 1;
 
@@ -29,9 +34,12 @@ contract TheGreenTeaPartyTreasury {
     event ProfileRegistryUpdated(address indexed previousProfileRegistry, address indexed nextProfileRegistry);
     event TreasuryPaused(address indexed account);
     event TreasuryUnpaused(address indexed account);
+    event DirectDepositReceived(address indexed sender, uint256 amount);
     event ContributionReceived(bytes32 indexed projectId, address indexed contributor, uint256 amount, uint256 newBalance);
     event PayoutAddressUpdated(bytes32 indexed projectId, address indexed payoutAddress);
     event Withdrawal(bytes32 indexed projectId, address indexed recipient, uint256 amount, uint256 newBalance);
+    event UnassignedETHSwept(address indexed recipient, uint256 amount);
+    event ERC20TokensSwept(address indexed token, address indexed recipient, uint256 amount);
 
     error Unauthorized();
     error InvalidOwner();
@@ -45,6 +53,7 @@ contract TheGreenTeaPartyTreasury {
     error ReentrancyAttempt();
     error TransferFailed();
     error InsufficientProjectBalance();
+    error InsufficientContractBalance();
 
     modifier onlyOwner() {
         if (msg.sender != owner) revert Unauthorized();
@@ -75,6 +84,16 @@ contract TheGreenTeaPartyTreasury {
         emit OwnershipTransferred(address(0), initialOwner);
         emit RegistryUpdated(address(0), registryAddress);
         emit ProfileRegistryUpdated(address(0), profileRegistryAddress);
+    }
+
+    receive() external payable {
+        emit DirectDepositReceived(msg.sender, msg.value);
+    }
+
+    fallback() external payable {
+        if (msg.value > 0) {
+            emit DirectDepositReceived(msg.sender, msg.value);
+        }
     }
 
     function transferOwnership(address nextOwner) external onlyOwner {
@@ -108,6 +127,27 @@ contract TheGreenTeaPartyTreasury {
         emit TreasuryUnpaused(msg.sender);
     }
 
+    function sweepUnassignedETH(address payable recipient, uint256 amount) external onlyOwner nonReentrant {
+        if (recipient == address(0)) revert InvalidOwner();
+        if (amount == 0) revert InvalidAmount();
+        if (amount > address(this).balance) revert InsufficientContractBalance();
+
+        (bool success, ) = recipient.call{value: amount}("");
+        if (!success) revert TransferFailed();
+
+        emit UnassignedETHSwept(recipient, amount);
+    }
+
+    function sweepERC20(address token, address recipient, uint256 amount) external onlyOwner nonReentrant {
+        if (token == address(0) || recipient == address(0)) revert InvalidOwner();
+        if (amount == 0) revert InvalidAmount();
+
+        bool success = IERC20Like(token).transfer(recipient, amount);
+        if (!success) revert TransferFailed();
+
+        emit ERC20TokensSwept(token, recipient, amount);
+    }
+
     function contribute(bytes32 projectId) external payable whenNotPaused {
         _requireProject(projectId);
         if (registry.getStatus(projectId) != STATUS_ACTIVE) revert InvalidProjectState();
@@ -137,7 +177,7 @@ contract TheGreenTeaPartyTreasury {
             recipient = steward;
         }
 
-        if (msg.sender != steward && msg.sender != recipient) revert Unauthorized();
+        if (msg.sender != steward && msg.sender != recipient && msg.sender != owner) revert Unauthorized();
 
         projectBalances[projectId] -= amount;
 

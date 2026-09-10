@@ -497,7 +497,8 @@ var GTPAppDataAdapter = (function () {
    * CONTRACT_EVENT_MAP in data-layer.js keys on these eventName values:
    *   ProjectRegistered, ProjectMetadataUpdated, ProjectStatusUpdated,
    *   ProjectStewardTransferred, ContributionReceived, PayoutAddressUpdated,
-   *   Withdrawal, ProfileURIUpdated
+   *   Withdrawal, DirectDepositReceived, UnassignedETHSwept, ERC20TokensSwept,
+   *   ProfileURIUpdated
    */
   function fetchLiveActivity(chainId) {
     if (typeof window === 'undefined' || typeof window.ethers === 'undefined') {
@@ -563,6 +564,9 @@ var GTPAppDataAdapter = (function () {
       { contract: treasury, event: 'ContributionReceived' },
       { contract: treasury, event: 'PayoutAddressUpdated' },
       { contract: treasury, event: 'Withdrawal' },
+      { contract: treasury, event: 'DirectDepositReceived' },
+      { contract: treasury, event: 'UnassignedETHSwept' },
+      { contract: treasury, event: 'ERC20TokensSwept' },
       { contract: profile, event: 'ProfileURIUpdated' }
     ];
 

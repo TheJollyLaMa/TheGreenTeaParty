@@ -122,4 +122,15 @@ describe('GTPContractAdapter', function () {
     expect(record.projectId).to.equal('green-tea-hut-001');
     expect(record.status).to.equal(1);
   });
+
+  it('exposes the updated treasury write and event surface', async function () {
+    const sandbox = await loadContractAdapterSandbox();
+    const treasuryAbi = sandbox.adapter.TREASURY_ABI.join('\n');
+
+    expect(treasuryAbi).to.include('function sweepUnassignedETH(address payable recipient, uint256 amount)');
+    expect(treasuryAbi).to.include('function sweepERC20(address token, address recipient, uint256 amount)');
+    expect(treasuryAbi).to.include('event DirectDepositReceived(address indexed sender, uint256 amount)');
+    expect(treasuryAbi).to.include('event UnassignedETHSwept(address indexed recipient, uint256 amount)');
+    expect(treasuryAbi).to.include('event ERC20TokensSwept(address indexed token, address indexed recipient, uint256 amount)');
+  });
 });

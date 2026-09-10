@@ -131,7 +131,7 @@ Commit this change. GitHub Pages will serve the updated config automatically.
 |---|---|---|
 | `TheGreenTeaPartyProjectRegistry` | `0x799A97231685d91fdbB03A635B965971A8c71a84` | https://optimistic.etherscan.io/address/0x799A97231685d91fdbB03A635B965971A8c71a84 |
 | `TheGreenTeaPartyProfileRegistry` | `0xd66AdB0E70303D4e6daf8C963c7947f9ae722446` | https://optimistic.etherscan.io/address/0xd66AdB0E70303D4e6daf8C963c7947f9ae722446 |
-| `TheGreenTeaPartyTreasury` | `0xA77967362b97bACf49d189CD30793D402030BAA7` | https://optimistic.etherscan.io/address/0xA77967362b97bACf49d189CD30793D402030BAA7 |
+| `TheGreenTeaPartyTreasury` | `0x14c1E69309C96569bBA0423507DA6AFE6FD30DdC` | https://optimistic.etherscan.io/address/0x14c1E69309C96569bBA0423507DA6AFE6FD30DdC |
 
 See `config/deployed-addresses.json` for the machine-readable record.
 
