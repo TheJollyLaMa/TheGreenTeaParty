@@ -7,10 +7,16 @@ interface IProjectRegistryLike {
     function getStatus(bytes32 projectId) external view returns (uint8);
 }
 
+interface IProfileRegistryLike {
+    function getProfileURI(address account) external view returns (string memory);
+}
+
 contract TheGreenTeaPartyTreasury {
     uint8 private constant STATUS_ACTIVE = 1;
 
-    IProjectRegistryLike public immutable registry;
+    IProjectRegistryLike public registry;
+    IProfileRegistryLike public profileRegistry;
+
     address public owner;
     bool public paused;
     bool private locked;
@@ -19,6 +25,8 @@ contract TheGreenTeaPartyTreasury {
     mapping(bytes32 => address) public payoutAddresses;
 
     event OwnershipTransferred(address indexed previousOwner, address indexed nextOwner);
+    event RegistryUpdated(address indexed previousRegistry, address indexed nextRegistry);
+    event ProfileRegistryUpdated(address indexed previousProfileRegistry, address indexed nextProfileRegistry);
     event TreasuryPaused(address indexed account);
     event TreasuryUnpaused(address indexed account);
     event ContributionReceived(bytes32 indexed projectId, address indexed contributor, uint256 amount, uint256 newBalance);
@@ -28,6 +36,7 @@ contract TheGreenTeaPartyTreasury {
     error Unauthorized();
     error InvalidOwner();
     error InvalidRegistry();
+    error InvalidProfileRegistry();
     error InvalidPayoutAddress();
     error InvalidAmount();
     error InvalidProjectState();
@@ -54,14 +63,18 @@ contract TheGreenTeaPartyTreasury {
         locked = false;
     }
 
-    constructor(address registryAddress, address initialOwner) {
+    constructor(address registryAddress, address profileRegistryAddress, address initialOwner) {
         if (registryAddress == address(0)) revert InvalidRegistry();
+        if (profileRegistryAddress == address(0)) revert InvalidProfileRegistry();
         if (initialOwner == address(0)) revert InvalidOwner();
 
         registry = IProjectRegistryLike(registryAddress);
+        profileRegistry = IProfileRegistryLike(profileRegistryAddress);
         owner = initialOwner;
 
         emit OwnershipTransferred(address(0), initialOwner);
+        emit RegistryUpdated(address(0), registryAddress);
+        emit ProfileRegistryUpdated(address(0), profileRegistryAddress);
     }
 
     function transferOwnership(address nextOwner) external onlyOwner {
@@ -69,6 +82,20 @@ contract TheGreenTeaPartyTreasury {
         address previousOwner = owner;
         owner = nextOwner;
         emit OwnershipTransferred(previousOwner, nextOwner);
+    }
+
+    function updateRegistry(address newRegistry) external onlyOwner {
+        if (newRegistry == address(0)) revert InvalidRegistry();
+        address previousRegistry = address(registry);
+        registry = IProjectRegistryLike(newRegistry);
+        emit RegistryUpdated(previousRegistry, newRegistry);
+    }
+
+    function updateProfileRegistry(address newProfileRegistry) external onlyOwner {
+        if (newProfileRegistry == address(0)) revert InvalidProfileRegistry();
+        address previousProfileRegistry = address(profileRegistry);
+        profileRegistry = IProfileRegistryLike(newProfileRegistry);
+        emit ProfileRegistryUpdated(previousProfileRegistry, newProfileRegistry);
     }
 
     function pause() external onlyOwner {
@@ -118,6 +145,10 @@ contract TheGreenTeaPartyTreasury {
         if (!success) revert TransferFailed();
 
         emit Withdrawal(projectId, recipient, amount, projectBalances[projectId]);
+    }
+
+    function getProjectBalance(bytes32 projectId) external view returns (uint256) {
+        return projectBalances[projectId];
     }
 
     function _requireProject(bytes32 projectId) internal view {

@@ -1,4 +1,5 @@
 import { expect } from 'chai';
+import { id as ethersId } from 'ethers';
 import hre from 'hardhat';
 
 // Helper: deterministic bytes32 project ID from a string slug
@@ -13,7 +14,11 @@ async function expectRevert(promise, pattern) {
     throw new Error('Expected transaction to revert, but it succeeded');
   } catch (err) {
     if (err.message === 'Expected transaction to revert, but it succeeded') throw err;
-    if (pattern && !err.message.includes(pattern)) {
+    const selector = pattern
+      ? ethersId(`${pattern}()`).slice(0, 10).toLowerCase()
+      : null;
+    const message = String(err.message || '').toLowerCase();
+    if (pattern && !message.includes(pattern.toLowerCase()) && !(selector && message.includes(selector))) {
       throw new Error(`Expected revert containing "${pattern}" but got: ${err.message}`);
     }
   }
@@ -43,6 +48,9 @@ describe('TheGreenTeaPartyProjectRegistry', function () {
       const receipt = await tx.wait();
       expect(receipt.status).to.equal(1);
       expect(await registry.projectExists(PID)).to.be.true;
+      expect(await registry.getProjectCount()).to.equal(1n);
+      expect(await registry.getAllProjectIds()).to.deep.equal([PID]);
+      expect(await registry.projectList(0)).to.equal(PID);
     });
 
     it('reverts when non-owner tries to register', async function () {
@@ -191,7 +199,7 @@ describe('TheGreenTeaPartyProfileRegistry', function () {
 });
 
 describe('TheGreenTeaPartyTreasury', function () {
-  let ethers, registry, treasury;
+  let ethers, registry, profile, treasury;
   let owner, steward, contributor, other;
   let PID, META;
 
@@ -208,8 +216,11 @@ describe('TheGreenTeaPartyTreasury', function () {
     const RegistryFactory = await ethers.getContractFactory('TheGreenTeaPartyProjectRegistry');
     registry = await RegistryFactory.deploy(owner.address);
 
+    const ProfileFactory = await ethers.getContractFactory('TheGreenTeaPartyProfileRegistry');
+    profile = await ProfileFactory.deploy();
+
     const TreasuryFactory = await ethers.getContractFactory('TheGreenTeaPartyTreasury');
-    treasury = await TreasuryFactory.deploy(await registry.getAddress(), owner.address);
+    treasury = await TreasuryFactory.deploy(await registry.getAddress(), await profile.getAddress(), owner.address);
 
     await registry.connect(owner).registerProject(PID, steward.address, META);
     await registry.connect(steward).updateProjectStatus(PID, 1 /* Active */);
@@ -293,6 +304,19 @@ describe('TheGreenTeaPartyTreasury', function () {
         'InvalidAmount'
       );
     });
+
+    it('owner can update registry references', async function () {
+      const newRegistryFactory = await ethers.getContractFactory('TheGreenTeaPartyProjectRegistry');
+      const newRegistry = await newRegistryFactory.deploy(owner.address);
+      const newProfileFactory = await ethers.getContractFactory('TheGreenTeaPartyProfileRegistry');
+      const newProfile = await newProfileFactory.deploy();
+
+      await treasury.connect(owner).updateRegistry(await newRegistry.getAddress());
+      await treasury.connect(owner).updateProfileRegistry(await newProfile.getAddress());
+
+      expect(await treasury.registry()).to.equal(await newRegistry.getAddress());
+      expect(await treasury.profileRegistry()).to.equal(await newProfile.getAddress());
+    });
   });
 
   describe('pause / unpause', function () {
@@ -325,7 +349,7 @@ describe('TheGreenTeaPartyTreasury', function () {
     it('reverts with zero registry address', async function () {
       const Factory = await ethers.getContractFactory('TheGreenTeaPartyTreasury');
       await expectRevert(
-        Factory.deploy(ethers.ZeroAddress, owner.address),
+        Factory.deploy(ethers.ZeroAddress, await profile.getAddress(), owner.address),
         'InvalidRegistry'
       );
     });

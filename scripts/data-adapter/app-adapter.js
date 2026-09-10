@@ -283,21 +283,38 @@ var GTPAppDataAdapter = (function () {
 
   // ---- Live project list from ProjectRegistry --------------------------------
 
-  /**
-   * Returns a Promise<Object[]> of project objects built from on-chain data.
-   *
-   * Strategy:
-   *  1. Query all ProjectRegistered events to enumerate project IDs.
-   *  2. For each ID, call getProject() to read the current state.
-   *  3. Resolve metadataURI — if it starts with "{" parse it as inline JSON;
-   *     if it is an HTTP/IPFS URL, fetch it; otherwise treat it as a label.
-   *  4. Merge on-chain fields (steward, status) with metadata fields.
-   *
-   * Required project shape for data-layer.js:
-   *   { id, name, track, status, raised, goal }
-   * All other fields are optional but surfaced if present in the metadata.
-   */
-  function fetchProjectsFromRegistry(chainId, options) {
+  function normalizeProjectIdList(ids) {
+    var seen = {};
+    return (Array.isArray(ids) ? ids : [])
+      .map(function (id) { return id === null || id === undefined ? '' : String(id); })
+      .filter(function (id) {
+          if (!id || seen[id]) return false;
+          seen[id] = true;
+          return true;
+      });
+  }
+
+  function fetchEnumeratedProjectIds(registry) {
+    if (typeof registry.getAllProjectIds === 'function') {
+      return Promise.resolve(registry.getAllProjectIds()).then(normalizeProjectIdList);
+    }
+
+    if (typeof registry.getProjectCount === 'function' && typeof registry.projectList === 'function') {
+      return Promise.resolve(registry.getProjectCount()).then(function (count) {
+          var total = toFiniteNumber(count, 0);
+          if (!Number.isFinite(total) || total <= 0) return [];
+          var fetches = [];
+          for (var i = 0; i < total; i += 1) {
+            fetches.push(registry.projectList(i));
+          }
+          return Promise.all(fetches).then(normalizeProjectIdList);
+      });
+    }
+
+    return Promise.resolve([]);
+  }
+
+  function fetchProjectsFromRegistry(chainId) {
     if (typeof window === 'undefined' || typeof window.ethers === 'undefined') {
       console.warn('[GTPAppDataAdapter] ethers.js not loaded — returning empty project list.');
       return Promise.resolve([]);
@@ -316,8 +333,6 @@ var GTPAppDataAdapter = (function () {
       return Promise.resolve([]);
     }
 
-    var fromBlock = typeof contractsCfg.fromBlock === 'number' ? contractsCfg.fromBlock : 0;
-    var projectHints = options && Array.isArray(options.projectHints) ? options.projectHints : candidateProjectIds();
     var PROJECT_REGISTRY_ABI = GTPContractAdapter.PROJECT_REGISTRY_ABI;
 
     var provider;
@@ -329,131 +344,58 @@ var GTPAppDataAdapter = (function () {
     }
 
     var registry = new window.ethers.Contract(contractsCfg.projectRegistry, PROJECT_REGISTRY_ABI, provider);
-    var loadSource = 'registry-events';
 
-    function loadProjectRegistrationLogs(startBlock) {
-      return queryFilterResilient(registry, registry.filters.ProjectRegistered(), startBlock, 'latest', provider);
-    }
-
-    function fetchCandidateProjects() {
-      return probeRegistryProjects(registry, projectHints);
-    }
-
-    return loadProjectRegistrationLogs(fromBlock)
-      .then(function (logs) {
-        if (logs.length || fromBlock <= 0) {
-          return logs;
-        }
-
-        console.warn('[GTPAppDataAdapter] No ProjectRegistered logs found from block ' + fromBlock + '; retrying from genesis.');
-        return loadProjectRegistrationLogs(0);
-      })
-      .then(function (logs) {
-        if (!logs.length) {
-          loadSource = 'registry-candidates';
-          return fetchCandidateProjects();
-        }
-
-        // De-duplicate by projectId, keeping the last (highest-index) event per ID.
-        // The contract prevents re-registration, but this guards against edge cases.
-        var latestByProjectId = {};
-        logs.forEach(function (log) {
-          var pid = log.args && log.args.projectId ? log.args.projectId : null;
-          if (pid) {
-            latestByProjectId[pid] = log;
-          }
-        });
-        var uniqueLogs = Object.values(latestByProjectId);
-
-        // Build project records from the registration event first.
-        // Fall back to getProject() only when the event payload is incomplete.
-        var stateFetches = uniqueLogs.map(function (log) {
-          var projectId = log.args.projectId;
-          var eventRecord = {
-            projectId: projectId,
-            steward: log.args && log.args.steward ? log.args.steward : null,
-            metadataURI: log.args && Object.prototype.hasOwnProperty.call(log.args, 'metadataURI')
-              ? log.args.metadataURI
-              : null,
-            status: Number(log.args && log.args.status !== undefined ? log.args.status : 0)
-          };
-
-          if (eventRecord.steward && eventRecord.metadataURI !== null) {
-            return Promise.resolve(eventRecord);
-          }
-
-          return registry.getProject(projectId)
-            .then(function (result) {
-              return {
-                projectId: projectId,
-                steward: result.steward || eventRecord.steward,
-                metadataURI: result.metadataURI || eventRecord.metadataURI,
-                status: Number(result.status !== undefined ? result.status : eventRecord.status)
-              };
-            })
-            .catch(function (err) {
-              console.warn('[GTPAppDataAdapter] getProject(' + projectId + ') failed; using event payload only:', err);
-              return eventRecord;
+    return fetchEnumeratedProjectIds(registry)
+      .then(function (projectIds) {
+          if (!projectIds.length) {
+            console.info('[GTPAppDataAdapter] project registry enumeration complete', {
+              chainId: chainId,
+              count: 0,
+              source: 'registry-enumeration'
             });
-        });
+            return [];
+          }
 
-          return Promise.all(stateFetches).then(function (records) {
-            return Promise.all(records
-              .filter(function (r) { return r !== null; })
-              .map(function (record) {
+          return Promise.all(projectIds.map(function (projectId) {
+            return registry.getProject(projectId)
+              .then(function (result) {
+                if (!result) return null;
+                var record = {
+                  projectId: projectId,
+                  steward: result.steward,
+                  metadataURI: result.metadataURI,
+                  status: Number(result.status)
+                };
+
                 return resolveMetadata(record.metadataURI)
                   .then(function (meta) {
                     return buildProjectObject(record, meta);
                   })
                   .catch(function (err) {
-                    console.warn('[GTPAppDataAdapter] resolveMetadata failed for ' + record.projectId, err);
+                    console.warn('[GTPAppDataAdapter] resolveMetadata failed for ' + projectId, err);
                     return buildProjectObject(record, {});
                   });
-              }));
-          });
+              })
+              .catch(function (err) {
+                console.warn('[GTPAppDataAdapter] getProject(' + projectId + ') failed:', err);
+                return null;
+              });
+          }));
       })
       .then(function (projects) {
-          if (!projects.length) {
-            loadSource = 'registry-candidates';
-            return fetchCandidateProjects();
-          }
-          return projects;
-      })
-      .catch(function (err) {
-        if (isRpcRateLimitError(err) || isBlockRangeTooLargeError(err)) {
-          console.warn('[GTPAppDataAdapter] registry scan throttled; probing candidate ids instead', {
-            chainId: chainId,
-            error: errorMessage(err)
-          });
-          loadSource = 'registry-candidates';
-          return probeRegistryProjects(registry, projectHints);
-        }
-        throw err;
-      })
-      .then(function (projects) {
-        var filteredProjects = projects.filter(function (p) { return p !== null; });
-        if (filteredProjects.length) {
+          var filteredProjects = (projects || []).filter(function (p) { return p !== null; });
           console.info('[GTPAppDataAdapter] project load complete', {
             chainId: chainId,
             count: filteredProjects.length,
-            firstProject: projectDiagnosticSummary(filteredProjects[0]),
+            firstProject: filteredProjects[0] ? projectDiagnosticSummary(filteredProjects[0]) : null,
             projectIds: filteredProjects.slice(0, 5).map(function (p) { return p.id; }),
-            source: loadSource
+            source: 'registry-enumeration'
           });
-        } else {
-          console.info('[GTPAppDataAdapter] project load complete', {
-            chainId: chainId,
-            count: 0,
-            firstProject: null,
-            projectIds: [],
-            source: 'none'
-          });
-        }
-        return filteredProjects;
+          return filteredProjects;
       })
       .catch(function (err) {
-        console.warn('[GTPAppDataAdapter] fetchProjectsFromRegistry failed:', err);
-        return [];
+          console.warn('[GTPAppDataAdapter] fetchProjectsFromRegistry failed:', err);
+          return [];
       });
   }
 
@@ -780,7 +722,7 @@ var GTPAppDataAdapter = (function () {
 
     return {
       getProjects: function () {
-        return fetchProjectsFromRegistry(resolvedChainId(), { projectHints: candidateProjectIds() }).catch(function (err) {
+        return fetchProjectsFromRegistry(resolvedChainId()).catch(function (err) {
           console.warn('[GTPAppDataAdapter] fetchProjectsFromRegistry failed:', err);
           return [];
         });

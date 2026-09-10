@@ -26,8 +26,8 @@ var GTPConfig = (function () {
   // fromBlock: first block to query for events (set to deployment block to avoid full-history scans).
   var CONTRACTS = {
     10: {
-      projectRegistry: '0x1b093804d9BF8572F9ea58e24E051580Ed608F64',
-      treasury: '0xebE0D6Fa315CeA75D491219d5D9CC13136580144',
+      projectRegistry: '0x799A97231685d91fdbB03A635B965971A8c71a84',
+      treasury: '0xA77967362b97bACf49d189CD30793D402030BAA7',
       profileRegistry: '0xd66AdB0E70303D4e6daf8C963c7947f9ae722446',
       fromBlock: 139000000
     }

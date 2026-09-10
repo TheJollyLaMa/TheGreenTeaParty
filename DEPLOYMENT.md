@@ -69,8 +69,8 @@ manual deployment. You do **not** deploy interfaces separately.
 
 - Deploy `TheGreenTeaPartyProjectRegistry.sol` first with `initialOwner`
 - Deploy `TheGreenTeaPartyProfileRegistry.sol`
-- Deploy `TheGreenTeaPartyTreasury.sol` with `registryAddress` set to the deployed
-  `TheGreenTeaPartyProjectRegistry` address and `initialOwner`
+- Deploy `TheGreenTeaPartyTreasury.sol` with `registryAddress`, `profileRegistryAddress`,
+  and `initialOwner`
 
 If you upload files into Remix manually, `TheGreenTeaPartyTreasury.sol` already embeds the small
 registry interface it needs for cross-contract calls, so no extra interface file
@@ -86,7 +86,7 @@ The script deploys in order:
 
 1. `TheGreenTeaPartyProjectRegistry(initialOwner)`
 2. `TheGreenTeaPartyProfileRegistry()` — no constructor args
-3. `TheGreenTeaPartyTreasury(registryAddress, initialOwner)`
+3. `TheGreenTeaPartyTreasury(registryAddress, profileRegistryAddress, initialOwner)`
 
 On success it writes `config/deployed-addresses.json` with all addresses.
 
@@ -97,7 +97,7 @@ On success it writes `config/deployed-addresses.json` with all addresses.
 ```bash
 npx hardhat verify --network optimism <TheGreenTeaPartyProjectRegistry address> "<INITIAL_OWNER>"
 npx hardhat verify --network optimism <TheGreenTeaPartyProfileRegistry address>
-npx hardhat verify --network optimism <TheGreenTeaPartyTreasury address> "<TheGreenTeaPartyProjectRegistry address>" "<INITIAL_OWNER>"
+npx hardhat verify --network optimism <TheGreenTeaPartyTreasury address> "<TheGreenTeaPartyProjectRegistry address>" "<TheGreenTeaPartyProfileRegistry address>" "<INITIAL_OWNER>"
 ```
 
 **Option B — via script (reads `config/deployed-addresses.json` automatically):**
@@ -129,9 +129,9 @@ Commit this change. GitHub Pages will serve the updated config automatically.
 
 | Contract | Address | Etherscan |
 |---|---|---|
-| `TheGreenTeaPartyProjectRegistry` | `0x1b093804d9BF8572F9ea58e24E051580Ed608F64` | https://optimistic.etherscan.io/address/0x1b093804d9BF8572F9ea58e24E051580Ed608F64 |
+| `TheGreenTeaPartyProjectRegistry` | `0x799A97231685d91fdbB03A635B965971A8c71a84` | https://optimistic.etherscan.io/address/0x799A97231685d91fdbB03A635B965971A8c71a84 |
 | `TheGreenTeaPartyProfileRegistry` | `0xd66AdB0E70303D4e6daf8C963c7947f9ae722446` | https://optimistic.etherscan.io/address/0xd66AdB0E70303D4e6daf8C963c7947f9ae722446 |
-| `TheGreenTeaPartyTreasury` | `0xebE0D6Fa315CeA75D491219d5D9CC13136580144` | https://optimistic.etherscan.io/address/0xebE0D6Fa315CeA75D491219d5D9CC13136580144 |
+| `TheGreenTeaPartyTreasury` | `0xA77967362b97bACf49d189CD30793D402030BAA7` | https://optimistic.etherscan.io/address/0xA77967362b97bACf49d189CD30793D402030BAA7 |
 
 See `config/deployed-addresses.json` for the machine-readable record.
 

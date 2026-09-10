@@ -10,6 +10,9 @@ var GTPContractAdapter = (function () {
     'function getSteward(bytes32 projectId) view returns (address)',
     'function getStatus(bytes32 projectId) view returns (uint8)',
     'function getProject(bytes32 projectId) view returns (address steward, string metadataURI, uint8 status)',
+    'function getProjectCount() view returns (uint256)',
+    'function getAllProjectIds() view returns (bytes32[])',
+    'function projectList(uint256 index) view returns (bytes32)',
     'function registerProject(bytes32 projectId, address steward, string metadataURI)',
     'function updateProjectMetadataURI(bytes32 projectId, string metadataURI)',
     'function updateProjectStatus(bytes32 projectId, uint8 nextStatus)',
@@ -32,17 +35,24 @@ var GTPContractAdapter = (function () {
   var TREASURY_ABI = [
     'function owner() view returns (address)',
     'function paused() view returns (bool)',
+    'function registry() view returns (address)',
+    'function profileRegistry() view returns (address)',
     'function projectBalances(bytes32 projectId) view returns (uint256)',
     'function payoutAddresses(bytes32 projectId) view returns (address)',
+    'function getProjectBalance(bytes32 projectId) view returns (uint256)',
     'function contribute(bytes32 projectId) payable',
     'function setPayoutAddress(bytes32 projectId, address payoutAddress)',
     'function withdraw(bytes32 projectId, uint256 amount)',
+    'function updateRegistry(address newRegistry)',
+    'function updateProfileRegistry(address newProfileRegistry)',
     'function transferOwnership(address nextOwner)',
     'function pause()',
     'function unpause()',
     'event ContributionReceived(bytes32 indexed projectId, address indexed contributor, uint256 amount, uint256 newBalance)',
     'event PayoutAddressUpdated(bytes32 indexed projectId, address indexed payoutAddress)',
-    'event Withdrawal(bytes32 indexed projectId, address indexed recipient, uint256 amount, uint256 newBalance)'
+    'event Withdrawal(bytes32 indexed projectId, address indexed recipient, uint256 amount, uint256 newBalance)',
+    'event RegistryUpdated(address indexed previousRegistry, address indexed nextRegistry)',
+    'event ProfileRegistryUpdated(address indexed previousProfileRegistry, address indexed nextProfileRegistry)'
   ];
 
   function getContractsForChain(chainId) {
@@ -419,6 +429,36 @@ var GTPContractAdapter = (function () {
         }).catch(function (err) {
           console.warn('[GTPContractAdapter] withdraw error', err);
           return { ok: false, placeholder: false, action: 'withdraw', chainId: chainId, error: err.message };
+        });
+      },
+
+      updateRegistry: function (newRegistry) {
+        assertCanWrite();
+        var chainId = currentChainId();
+        var contracts = getContractsForChain(chainId);
+        return getSignerProvider().getSigner().then(function (signer) {
+          var treasury = new window.ethers.Contract(contracts.treasury, TREASURY_ABI, signer);
+          return treasury.updateRegistry(newRegistry);
+        }).then(function (tx) {
+          return { ok: true, placeholder: false, action: 'updateRegistry', tx: tx };
+        }).catch(function (err) {
+          console.warn('[GTPContractAdapter] updateRegistry error', err);
+          return { ok: false, placeholder: false, action: 'updateRegistry', chainId: chainId, error: err.message };
+        });
+      },
+
+      updateProfileRegistry: function (newProfileRegistry) {
+        assertCanWrite();
+        var chainId = currentChainId();
+        var contracts = getContractsForChain(chainId);
+        return getSignerProvider().getSigner().then(function (signer) {
+          var treasury = new window.ethers.Contract(contracts.treasury, TREASURY_ABI, signer);
+          return treasury.updateProfileRegistry(newProfileRegistry);
+        }).then(function (tx) {
+          return { ok: true, placeholder: false, action: 'updateProfileRegistry', tx: tx };
+        }).catch(function (err) {
+          console.warn('[GTPContractAdapter] updateProfileRegistry error', err);
+          return { ok: false, placeholder: false, action: 'updateProfileRegistry', chainId: chainId, error: err.message };
         });
       }
     };

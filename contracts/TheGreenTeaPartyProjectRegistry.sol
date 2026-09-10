@@ -19,6 +19,9 @@ contract TheGreenTeaPartyProjectRegistry {
     address public owner;
     bool public paused;
 
+    // Array for on-chain enumeration
+    bytes32[] public projectList;
+
     mapping(bytes32 => Project) private projects;
 
     event OwnershipTransferred(address indexed previousOwner, address indexed nextOwner);
@@ -92,6 +95,8 @@ contract TheGreenTeaPartyProjectRegistry {
             exists: true
         });
 
+        projectList.push(projectId);
+
         emit ProjectRegistered(projectId, steward, metadataURI, uint8(Status.Draft));
     }
 
@@ -132,6 +137,14 @@ contract TheGreenTeaPartyProjectRegistry {
         project.steward = nextSteward;
 
         emit ProjectStewardTransferred(projectId, previousSteward, nextSteward);
+    }
+
+    function getProjectCount() external view returns (uint256) {
+        return projectList.length;
+    }
+
+    function getAllProjectIds() external view returns (bytes32[] memory) {
+        return projectList;
     }
 
     function projectExists(bytes32 projectId) external view returns (bool) {

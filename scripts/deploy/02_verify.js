@@ -41,7 +41,7 @@ async function main() {
   console.log('\n[3/3] Verifying TheGreenTeaPartyTreasury…');
   await run('verify:verify', {
     address: contracts.treasury,
-    constructorArguments: [contracts.projectRegistry, initialOwner]
+    constructorArguments: [contracts.projectRegistry, contracts.profileRegistry, initialOwner]
   });
 
   console.log('\nVerification complete.');

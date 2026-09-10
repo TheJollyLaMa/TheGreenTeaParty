@@ -46,7 +46,12 @@ async function loadAppAdapterSandbox(options = {}) {
         10: { rpcUrl: 'http://localhost:8545' }
       },
       contracts: {
-        10: { projectRegistry: '0x0000000000000000000000000000000000000001', fromBlock: 0 }
+        10: {
+          projectRegistry: '0x799A97231685d91fdbB03A635B965971A8c71a84',
+          treasury: '0xA77967362b97bACf49d189CD30793D402030BAA7',
+          profileRegistry: '0xd66AdB0E70303D4e6daf8C963c7947f9ae722446',
+          fromBlock: 0
+        }
       }
     },
     GTPContractAdapter: {
@@ -64,7 +69,9 @@ async function loadAppAdapterSandbox(options = {}) {
           setProfilePointer: async function () {},
           contribute: async function () {},
           setPayoutAddress: async function () {},
-          withdraw: async function () {}
+          withdraw: async function () {},
+          updateRegistry: async function () {},
+          updateProfileRegistry: async function () {}
         };
       }
     }
@@ -73,9 +80,6 @@ async function loadAppAdapterSandbox(options = {}) {
   sandbox.window.ethers = {
     JsonRpcProvider: class {
       constructor() {}
-      getBlockNumber() {
-        return Promise.resolve(123);
-      }
     },
     Contract: class {
       constructor() {
@@ -101,67 +105,17 @@ async function loadAppAdapterSandbox(options = {}) {
 }
 
 describe('GTPAppDataAdapter', function () {
-  it('fills safe defaults for registry-backed inline metadata', async function () {
+  it('hydrates projects from getAllProjectIds()', async function () {
     const sandbox = await loadAppAdapterSandbox();
-    sandbox.setRegistryStub({
-      filters: {
-        ProjectRegistered: function () {
-          return {};
-        }
-      },
-      queryFilter: async function () {
-        return [
-          {
-            args: { projectId: '0xproject1' }
-          }
-        ];
-      },
-      getProject: async function () {
-        return {
-          steward: '0x0000000000000000000000000000000000000002',
-          metadataURI: '{"id":"green-tea-hut-01","name":"The Green Tea Hut #1","track":"Green Tea","goal":"12000"}',
-          status: 0n
-        };
-      }
-    });
-
-    const projects = await sandbox.adapter.create({}).getProjects();
-
-    expect(projects).to.have.lengthOf(1);
-    expect(projects[0]).to.include({
-      id: 'green-tea-hut-01',
-      name: 'The Green Tea Hut #1',
-      track: 'Green Tea',
-      status: 'draft',
-      raised: 0,
-      goal: 12000
-    });
-  });
-
-  it('uses the registration event payload when it is complete', async function () {
-    const sandbox = await loadAppAdapterSandbox();
-    let getProjectCalled = false;
+    let getProjectCalls = 0;
 
     sandbox.setRegistryStub({
-      filters: {
-        ProjectRegistered: function () {
-          return {};
-        }
+      getAllProjectIds: async function () {
+        return ['0xproject1'];
       },
-      queryFilter: async function () {
-        return [
-          {
-            args: {
-              projectId: '0xproject1',
-              steward: '0x0000000000000000000000000000000000000002',
-              metadataURI: '{"id":"green-tea-hut-01","name":"The Green Tea Hut #1","track":"Green Tea","goal":"12000"}',
-              status: 1
-            }
-          }
-        ];
-      },
-      getProject: async function () {
-        getProjectCalled = true;
+      getProject: async function (projectId) {
+        getProjectCalls += 1;
+        expect(projectId).to.equal('0xproject1');
         return {
           steward: '0x0000000000000000000000000000000000000002',
           metadataURI: '{"id":"green-tea-hut-01","name":"The Green Tea Hut #1","track":"Green Tea","goal":"12000"}',
@@ -172,7 +126,7 @@ describe('GTPAppDataAdapter', function () {
 
     const projects = await sandbox.adapter.create({}).getProjects();
 
-    expect(getProjectCalled).to.equal(false);
+    expect(getProjectCalls).to.equal(1);
     expect(projects).to.have.lengthOf(1);
     expect(projects[0]).to.include({
       id: 'green-tea-hut-01',
@@ -198,25 +152,15 @@ describe('GTPAppDataAdapter', function () {
     };
 
     sandbox.setRegistryStub({
-      filters: {
-        ProjectRegistered: function () {
-          return {};
-        }
-      },
-      queryFilter: async function () {
-        return [
-          {
-            args: {
-              projectId: '0xproject1',
-              steward: '0x0000000000000000000000000000000000000002',
-              metadataURI: JSON.stringify(JSON.stringify(metadata)),
-              status: 1
-            }
-          }
-        ];
+      getAllProjectIds: async function () {
+        return ['0xproject1'];
       },
       getProject: async function () {
-        throw new Error('getProject should not be called when event payload is complete');
+        return {
+          steward: '0x0000000000000000000000000000000000000002',
+          metadataURI: JSON.stringify(JSON.stringify(metadata)),
+          status: 1n
+        };
       }
     });
 
@@ -248,25 +192,15 @@ describe('GTPAppDataAdapter', function () {
     });
 
     sandbox.setRegistryStub({
-      filters: {
-        ProjectRegistered: function () {
-          return {};
-        }
-      },
-      queryFilter: async function () {
-        return [
-          {
-            args: {
-              projectId: '0xproject1',
-              steward: '0x0000000000000000000000000000000000000002',
-              metadataURI: 'https://example.com/metadata.json',
-              status: 1
-            }
-          }
-        ];
+      getAllProjectIds: async function () {
+        return ['0xproject1'];
       },
       getProject: async function () {
-        throw new Error('getProject should not be called when event payload is complete');
+        return {
+          steward: '0x0000000000000000000000000000000000000002',
+          metadataURI: 'https://example.com/metadata.json',
+          status: 1n
+        };
       }
     });
 
@@ -283,65 +217,22 @@ describe('GTPAppDataAdapter', function () {
     });
   });
 
-  it('retries the registry scan from genesis when the configured start block misses the project', async function () {
+  it('falls back to projectList enumeration when getAllProjectIds is unavailable', async function () {
     const sandbox = await loadAppAdapterSandbox();
-    const queryCalls = [];
+    const calls = [];
 
     sandbox.setRegistryStub({
-      filters: {
-        ProjectRegistered: function () {
-          return {};
-        }
+      getProjectCount: async function () {
+        return 1;
       },
-      queryFilter: async function (filter, fromBlock, toBlock) {
-        queryCalls.push({ fromBlock, toBlock });
-        if (fromBlock === 0) {
-          return [
-            {
-              args: { projectId: '0xproject1' }
-            }
-          ];
-        }
-        return [];
+      projectList: async function (index) {
+        calls.push(index);
+        return '0xproject1';
       },
       getProject: async function () {
         return {
           steward: '0x0000000000000000000000000000000000000002',
           metadataURI: '{"id":"green-tea-hut-01","name":"The Green Tea Hut #1","track":"Green Tea","goal":"12000"}',
-          status: 0n
-        };
-      }
-    });
-
-    const projects = await sandbox.adapter.create({}).getProjects();
-
-    expect(projects).to.have.lengthOf(1);
-    expect(queryCalls.some(({ fromBlock }) => fromBlock === 0)).to.equal(true);
-  });
-
-  it('probes candidate ids when registry logs are empty', async function () {
-    const sandbox = await loadAppAdapterSandbox();
-    const targetHash = 'hash:green-tea-hut-01';
-
-    sandbox.setRegistryStub({
-      filters: {
-        ProjectRegistered: function () {
-          return {};
-        }
-      },
-      queryFilter: async function () {
-        return [];
-      },
-      projectExists: async function (bytes32ProjectId) {
-        return bytes32ProjectId === targetHash;
-      },
-      getProject: async function (bytes32ProjectId) {
-        if (bytes32ProjectId !== targetHash) {
-          throw new Error('ProjectNotFound');
-        }
-        return {
-          steward: '0x0000000000000000000000000000000000000002',
-          metadataURI: '{"id":"green-tea-hut-01","name":"The Green Tea Hut #1","track":"Green Tea","goal":"12000"}',
           status: 1n
         };
       }
@@ -349,41 +240,7 @@ describe('GTPAppDataAdapter', function () {
 
     const projects = await sandbox.adapter.create({}).getProjects();
 
-    expect(projects).to.have.lengthOf(1);
-    expect(projects[0].id).to.equal('green-tea-hut-01');
-    expect(projects[0].status).to.equal('active');
-  });
-
-  it('falls back to candidate ids when the registry scan is rate limited', async function () {
-    const sandbox = await loadAppAdapterSandbox();
-    const targetHash = 'hash:green-tea-hut-01';
-
-    sandbox.setRegistryStub({
-      filters: {
-        ProjectRegistered: function () {
-          return {};
-        }
-      },
-      queryFilter: async function () {
-        throw new Error('Your IP has exceeded its requests per second capacity');
-      },
-      projectExists: async function (bytes32ProjectId) {
-        return bytes32ProjectId === targetHash;
-      },
-      getProject: async function (bytes32ProjectId) {
-        if (bytes32ProjectId !== targetHash) {
-          throw new Error('ProjectNotFound');
-        }
-        return {
-          steward: '0x0000000000000000000000000000000000000002',
-          metadataURI: '{"id":"green-tea-hut-01","name":"The Green Tea Hut #1","track":"Green Tea","goal":"12000"}',
-          status: 1n
-        };
-      }
-    });
-
-    const projects = await sandbox.adapter.create({}).getProjects();
-
+    expect(calls).to.deep.equal([0]);
     expect(projects).to.have.lengthOf(1);
     expect(projects[0].id).to.equal('green-tea-hut-01');
     expect(projects[0].status).to.equal('active');

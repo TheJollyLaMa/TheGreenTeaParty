@@ -121,9 +121,9 @@ App mode now includes a minimal contract scaffold for the planned onchain path:
 
 ### Optimism deployed contract addresses
 
-- `TheGreenTeaPartyProjectRegistry`: `0x1b093804d9BF8572F9ea58e24E051580Ed608F64`
+- `TheGreenTeaPartyProjectRegistry`: `0x799A97231685d91fdbB03A635B965971A8c71a84`
 - `TheGreenTeaPartyProfileRegistry`: `0xd66AdB0E70303D4e6daf8C963c7947f9ae722446`
-- `TheGreenTeaPartyTreasury`: `0xebE0D6Fa315CeA75D491219d5D9CC13136580144`
+- `TheGreenTeaPartyTreasury`: `0xA77967362b97bACf49d189CD30793D402030BAA7`
 
 ### Current contract adapter behavior
 
