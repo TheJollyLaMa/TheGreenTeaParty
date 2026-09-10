@@ -5,6 +5,7 @@ var GTPWallet = (function () {
 
   var provider = null;
   var initialized = false;
+  var boundProviders = [];
 
   function getProvider() {
     var injected = window.ethereum;
@@ -23,6 +24,19 @@ var GTPWallet = (function () {
       isSupportedNetwork: GTPNetwork.isSupportedChain(chainId),
       connectionStatus: address ? 'connected' : 'disconnected'
     });
+  }
+
+  function bindProviderEvents(target) {
+    if (!target || typeof target.on !== 'function' || boundProviders.indexOf(target) !== -1) {
+      return;
+    }
+
+    target.on('accountsChanged', onAccountsChanged);
+    target.on('chainChanged', onChainChanged);
+    target.on('disconnect', function () {
+      disconnect();
+    });
+    boundProviders.push(target);
   }
 
   function readSession() {
@@ -55,6 +69,7 @@ var GTPWallet = (function () {
       GTPAppState.setState({ lastError: null });
     }
     console.info('[wallet] accounts changed', accounts);
+    readSession();
   }
 
   function onChainChanged(nextChainId) {
@@ -62,18 +77,16 @@ var GTPWallet = (function () {
     var identity = GTPAppState.getSessionIdentity();
     updateIdentity(identity.address, parsedChainId);
     console.info('[wallet] chain changed', { chainId: parsedChainId });
+    readSession();
   }
 
   function init() {
     if (initialized) return Promise.resolve();
     initialized = true;
     provider = getProvider();
-    if (provider && typeof provider.on === 'function') {
-      provider.on('accountsChanged', onAccountsChanged);
-      provider.on('chainChanged', onChainChanged);
-      provider.on('disconnect', function () {
-        disconnect();
-      });
+    bindProviderEvents(provider);
+    if (window.ethereum && window.ethereum !== provider) {
+      bindProviderEvents(window.ethereum);
     }
     return readSession();
   }
