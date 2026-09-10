@@ -125,7 +125,7 @@ describe('GTPContractAdapter', function () {
 
   it('exposes the updated treasury write and event surface', async function () {
     const sandbox = await loadContractAdapterSandbox();
-    const treasuryAbi = sandbox.adapter.TREASURY_ABI.join('\n');
+    const treasuryAbi = sandbox.window.GTPContractAdapter.TREASURY_ABI.join('\n');
 
     expect(treasuryAbi).to.include('function sweepUnassignedETH(address payable recipient, uint256 amount)');
     expect(treasuryAbi).to.include('function sweepERC20(address token, address recipient, uint256 amount)');
