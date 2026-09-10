@@ -374,74 +374,65 @@ const renderWalletControl = () => {
   const state = GTPAppState.getState();
   walletControl.hidden = false;
   walletControl.innerHTML = '';
+  walletControl.classList.toggle('wallet-control--connected', state.connectionStatus === 'connected' && Boolean(state.address));
+  walletControl.classList.toggle('wallet-control--error', state.connectionStatus === 'rejected' || state.connectionStatus === 'error');
 
-  const row = document.createElement('div');
-  row.className = 'wallet-control-row';
+  const control = document.createElement('div');
+  control.className = 'wallet-control-orbiter';
 
   if (state.connectionStatus === 'connected' && state.address) {
-    const addressPill = document.createElement('span');
-    addressPill.className = 'wallet-address-pill';
-    addressPill.textContent = shortenAddress(state.address);
-    addressPill.title = state.address;
-    addressPill.setAttribute('aria-label', `Connected wallet ${state.address}`);
-    row.appendChild(addressPill);
+    const orbit = document.createElement('div');
+    orbit.className = 'wallet-address-orbit';
+    orbit.setAttribute('aria-hidden', 'true');
+    orbit.textContent = `${state.address.slice(0, 6)}🦊🦊🦊🦊${state.address.slice(-4)}`;
+    control.appendChild(orbit);
+  }
 
-    const disconnectBtn = document.createElement('button');
-    disconnectBtn.type = 'button';
-    disconnectBtn.className = 'btn btn-secondary wallet-disconnect-btn';
-    disconnectBtn.textContent = 'Disconnect';
-    disconnectBtn.addEventListener('click', () => {
-      GTPWallet.disconnect();
+  const button = document.createElement('button');
+  button.type = 'button';
+  button.className = 'wallet-fx-btn';
+  button.disabled = state.connectionStatus === 'connecting';
+  button.title = state.connectionStatus === 'connected' && state.address
+    ? `Disconnect ${state.address}`
+    : state.connectionStatus === 'connecting'
+      ? 'Connecting…'
+      : connectIconFailed ? 'Connect wallet' : 'Connect MetaMask Wallet';
+  button.setAttribute(
+    'aria-label',
+    state.connectionStatus === 'connected' && state.address
+      ? `Connected wallet ${state.address}. Click to disconnect.`
+      : state.connectionStatus === 'connecting'
+        ? 'Connecting wallet'
+        : 'Connect MetaMask Wallet'
+  );
+
+  if (!connectIconFailed) {
+    const icon = document.createElement('img');
+    icon.src = 'assets/metamask.png';
+    icon.alt = '';
+    icon.className = 'wallet-fx-icon';
+    icon.addEventListener('error', () => {
+      connectIconFailed = true;
+      renderWalletControl();
     });
-    row.appendChild(disconnectBtn);
+    button.appendChild(icon);
   } else {
-    const connectBtn = document.createElement('button');
-    connectBtn.type = 'button';
-    connectBtn.className = 'btn btn-primary wallet-connect-btn';
-    connectBtn.setAttribute('aria-label', 'Connect MetaMask Wallet');
-    connectBtn.disabled = state.connectionStatus === 'connecting';
+    const fallback = document.createElement('span');
+    fallback.className = 'wallet-fx-fallback';
+    fallback.textContent = '🦊';
+    button.appendChild(fallback);
+  }
 
-    if (!connectIconFailed) {
-      const icon = document.createElement('img');
-      icon.src = 'assets/metamask.png';
-      icon.alt = 'MetaMask';
-      icon.className = 'wallet-connect-icon';
-      icon.addEventListener('error', () => {
-        connectIconFailed = true;
-        renderWalletControl();
-      });
-      connectBtn.appendChild(icon);
+  button.addEventListener('click', () => {
+    if (state.connectionStatus === 'connected' && state.address) {
+      GTPWallet.disconnect();
+      return;
     }
+    GTPWallet.connect();
+  });
 
-    const label = document.createElement('span');
-    if (state.connectionStatus === 'connecting') {
-      label.textContent = 'Connecting…';
-    } else {
-      label.textContent = connectIconFailed ? 'Connect Wallet' : 'Connect MetaMask Wallet';
-    }
-    connectBtn.appendChild(label);
-
-    connectBtn.addEventListener('click', () => {
-      GTPWallet.connect();
-    });
-    row.appendChild(connectBtn);
-  }
-
-  walletControl.appendChild(row);
-
-  if (!state.isSupportedNetwork && typeof state.chainId === 'number') {
-    const unsupported = document.createElement('p');
-    unsupported.className = 'wallet-warning';
-    unsupported.textContent = `Unsupported network (${state.chainId}). Switch to one of: ${GTPNetwork.supportedChainLabel()}.`;
-    walletControl.appendChild(unsupported);
-  }
-
-  if (state.connectionStatus === 'rejected' || state.connectionStatus === 'error') {
-    const warning = document.createElement('p');
-    warning.className = 'wallet-warning';
-    warning.textContent = state.lastError || 'Wallet connection failed. Try again.';
-    walletControl.appendChild(warning);
-  }
+  control.appendChild(button);
+  walletControl.appendChild(control);
 };
 
 const updateMetrics = (filteredProjects) => {
