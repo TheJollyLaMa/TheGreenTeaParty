@@ -472,6 +472,7 @@ var GTPAppDataAdapter = (function () {
       publicUpdate: firstDefined(metadataValue(normalizedMeta, ['publicUpdate', 'lastUpdate']), null),
       stewards: toFiniteNumber(metadataValue(normalizedMeta, ['stewards', 'stewardCount', 'teamSize']), 1),
       description: String(metadataDescription),
+      metadataURI: String(record.metadataURI || ''),
       repoUrl: firstDefined(metadataValue(normalizedMeta, ['repoUrl', 'repo', 'githubUrl', 'repositoryUrl']), null),
       artizenUrl: firstDefined(metadataValue(normalizedMeta, ['artizenUrl', 'fundingUrl', 'projectUrl']), null),
       ledgerUrl: firstDefined(metadataValue(normalizedMeta, ['ledgerUrl', 'explorerUrl', 'etherscanUrl']), null),

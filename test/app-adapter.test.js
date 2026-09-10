@@ -134,7 +134,8 @@ describe('GTPAppDataAdapter', function () {
       track: 'Green Tea',
       status: 'active',
       raised: 0,
-      goal: 12000
+      goal: 12000,
+      metadataURI: '{"id":"green-tea-hut-01","name":"The Green Tea Hut #1","track":"Green Tea","goal":"12000"}'
     });
   });
 
@@ -177,7 +178,8 @@ describe('GTPAppDataAdapter', function () {
       goal: 12000,
       description: 'A community tea house',
       artizenUrl: 'https://artizen.fund/projects/green-tea-hut-1',
-      githubPagesUrl: 'https://example.com/green-tea-hut-1'
+      githubPagesUrl: 'https://example.com/green-tea-hut-1',
+      metadataURI: JSON.stringify(JSON.stringify(metadata))
     });
   });
 
@@ -215,7 +217,8 @@ describe('GTPAppDataAdapter', function () {
       track: 'Green Tea',
       status: 'active',
       raised: 500,
-      goal: 12000
+      goal: 12000,
+      metadataURI: 'https://example.com/metadata.json'
     });
   });
 
@@ -246,5 +249,6 @@ describe('GTPAppDataAdapter', function () {
     expect(projects).to.have.lengthOf(1);
     expect(projects[0].id).to.equal('green-tea-hut-01');
     expect(projects[0].status).to.equal('active');
+    expect(projects[0].metadataURI).to.equal('{"id":"green-tea-hut-01","name":"The Green Tea Hut #1","track":"Green Tea","goal":"12000"}');
   });
 });

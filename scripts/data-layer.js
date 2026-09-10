@@ -109,6 +109,7 @@ var GTPData = (function () {
       publicUpdate: raw.publicUpdate || raw.lastUpdate || null,
       stewards: Number(raw.stewards) || 0,
       description: String(raw.description || ''),
+      metadataURI: raw.metadataURI || null,
       repoUrl: raw.repoUrl || null,
       artizenUrl: raw.artizenUrl || null,
       nextAction: raw.nextAction || null,

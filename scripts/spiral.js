@@ -1378,6 +1378,11 @@
   }
 
   function metadataSchemaHtml(node) {
+    const metadataUri = node.metadataURI
+      ? (isSafeHttpUrl(node.metadataURI) || String(node.metadataURI).indexOf('ipfs://') === 0
+        ? `<a href="${escAttr(node.metadataURI)}" target="_blank" rel="noreferrer noopener">${escHtml(node.metadataURI)}</a>`
+        : formatSchemaValue(node.metadataURI))
+      : formatSchemaValue(node.metadataURI);
     const artizen = node.artizenUrl && isSafeHttpUrl(node.artizenUrl)
       ? `<a href="${escAttr(node.artizenUrl)}" target="_blank" rel="noreferrer noopener">${escHtml(node.artizenUrl)}</a>`
       : formatSchemaValue(node.artizenUrl);
@@ -1395,6 +1400,7 @@
         ${schemaRow('Name', formatSchemaValue(node.name))}
         ${schemaRow('Track', formatSchemaValue(node.track))}
         ${schemaRow('Status', `<span class="details-schema-pill details-schema-pill--${escAttr(node.status || 'unknown')}">${escHtml(capitalize(node.status || 'unknown'))}</span>`)}
+        ${schemaRow('Registry metadata URI', metadataUri)}
         ${schemaRow('Raised', escHtml(formatCurrency(Number(node.raised) || 0)))}
         ${schemaRow('Goal', escHtml(formatCurrency(Number(node.goal) || 0)))}
         ${schemaRow('Artizen page', artizen)}
@@ -1419,8 +1425,40 @@
       return String(form.elements[name].value || '').trim();
     }
 
+    function changed(name, current) {
+      return read(name) !== String(current === null || current === undefined ? '' : current).trim();
+    }
+
     function setIfText(target, key, value) {
       if (value !== '') target[key] = value;
+    }
+
+    const metadataURI = read('meta-metadata-uri');
+    const currentMetadataURI = String(node.metadataURI || '').trim();
+    const hasFieldChanges = [
+      changed('meta-name', node.name || ''),
+      changed('meta-track', node.track || ''),
+      changed('meta-status', node.status || ''),
+      changed('meta-raised', Number(node.raised) || 0),
+      changed('meta-goal', Number(node.goal) || 0),
+      changed('meta-artizen-url', node.artizenUrl || ''),
+      changed('meta-repo-url', node.repoUrl || ''),
+      changed('meta-pages-url', node.githubPagesUrl || ''),
+      changed('meta-ledger-url', node.ledgerUrl || ''),
+      changed('meta-contract-url', node.contractUrl || ''),
+      changed('meta-next-action', node.nextAction || ''),
+      changed('meta-location', node.location || ''),
+      changed('meta-last-update', node.lastUpdate || ''),
+      changed('meta-public-update', node.publicUpdate || ''),
+      changed('meta-stewards', Number(node.stewards) || 0),
+      changed('meta-description', node.description || '')
+    ].some(Boolean);
+
+    if (metadataURI && metadataURI !== currentMetadataURI) {
+      return metadataURI;
+    }
+    if (metadataURI && !hasFieldChanges) {
+      return metadataURI;
     }
 
     const payload = { id: node.projectId || node.id };
@@ -1453,10 +1491,11 @@
     const currentStatus = String(node.status || 'planning');
     return `<div class="details-group details-editor-group">
       <h3>Edit metadata</h3>
-      <p class="details-editor-note">Update the metadata URI on-chain. Leave a field blank to keep the current value.</p>
+      <p class="details-editor-note">Edit the fields below to save inline JSON metadata, or change the metadata URI to point at IPFS/HTTP content.</p>
       <form class="details-editor-form" data-project-id="${escAttr(node.projectId || node.id)}">
         <div class="details-editor-grid">
           <label>Project ID<input type="text" name="meta-id" value="${escAttr(node.projectId || node.id)}" readonly /></label>
+          <label class="details-editor-textarea">Registry metadata URI / IPFS CID<textarea name="meta-metadata-uri" placeholder="ipfs://... or https://...">${escHtml(node.metadataURI || '')}</textarea></label>
           <label>Name<input type="text" name="meta-name" value="${escAttr(node.name || '')}" /></label>
           <label>Track<input type="text" name="meta-track" value="${escAttr(node.track || '')}" /></label>
           <label>Status
@@ -1639,7 +1678,7 @@
 
         const projectId = form.dataset.projectId || node.projectId || node.id;
         const payload = metadataPayloadFromNode(node, form);
-        const metadataURI = JSON.stringify(payload);
+        const metadataURI = typeof payload === 'string' ? payload : JSON.stringify(payload);
 
         if (statusEl) statusEl.textContent = 'Submitting metadata update…';
         GTPData.updateProjectMetadataURI(projectId, metadataURI)
