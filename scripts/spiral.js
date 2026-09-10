@@ -1611,15 +1611,14 @@
       : '';
     const editable = canEditProjectMetadata(node);
     const editButtonHtml = editable
-      ? `<div class="details-actions">
-          <button type="button" class="details-edit-btn">${detailsEditMode ? 'Close editor' : 'Edit metadata'}</button>
-        </div>`
+      ? `<button type="button" class="details-edit-btn">${detailsEditMode ? 'Close editor' : 'Edit metadata'}</button>`
       : '';
 
     detailsContentEl.innerHTML =
+      `<div class="details-top-actions">${editButtonHtml}</div>` +
       `<p class="details-track" style="color:${color}">${escHtml(node.track)}</p>` +
       `<h2 class="details-title">${escHtml(node.name)}</h2>` +
-      editButtonHtml +
+      (editable && detailsEditMode ? renderMetadataEditor(node) : '') +
       `<div class="details-priority">` +
         `<h3>What needs action now</h3>` +
         `<p>${escHtml(primaryAction(node))}</p>` +
@@ -1642,8 +1641,7 @@
       parentHtml +
       childHtml +
       assocHtml +
-      linksHtml +
-      (editable && detailsEditMode ? renderMetadataEditor(node) : '');
+      linksHtml;
 
     const editBtn = detailsContentEl.querySelector('.details-edit-btn');
     if (editBtn) {
