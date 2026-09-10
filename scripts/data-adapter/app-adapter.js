@@ -6,6 +6,7 @@ var GTPAppDataAdapter = (function () {
   var DEFAULT_CHAIN_ID = 10;
 
   var CONTRACT_STATUS_TO_LABEL = { 0: 'draft', 1: 'active', 2: 'paused', 3: 'completed' };
+  var INITIAL_PROJECT_SLUGS = ['green-tea-hut-001', 'green-tea-hut-1', 'green-tea-hut-01'];
 
   function fetchJson(url) {
     return fetch(url).then(function (res) {
@@ -149,17 +150,10 @@ var GTPAppDataAdapter = (function () {
   }
 
   function candidateProjectIds() {
-    var seeds = [
-      'green-tea-party',
-      'green-tea-hut',
-      'green-tea-hut-01',
-      'green-tea-hut-1',
-      'green-tea-hut-001'
-    ];
     var ids = {};
 
-    seeds.forEach(function (seed) {
-      ids[seed] = true;
+    INITIAL_PROJECT_SLUGS.concat(['green-tea-party', 'green-tea-hut']).forEach(function (seed) {
+     ids[seed] = true;
     });
 
     var fixtureNames = [];
@@ -341,6 +335,10 @@ var GTPAppDataAdapter = (function () {
       return queryFilterResilient(registry, registry.filters.ProjectRegistered(), startBlock, 'latest', provider);
     }
 
+    function fetchCandidateProjects() {
+      return probeRegistryProjects(registry, projectHints);
+    }
+
     return loadProjectRegistrationLogs(fromBlock)
       .then(function (logs) {
         if (logs.length || fromBlock <= 0) {
@@ -351,7 +349,10 @@ var GTPAppDataAdapter = (function () {
         return loadProjectRegistrationLogs(0);
       })
       .then(function (logs) {
-        if (!logs.length) return [];
+        if (!logs.length) {
+          loadSource = 'registry-candidates';
+          return fetchCandidateProjects();
+        }
 
         // De-duplicate by projectId, keeping the last (highest-index) event per ID.
         // The contract prevents re-registration, but this guards against edge cases.
@@ -396,40 +397,27 @@ var GTPAppDataAdapter = (function () {
             });
         });
 
-        return Promise.all(stateFetches);
-      })
-      .then(function (records) {
-        if (!records.length) {
-          console.info('[GTPAppDataAdapter] registry event scan yielded no projects; probing candidate ids', {
-            chainId: chainId,
-            candidateCount: projectHints.length
+          return Promise.all(stateFetches).then(function (records) {
+            return Promise.all(records
+              .filter(function (r) { return r !== null; })
+              .map(function (record) {
+                return resolveMetadata(record.metadataURI)
+                  .then(function (meta) {
+                    return buildProjectObject(record, meta);
+                  })
+                  .catch(function (err) {
+                    console.warn('[GTPAppDataAdapter] resolveMetadata failed for ' + record.projectId, err);
+                    return buildProjectObject(record, {});
+                  });
+              }));
           });
-          loadSource = 'registry-candidates';
-          return probeRegistryProjects(registry, projectHints);
-        }
-
-        var metaFetches = records
-          .filter(function (r) { return r !== null; })
-          .map(function (record) {
-            return resolveMetadata(record.metadataURI)
-              .then(function (meta) {
-                return buildProjectObject(record, meta);
-              })
-              .catch(function (err) {
-                console.warn('[GTPAppDataAdapter] resolveMetadata failed for ' + record.projectId, err);
-                return buildProjectObject(record, {});
-              });
-          });
-
-        return Promise.all(metaFetches);
       })
       .then(function (projects) {
-        if (!projects.length) {
-          loadSource = 'registry-candidates';
-          return probeRegistryProjects(registry, projectHints);
-        }
-
-        return projects;
+          if (!projects.length) {
+            loadSource = 'registry-candidates';
+            return fetchCandidateProjects();
+          }
+          return projects;
       })
       .catch(function (err) {
         if (isRpcRateLimitError(err) || isBlockRangeTooLargeError(err)) {
