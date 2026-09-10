@@ -6,11 +6,15 @@ import vm from 'node:vm';
 
 const __dirname = path.dirname(fileURLToPath(import.meta.url));
 
-function createEventTarget(currentAccountRef) {
+function createEventTarget(requestAccountRef, selectedAddressRef) {
   const listeners = {};
+  const addressRef = selectedAddressRef || requestAccountRef;
 
   return {
     isMetaMask: true,
+    get selectedAddress() {
+      return addressRef.value;
+    },
     listeners,
     on(event, handler) {
       listeners[event] = listeners[event] || [];
@@ -21,10 +25,10 @@ function createEventTarget(currentAccountRef) {
     },
     request({ method }) {
       if (method === 'eth_accounts') {
-        return Promise.resolve(currentAccountRef.value ? [currentAccountRef.value] : []);
+        return Promise.resolve(requestAccountRef.value ? [requestAccountRef.value] : []);
       }
       if (method === 'eth_requestAccounts') {
-        return Promise.resolve(currentAccountRef.value ? [currentAccountRef.value] : []);
+        return Promise.resolve(requestAccountRef.value ? [requestAccountRef.value] : []);
       }
       if (method === 'eth_chainId') {
         return Promise.resolve('0xa');
@@ -38,8 +42,8 @@ async function loadWalletSandbox() {
   const source = await readFile(path.join(__dirname, '..', 'scripts', 'wallet.js'), 'utf8');
   const staleAccountRef = { value: '0x0000000000000000000000000000000000000001' };
   const liveAccountRef = { value: '0x0000000000000000000000000000000000000001' };
-  const selectedProvider = createEventTarget(staleAccountRef);
-  const injectedProvider = createEventTarget(liveAccountRef);
+  const liveSelectedRef = { value: '0x0000000000000000000000000000000000000001' };
+  const selectedProvider = createEventTarget(staleAccountRef, liveSelectedRef);
   const windowListeners = {};
   const documentListeners = {};
   const intervalCallbacks = [];
@@ -55,16 +59,9 @@ async function loadWalletSandbox() {
 
   const sandbox = {
     window: {
-      ethereum: {
-        isMetaMask: true,
-        providers: [selectedProvider],
-        on(event, handler) {
-          injectedProvider.on(event, handler);
-        },
-        request(args) {
-          return injectedProvider.request(args);
-        }
-      },
+      ethereum: Object.assign(selectedProvider, {
+        providers: [selectedProvider]
+      }),
       addEventListener(event, handler) {
         windowListeners[event] = handler;
       },
@@ -122,8 +119,8 @@ async function loadWalletSandbox() {
     wallet: sandbox.window.GTPWallet,
     state,
     selectedProvider,
-    injectedProvider,
     liveAccountRef,
+    liveSelectedRef,
     staleAccountRef,
     windowListeners,
     documentListeners,
@@ -137,10 +134,10 @@ describe('GTPWallet', function () {
 
     await sandbox.wallet.init();
     expect(sandbox.selectedProvider.listeners.accountsChanged).to.have.lengthOf(1);
-    expect(sandbox.injectedProvider.listeners.accountsChanged).to.have.lengthOf(1);
 
     sandbox.liveAccountRef.value = '0x0000000000000000000000000000000000000002';
-    sandbox.injectedProvider.emit('accountsChanged', [sandbox.liveAccountRef.value]);
+    sandbox.liveSelectedRef.value = '0x0000000000000000000000000000000000000002';
+    sandbox.selectedProvider.emit('accountsChanged', [sandbox.liveAccountRef.value]);
 
     await new Promise((resolve) => setTimeout(resolve, 0));
 
@@ -156,6 +153,7 @@ describe('GTPWallet', function () {
     sandbox.wallet.disconnect();
 
     sandbox.liveAccountRef.value = '0x0000000000000000000000000000000000000003';
+    sandbox.liveSelectedRef.value = '0x0000000000000000000000000000000000000003';
     const result = await sandbox.wallet.connect();
 
     expect(result).to.equal(true);
@@ -168,11 +166,33 @@ describe('GTPWallet', function () {
 
     await sandbox.wallet.init();
     sandbox.liveAccountRef.value = '0x0000000000000000000000000000000000000004';
+    sandbox.liveSelectedRef.value = '0x0000000000000000000000000000000000000004';
     expect(sandbox.intervalCallbacks).to.have.lengthOf(1);
 
     await sandbox.intervalCallbacks[0]();
 
     expect(sandbox.state.address).to.equal('0x0000000000000000000000000000000000000004');
+    expect(sandbox.state.connectionStatus).to.equal('connected');
+  });
+
+  it('prefers the provider selectedAddress over a stale accounts response', async function () {
+    const sandbox = await loadWalletSandbox();
+
+    sandbox.selectedProvider.request = ({ method }) => {
+      if (method === 'eth_accounts' || method === 'eth_requestAccounts') {
+        return Promise.resolve(['0x0000000000000000000000000000000000000001']);
+      }
+      if (method === 'eth_chainId') {
+        return Promise.resolve('0xa');
+      }
+      return Promise.reject(new Error(`Unexpected method: ${method}`));
+    };
+    sandbox.liveAccountRef.value = '0x0000000000000000000000000000000000000001';
+    sandbox.liveSelectedRef.value = '0x0000000000000000000000000000000000000005';
+
+    await sandbox.wallet.init();
+
+    expect(sandbox.state.address).to.equal('0x0000000000000000000000000000000000000005');
     expect(sandbox.state.connectionStatus).to.equal('connected');
   });
 });

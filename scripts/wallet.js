@@ -19,6 +19,36 @@ var GTPWallet = (function () {
     return injected;
   }
 
+  function isValidAddress(address) {
+    return typeof address === 'string' && /^0x[a-fA-F0-9]{40}$/.test(address);
+  }
+
+  function resolveActiveAddress(target, accounts) {
+    if (target) {
+      if (isValidAddress(target.selectedAddress)) {
+        return target.selectedAddress;
+      }
+      if (isValidAddress(target._selectedAddress)) {
+        return target._selectedAddress;
+      }
+    }
+
+    if (Array.isArray(accounts) && accounts.length && isValidAddress(accounts[0])) {
+      return accounts[0];
+    }
+
+    return null;
+  }
+
+  function refreshProvider() {
+    var nextProvider = getProvider();
+    if (nextProvider) {
+      provider = nextProvider;
+      bindProviderEvents(nextProvider);
+    }
+    return provider;
+  }
+
   function updateIdentity(address, chainId) {
     GTPAppState.setState({
       address: address || null,
@@ -71,7 +101,7 @@ var GTPWallet = (function () {
   }
 
   function getRequestProvider() {
-    return window.ethereum || provider;
+    return refreshProvider() || window.ethereum || provider;
   }
 
   function readSession() {
@@ -87,7 +117,7 @@ var GTPWallet = (function () {
     ]).then(function (results) {
       var accounts = results[0];
       var chainId = GTPNetwork.parseChainId(results[1]);
-      var address = Array.isArray(accounts) && accounts.length ? accounts[0] : null;
+      var address = resolveActiveAddress(requestProvider, accounts);
       updateIdentity(address, chainId);
       GTPAppState.setState({ lastError: null });
       console.info('[wallet] session sync', { address: address, chainId: chainId });
@@ -139,7 +169,7 @@ var GTPWallet = (function () {
 
     return requestProvider.request({ method: 'eth_requestAccounts' })
       .then(function (accounts) {
-        var address = Array.isArray(accounts) && accounts.length ? accounts[0] : null;
+        var address = resolveActiveAddress(requestProvider, accounts);
         if (!address) {
           GTPAppState.setState({ connectionStatus: 'error', lastError: 'No wallet account was returned.' });
           return false;
