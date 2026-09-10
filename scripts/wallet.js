@@ -39,15 +39,20 @@ var GTPWallet = (function () {
     boundProviders.push(target);
   }
 
+  function getRequestProvider() {
+    return window.ethereum || provider;
+  }
+
   function readSession() {
-    if (!provider) {
+    var requestProvider = getRequestProvider();
+    if (!requestProvider) {
       GTPAppState.setState({ connectionStatus: 'disconnected', lastError: 'Wallet provider unavailable. Install MetaMask to continue.' });
       return Promise.resolve();
     }
 
     return Promise.all([
-      provider.request({ method: 'eth_accounts' }),
-      provider.request({ method: 'eth_chainId' })
+      requestProvider.request({ method: 'eth_accounts' }),
+      requestProvider.request({ method: 'eth_chainId' })
     ]).then(function (results) {
       var accounts = results[0];
       var chainId = GTPNetwork.parseChainId(results[1]);
@@ -92,26 +97,29 @@ var GTPWallet = (function () {
   }
 
   function connect() {
-    if (!provider) {
+    var requestProvider = getRequestProvider();
+    if (!requestProvider) {
       GTPAppState.setState({ connectionStatus: 'error', lastError: 'Wallet provider unavailable. Install MetaMask to continue.' });
       return Promise.resolve(false);
     }
 
     GTPAppState.setState({ connectionStatus: 'connecting', lastError: null });
 
-    return provider.request({ method: 'eth_requestAccounts' })
+    return requestProvider.request({ method: 'eth_requestAccounts' })
       .then(function (accounts) {
         var address = Array.isArray(accounts) && accounts.length ? accounts[0] : null;
         if (!address) {
           GTPAppState.setState({ connectionStatus: 'error', lastError: 'No wallet account was returned.' });
           return false;
         }
-        return provider.request({ method: 'eth_chainId' }).then(function (rawChainId) {
+        return requestProvider.request({ method: 'eth_chainId' }).then(function (rawChainId) {
           var chainId = GTPNetwork.parseChainId(rawChainId);
           updateIdentity(address, chainId);
           GTPAppState.setState({ lastError: null });
           console.info('[wallet] connected', { address: address, chainId: chainId });
-          return true;
+          return readSession().then(function () {
+            return true;
+          });
         });
       })
       .catch(function (error) {
