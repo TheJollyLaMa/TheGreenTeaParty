@@ -42,7 +42,7 @@ async function main() {
   // ── 3. TheGreenTeaPartyTreasury ─────────────────────────────────────────
   console.log('\n[3/3] Deploying TheGreenTeaPartyTreasury…');
   const TheGreenTeaPartyTreasury = await ethers.getContractFactory('TheGreenTeaPartyTreasury');
-  const treasury = await TheGreenTeaPartyTreasury.deploy(registryAddress, initialOwner);
+  const treasury = await TheGreenTeaPartyTreasury.deploy(registryAddress, profileAddress, initialOwner);
   await treasury.waitForDeployment();
   const treasuryAddress = await treasury.getAddress();
   console.log('TheGreenTeaPartyTreasury :', treasuryAddress);
@@ -77,7 +77,7 @@ async function main() {
   console.log('\nNext steps:');
   console.log('  npx hardhat verify --network optimism', registryAddress, `"${initialOwner}"`);
   console.log('  npx hardhat verify --network optimism', profileAddress);
-  console.log('  npx hardhat verify --network optimism', treasuryAddress, `"${registryAddress}"`, `"${initialOwner}"`);
+  console.log('  npx hardhat verify --network optimism', treasuryAddress, `"${registryAddress}"`, `"${profileAddress}"`, `"${initialOwner}"`);
 }
 
 main().catch((err) => {

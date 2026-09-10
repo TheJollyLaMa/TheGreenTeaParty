@@ -17,6 +17,12 @@
     return null;
   }
 
+  function resolvedReadChainId() {
+    var chainId = currentChainId();
+    if (typeof chainId === 'number') return chainId;
+    return GTPConfig && GTPConfig.app ? GTPConfig.app.defaultChainId : null;
+  }
+
   function walletReady() {
     if (!GTPAppState || typeof GTPAppState.getSessionIdentity !== 'function') return false;
     var id = GTPAppState.getSessionIdentity();
@@ -26,7 +32,7 @@
   }
 
   function getReadProvider() {
-    var chainId = currentChainId();
+    var chainId = resolvedReadChainId();
     if (!chainId) return null;
     var networks = GTPConfig && GTPConfig.networks ? GTPConfig.networks : {};
     var net = networks[chainId];
@@ -44,7 +50,7 @@
   }
 
   function contractAddresses() {
-    var chainId = currentChainId();
+    var chainId = resolvedReadChainId();
     if (!chainId) return {};
     if (GTPContractAdapter && typeof GTPContractAdapter.getContractsForChain === 'function') {
       return GTPContractAdapter.getContractsForChain(chainId) || {};
@@ -60,6 +66,9 @@
     'function getSteward(bytes32) view returns (address)',
     'function getStatus(bytes32) view returns (uint8)',
     'function getProject(bytes32) view returns (address steward, string metadataURI, uint8 status)',
+    'function getProjectCount() view returns (uint256)',
+    'function getAllProjectIds() view returns (bytes32[])',
+    'function projectList(uint256 index) view returns (bytes32)',
     'function registerProject(bytes32, address, string)',
     'function updateProjectMetadataURI(bytes32, string)',
     'function updateProjectStatus(bytes32, uint8)',
@@ -72,11 +81,18 @@
   var FALLBACK_TREASURY_ABI = [
     'function owner() view returns (address)',
     'function paused() view returns (bool)',
+    'function registry() view returns (address)',
+    'function profileRegistry() view returns (address)',
     'function projectBalances(bytes32) view returns (uint256)',
     'function payoutAddresses(bytes32) view returns (address)',
+    'function getProjectBalance(bytes32) view returns (uint256)',
     'function contribute(bytes32) payable',
     'function setPayoutAddress(bytes32, address)',
     'function withdraw(bytes32, uint256)',
+    'function updateRegistry(address)',
+    'function updateProfileRegistry(address)',
+    'function sweepUnassignedETH(address payable, uint256)',
+    'function sweepERC20(address, address, uint256)',
     'function transferOwnership(address)',
     'function pause()',
     'function unpause()'
@@ -158,7 +174,7 @@
   function txLink(tx) {
     var hash = tx && tx.hash ? tx.hash : null;
     if (!hash) return '';
-    var chainId = currentChainId();
+    var chainId = resolvedReadChainId();
     var networks = GTPConfig && GTPConfig.networks ? GTPConfig.networks : {};
     var explorer = (networks[chainId] && networks[chainId].blockExplorer)
       ? networks[chainId].blockExplorer
@@ -328,7 +344,7 @@
     loadingState.textContent = 'Loading contract introspection…';
     container.appendChild(loadingState);
 
-    var chainId = currentChainId();
+    var chainId = resolvedReadChainId();
     var contracts = contractAddresses();
     var provider = getReadProvider();
     if (!provider) {
@@ -516,6 +532,35 @@
     });
   }
 
+  function initPRGetProjectCount() {
+    bindRead('admin-pr-count-form', function () {
+      return readContract(PROJECT_REGISTRY_ABI, 'projectRegistry').getProjectCount()
+        .then(function (count) {
+          return String(count);
+        });
+    });
+  }
+
+  function initPRGetAllIds() {
+    bindRead('admin-pr-allids-form', function () {
+      return readContract(PROJECT_REGISTRY_ABI, 'projectRegistry').getAllProjectIds()
+        .then(function (ids) {
+          return JSON.stringify(ids, null, 2);
+        });
+    });
+  }
+
+  function initPRProjectList() {
+    bindRead('admin-pr-projectlist-form', function (form) {
+      var index = val(form, 'pr-projectlist-index');
+      if (index === '') throw new Error('Index is required.');
+      return readContract(PROJECT_REGISTRY_ABI, 'projectRegistry').projectList(Number(index))
+        .then(function (projectId) {
+          return String(projectId);
+        });
+    });
+  }
+
   // ── ProjectRegistry writes ────────────────────────────────────────────────────
 
   function initPRRegister() {
@@ -613,10 +658,22 @@
     bindRead('admin-tr-balance-form', function (form) {
       var pid = val(form, 'tr-balance-id');
       if (!pid) throw new Error('Project ID is required.');
-      return readContract(TREASURY_ABI, 'treasury').projectBalances(toBytes32(pid))
+      return readContract(TREASURY_ABI, 'treasury').getProjectBalance(toBytes32(pid))
         .then(function (wei) {
           return window.ethers.formatEther(wei) + ' ETH (' + wei.toString() + ' wei)';
         });
+    });
+  }
+
+  function initTRRegistry() {
+    bindRead('admin-tr-registry-form', function () {
+      return readContract(TREASURY_ABI, 'treasury').registry();
+    });
+  }
+
+  function initTRProfileRegistry() {
+    bindRead('admin-tr-profile-form', function () {
+      return readContract(TREASURY_ABI, 'treasury').profileRegistry();
     });
   }
 
@@ -687,6 +744,53 @@
   function initTRUnpause() {
     bindWrite('admin-tr-unpause-form', function () {
       return writeContract(TREASURY_ABI, 'treasury').then(function (c) { return c.unpause(); });
+    });
+  }
+
+  function initTRSweepETH() {
+    bindWrite('admin-tr-sweepeth-form', function (form) {
+      var recipient = val(form, 'tr-sweepeth-recipient');
+      var amountEth = val(form, 'tr-sweepeth-amount');
+      if (!recipient) throw new Error('Recipient address is required.');
+      if (!amountEth || Number(amountEth) <= 0) throw new Error('Enter a positive ETH amount.');
+      var amountWei = window.ethers.parseEther(amountEth);
+      return writeContract(TREASURY_ABI, 'treasury').then(function (c) {
+        return c.sweepUnassignedETH(recipient, amountWei);
+      });
+    });
+  }
+
+  function initTRSweepERC20() {
+    bindWrite('admin-tr-sweepertc-form', function (form) {
+      var token = val(form, 'tr-sweepertc-token');
+      var recipient = val(form, 'tr-sweepertc-recipient');
+      var amount = val(form, 'tr-sweepertc-amount');
+      if (!token) throw new Error('Token address is required.');
+      if (!recipient) throw new Error('Recipient address is required.');
+      if (!amount || Number(amount) <= 0) throw new Error('Enter a positive token amount.');
+      return writeContract(TREASURY_ABI, 'treasury').then(function (c) {
+        return c.sweepERC20(token, recipient, amount);
+      });
+    });
+  }
+
+  function initTRUpdateRegistry() {
+    bindWrite('admin-tr-updateregistry-form', function (form) {
+      var addr = val(form, 'tr-updateregistry-addr');
+      if (!addr) throw new Error('Registry address is required.');
+      return writeContract(TREASURY_ABI, 'treasury').then(function (c) {
+        return c.updateRegistry(addr);
+      });
+    });
+  }
+
+  function initTRUpdateProfileRegistry() {
+    bindWrite('admin-tr-updateprofileregistry-form', function (form) {
+      var addr = val(form, 'tr-updateprofileregistry-addr');
+      if (!addr) throw new Error('Profile registry address is required.');
+      return writeContract(TREASURY_ABI, 'treasury').then(function (c) {
+        return c.updateProfileRegistry(addr);
+      });
     });
   }
 
@@ -827,6 +931,9 @@
       initPRGetSteward();
       initPRGetStatus();
       initPRGetProject();
+      initPRGetProjectCount();
+      initPRGetAllIds();
+      initPRProjectList();
       initPRRegister();
       initPRUpdateMetadata();
       initPRUpdateStatus();
@@ -838,12 +945,18 @@
       // Treasury
       initTROwner();
       initTRPaused();
+      initTRRegistry();
+      initTRProfileRegistry();
       initTRBalance();
       initTRPayoutAddr();
       initTRContribute();
       initTRSetPayout();
       initTRWithdraw();
       initTRTransferOwnership();
+      initTRUpdateRegistry();
+      initTRUpdateProfileRegistry();
+      initTRSweepETH();
+      initTRSweepERC20();
       initTRPause();
       initTRUnpause();
 

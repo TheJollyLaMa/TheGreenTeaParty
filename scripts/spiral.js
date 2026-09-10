@@ -17,7 +17,7 @@
     'Silver Stream': '#94a3b8'
   };
 
-  const TRACK_ORDER = Object.keys(TRACK_COLORS);
+  const TRACK_ORDER = window.GTPTrackLabels || Object.keys(TRACK_COLORS);
 
   const STATUS_COLORS = {
     active: '#22c55e',
@@ -55,6 +55,65 @@
   const VIEW_MARGIN = 120;
   const DRAG_THRESHOLD = 4;
   const GREEN_TEA_PARTY_ROOT_ID = 'gtp-root';
+  const POST_SAVE_REFRESH_DELAY_MS = 3500;
+  const RESERVED_METADATA_KEYS = {
+    id: true,
+    projectId: true,
+    slug: true,
+    name: true,
+    title: true,
+    projectName: true,
+    metadataURI: true,
+    metadataExtras: true,
+    track: true,
+    category: true,
+    theme: true,
+    status: true,
+    raised: true,
+    raisedUsd: true,
+    amountRaisedUsd: true,
+    amount_raised_usd: true,
+    fundsRaisedUsd: true,
+    fundsRaised: true,
+    goal: true,
+    fundingGoalUsd: true,
+    fundingGoal: true,
+    funding_goal_usd: true,
+    funding_goal: true,
+    goalUsd: true,
+    description: true,
+    summary: true,
+    about: true,
+    lastUpdate: true,
+    publicUpdate: true,
+    stewards: true,
+    stewardCount: true,
+    teamSize: true,
+    repoUrl: true,
+    repo: true,
+    githubUrl: true,
+    repositoryUrl: true,
+    artizenUrl: true,
+    fundingUrl: true,
+    projectUrl: true,
+    ledgerUrl: true,
+    explorerUrl: true,
+    etherscanUrl: true,
+    contractUrl: true,
+    contractExplorerUrl: true,
+    githubPagesUrl: true,
+    website: true,
+    siteUrl: true,
+    homepage: true,
+    nextAction: true,
+    nextStep: true,
+    location: true,
+    city: true,
+    region: true,
+    steward: true,
+    owner: true,
+    leadSteward: true
+  };
 
   // ---- Application state --------------------------------------------------------
 
@@ -89,6 +148,7 @@
   let focusMode = false;
   let showAssoc = true;
   let focusHistory = [];
+  let detailsEditMode = false;
 
   let filterTrack = 'all';
   let filterStatus = 'all';
@@ -100,6 +160,12 @@
 
   let touchPrev = null;
   let touchPinchDist = null;
+
+  function getAdapterMetrics() {
+    return typeof GTPData !== 'undefined' && typeof GTPData.getAdapterMetrics === 'function'
+      ? GTPData.getAdapterMetrics()
+      : { placeholder: false, reason: '' };
+  }
 
   // ---- DOM references -----------------------------------------------------------
 
@@ -114,6 +180,7 @@
   let zoomInBtn;
   let zoomOutBtn;
   let backBtn;
+  let editDetailsBtn;
   let closeDetailsBtn;
   let breadcrumbsEl;
   let trackSel;
@@ -136,6 +203,7 @@
     zoomInBtn = document.getElementById('zoom-in');
     zoomOutBtn = document.getElementById('zoom-out');
     backBtn = document.getElementById('focus-back');
+    editDetailsBtn = document.getElementById('details-edit');
     closeDetailsBtn = document.getElementById('close-details');
     breadcrumbsEl = document.getElementById('spiral-breadcrumbs');
     trackSel = document.getElementById('spiral-track-filter');
@@ -176,12 +244,28 @@
     }
 
     if (loadingEl) loadingEl.style.display = 'none';
+    const adapterMetrics = getAdapterMetrics();
+    console.info('[spiral diagnostics] data load complete', {
+      projectCount: allProjects.length,
+      firstProject: allProjects[0] || null,
+      associationCount: allAssociations.length,
+      adapterMetrics: adapterMetrics
+    });
+    if (loadingEl && adapterMetrics.placeholder) {
+      loadingEl.style.display = 'block';
+      const textNode = loadingEl.querySelector('div:last-child');
+      if (textNode) {
+        textNode.textContent = adapterMetrics.reason || 'Loading on-chain projects…';
+      }
+    }
 
     if (allProjects.length === 0 && emptyEl) {
       const modeInfo = typeof GTPData !== 'undefined' ? GTPData.getModeInfo() : null;
-      if (modeInfo && modeInfo.isApp) {
+      if (modeInfo && modeInfo.isApp && !adapterMetrics.placeholder) {
         emptyEl.querySelector('strong').textContent = 'Project registry is empty.';
         emptyEl.querySelector('p').textContent = 'No projects have been registered on-chain yet. Register The Green Tea Hut #1 to see it appear here.';
+      } else if (adapterMetrics.placeholder) {
+        emptyEl.style.display = 'none';
       }
     }
 
@@ -229,6 +313,14 @@
 
   function buildLayout() {
     const filtered = filteredProjects();
+    const adapterMetrics = getAdapterMetrics();
+    console.info('[spiral diagnostics] layout build', {
+      filteredCount: filtered.length,
+      firstFilteredProject: filtered[0] || null,
+      totalProjects: allProjects.length,
+      associationCount: allAssociations.length,
+      adapterMetrics: adapterMetrics
+    });
 
     if (filtered.length === 0) {
       nodes = [];
@@ -244,7 +336,9 @@
       descendantCache = {};
       trackClusters = [];
       if (selectedNode) closeDetails({ clearSelection: true });
-      if (emptyEl) emptyEl.style.display = 'block';
+      if (emptyEl) {
+        emptyEl.style.display = modeInfo.isApp && adapterMetrics.placeholder ? 'none' : 'block';
+      }
       needRender = true;
       updateBreadcrumbs();
       updateBackButton();
@@ -261,15 +355,17 @@
 
     nodes = sorted.map((project) => {
       const progress = project.goal > 0 ? project.raised / project.goal : 0;
+      const layoutTrack = project.layoutTrack || project.track;
       const size = 6 + Math.min(progress, 1) * 7;
       return {
         ...project,
+        layoutTrack,
         x: 0,
         y: 0,
         size,
         degree: 0,
         depth: 0,
-        trackIndex: TRACK_ORDER.indexOf(project.track),
+        trackIndex: TRACK_ORDER.indexOf(layoutTrack),
         screenX: 0,
         screenY: 0
       };
@@ -332,7 +428,7 @@
     trackClusters = [];
 
     const groups = TRACK_ORDER
-      .map((track) => nodes.filter((node) => node.track === track))
+      .map((track) => nodes.filter((node) => (node.layoutTrack || node.track) === track))
       .filter((group) => group.length > 0);
 
     groups.forEach((group, index) => buildTrackHierarchy(group, index, groups.length));
@@ -912,6 +1008,11 @@
     zoomInBtn?.addEventListener('click', () => zoomAtViewportCenter(1.25));
     zoomOutBtn?.addEventListener('click', () => zoomAtViewportCenter(0.8));
     backBtn?.addEventListener('click', goToPreviousFocus);
+    editDetailsBtn?.addEventListener('click', () => {
+      if (!selectedNode || !nodeMap[selectedNode.id]) return;
+      detailsEditMode = !detailsEditMode;
+      showDetails(selectedNode);
+    });
     closeDetailsBtn?.addEventListener('click', () => closeDetails({ clearSelection: true }));
     breadcrumbsEl?.addEventListener('click', onBreadcrumbClick);
 
@@ -1308,8 +1409,262 @@
 
   // ---- Details panel ------------------------------------------------------------
 
+  function currentWalletAddress() {
+    const state = typeof GTPAppState !== 'undefined' && GTPAppState && typeof GTPAppState.getState === 'function'
+      ? GTPAppState.getState()
+      : null;
+    return state && state.address ? String(state.address).toLowerCase() : '';
+  }
+
+  function canEditProjectMetadata(node) {
+    if (!node || !node.onChainSteward) return false;
+    const wallet = currentWalletAddress();
+    return wallet && wallet === String(node.onChainSteward).toLowerCase();
+  }
+
+  function isSafeHttpUrl(value) {
+    if (!value || typeof value !== 'string') return false;
+    try {
+      const parsed = new URL(value);
+      return parsed.protocol === 'http:' || parsed.protocol === 'https:';
+    } catch (error) {
+      return false;
+    }
+  }
+
+  function formatSchemaValue(value, fallback = '—') {
+    if (value === null || value === undefined || value === '') {
+      return escHtml(fallback);
+    }
+    return escHtml(formatTextValue(value, fallback));
+  }
+
+  function schemaRow(label, valueHtml) {
+    return `<div class="details-schema-item"><dt>${escHtml(label)}</dt><dd>${valueHtml}</dd></div>`;
+  }
+
+  function customMetadataRowHtml(key, value) {
+    return `<div class="details-custom-metadata-row" data-custom-metadata-row="true">
+      <label>
+        <span>Field name</span>
+        <input type="text" name="custom-metadata-key" value="${escAttr(key || '')}" placeholder="website" />
+      </label>
+      <label>
+        <span>Field value</span>
+        <textarea name="custom-metadata-value" rows="2" placeholder="https://example.org">${escHtml(value === null || value === undefined ? '' : value)}</textarea>
+      </label>
+      <button type="button" class="details-custom-metadata-remove" aria-label="Remove metadata field">Remove</button>
+    </div>`;
+  }
+
+  function metadataExtrasEntries(node) {
+    const extras = node && node.metadataExtras && typeof node.metadataExtras === 'object'
+      ? node.metadataExtras
+      : {};
+    return Object.keys(extras)
+      .filter((key) => !RESERVED_METADATA_KEYS[key])
+      .sort((a, b) => a.localeCompare(b))
+      .map((key) => [key, extras[key]]);
+  }
+
+  function renderCustomMetadataRows(node) {
+    const rows = metadataExtrasEntries(node);
+    const body = rows.length
+      ? rows.map(([key, value]) => customMetadataRowHtml(key, value)).join('')
+      : customMetadataRowHtml('', '');
+    return `<div class="details-editor-custom-metadata">
+      <div class="details-editor-custom-metadata-head">
+        <div>
+          <h4>Additional metadata</h4>
+          <p>Add any extra key/value pair you want stored in the registry JSON.</p>
+        </div>
+        <button type="button" class="details-custom-metadata-add">Add field</button>
+      </div>
+      <div class="details-custom-metadata-list">
+        ${body}
+      </div>
+    </div>`;
+  }
+
+  function appendCustomMetadataRow(form, key, value) {
+    const list = form && form.querySelector('.details-custom-metadata-list');
+    if (!list) return null;
+    const wrapper = document.createElement('div');
+    wrapper.innerHTML = customMetadataRowHtml(key, value);
+    const row = wrapper.firstElementChild;
+    if (row) {
+      list.appendChild(row);
+    }
+    return row;
+  }
+
+  function metadataSchemaHtml(node) {
+    const metadataUri = node.metadataURI
+      ? (isSafeHttpUrl(node.metadataURI) || String(node.metadataURI).indexOf('ipfs://') === 0
+        ? `<a href="${escAttr(node.metadataURI)}" target="_blank" rel="noreferrer noopener">${escHtml(node.metadataURI)}</a>`
+        : formatSchemaValue(node.metadataURI))
+      : formatSchemaValue(node.metadataURI);
+    const artizen = node.artizenUrl && isSafeHttpUrl(node.artizenUrl)
+      ? `<a href="${escAttr(node.artizenUrl)}" target="_blank" rel="noreferrer noopener">${escHtml(node.artizenUrl)}</a>`
+      : formatSchemaValue(node.artizenUrl);
+    const repo = node.repoUrl && isSafeHttpUrl(node.repoUrl)
+      ? `<a href="${escAttr(node.repoUrl)}" target="_blank" rel="noreferrer noopener">${escHtml(node.repoUrl)}</a>`
+      : formatSchemaValue(node.repoUrl);
+    const site = node.githubPagesUrl && isSafeHttpUrl(node.githubPagesUrl)
+      ? `<a href="${escAttr(node.githubPagesUrl)}" target="_blank" rel="noreferrer noopener">${escHtml(node.githubPagesUrl)}</a>`
+      : formatSchemaValue(node.githubPagesUrl);
+    const extras = metadataExtrasEntries(node);
+    const extraSchema = extras.length
+      ? `<div class="details-group details-schema-group">
+          <h3>Additional metadata</h3>
+          <dl class="details-schema">
+            ${extras.map(([key, value]) => schemaRow(key, formatSchemaValue(value))).join('')}
+          </dl>
+        </div>`
+      : '';
+
+    return `<div class="details-group details-schema-group">
+      <h3>Metadata schema</h3>
+      <dl class="details-schema">
+        ${schemaRow('Project ID', escHtml(node.projectId || node.id || '—'))}
+        ${schemaRow('Name', formatSchemaValue(node.name))}
+        ${schemaRow('Track', formatSchemaValue(node.track))}
+        ${schemaRow('Status', `<span class="details-schema-pill details-schema-pill--${escAttr(node.status || 'unknown')}">${escHtml(capitalize(node.status || 'unknown'))}</span>`)}
+        ${schemaRow('Registry metadata URI', metadataUri)}
+        ${schemaRow('Raised', escHtml(formatCurrency(Number(node.raised) || 0)))}
+        ${schemaRow('Goal', escHtml(formatCurrency(Number(node.goal) || 0)))}
+        ${schemaRow('Artizen page', artizen)}
+        ${schemaRow('Repository', repo)}
+        ${schemaRow('Project site', site)}
+        ${schemaRow('Description', formatSchemaValue(node.description))}
+        ${schemaRow('Next action', formatSchemaValue(node.nextAction))}
+        ${schemaRow('Location', formatSchemaValue(node.location))}
+        ${schemaRow('Last update', formatSchemaValue(node.lastUpdate, 'Not recorded'))}
+        ${schemaRow('Public update', formatSchemaValue(node.publicUpdate, 'Not recorded'))}
+        ${schemaRow('Stewards', escHtml(String(node.stewards || 0)))}
+        ${schemaRow('On-chain steward', escHtml(node.onChainSteward || '—'))}
+        ${schemaRow('Metadata steward', formatSchemaValue(node.metadataSteward))}
+        ${schemaRow('Metadata status', formatSchemaValue(node.metadataStatus))}
+      </dl>
+    </div>${extraSchema}`;
+  }
+
+  function metadataPayloadFromNode(node, form) {
+    function read(name) {
+      if (!form || !form.elements || !form.elements[name]) return '';
+      return String(form.elements[name].value || '').trim();
+    }
+
+    function setIfText(target, key, value) {
+      if (value !== '') target[key] = value;
+    }
+
+    const payload = { id: node.projectId || node.id };
+
+    setIfText(payload, 'name', read('meta-name') || node.name || '');
+    setIfText(payload, 'track', read('meta-track') || node.track || '');
+    setIfText(payload, 'status', read('meta-status') || node.status || '');
+    setIfText(payload, 'description', read('meta-description') || node.description || '');
+    setIfText(payload, 'nextAction', read('meta-next-action') || node.nextAction || '');
+    setIfText(payload, 'location', read('meta-location') || node.location || '');
+    setIfText(payload, 'lastUpdate', read('meta-last-update') || node.lastUpdate || '');
+    setIfText(payload, 'publicUpdate', read('meta-public-update') || node.publicUpdate || '');
+    setIfText(payload, 'artizenUrl', read('meta-artizen-url') || node.artizenUrl || '');
+    setIfText(payload, 'repoUrl', read('meta-repo-url') || node.repoUrl || '');
+    setIfText(payload, 'githubPagesUrl', read('meta-pages-url') || node.githubPagesUrl || '');
+    setIfText(payload, 'ledgerUrl', read('meta-ledger-url') || node.ledgerUrl || '');
+    setIfText(payload, 'contractUrl', read('meta-contract-url') || node.contractUrl || '');
+    setIfText(payload, 'stewards', read('meta-stewards') || String(node.stewards || 1));
+
+    const raised = read('meta-raised');
+    const goal = read('meta-goal');
+    payload.raised = raised !== '' ? Number(raised) || 0 : Number(node.raised) || 0;
+    payload.goal = goal !== '' ? Number(goal) || 0 : Number(node.goal) || 0;
+
+    const extras = {};
+    const rows = form ? form.querySelectorAll('[data-custom-metadata-row="true"]') : [];
+    rows.forEach(function (row) {
+      const keyInput = row.querySelector('input[name="custom-metadata-key"]');
+      const valueInput = row.querySelector('textarea[name="custom-metadata-value"]');
+      const key = String(keyInput && keyInput.value ? keyInput.value : '').trim();
+      const value = String(valueInput && valueInput.value ? valueInput.value : '').trim();
+      if (!key || RESERVED_METADATA_KEYS[key] || key === 'metadataExtras') return;
+      extras[key] = value;
+    });
+    Object.keys(extras).forEach(function (key) {
+      payload[key] = extras[key];
+    });
+
+    return payload;
+  }
+
+  function renderMetadataEditor(node) {
+    const statusOptions = ['planning', 'active', 'paused', 'completed'];
+    const currentStatus = String(node.status || 'planning');
+    return `<div class="details-group details-editor-group">
+      <h3>Edit metadata</h3>
+      <p class="details-editor-note">Edit the fields below. Saving writes updated JSON metadata back to the ProjectRegistry.</p>
+      <form class="details-editor-form" data-project-id="${escAttr(node.projectId || node.id)}">
+        <div class="details-editor-grid">
+          <label>Project ID<input type="text" name="meta-id" value="${escAttr(node.projectId || node.id)}" readonly /></label>
+          <label>Name<input type="text" name="meta-name" value="${escAttr(node.name || '')}" /></label>
+          <label>Track<input type="text" name="meta-track" value="${escAttr(node.track || '')}" /></label>
+          <label>Status
+            <select name="meta-status">
+              ${statusOptions.map((status) => `<option value="${status}"${status === currentStatus ? ' selected' : ''}>${capitalize(status)}</option>`).join('')}
+            </select>
+          </label>
+          <label>Raised (USD)<input type="number" name="meta-raised" min="0" step="1" value="${escAttr(String(Number(node.raised) || 0))}" /></label>
+          <label>Goal (USD)<input type="number" name="meta-goal" min="0" step="1" value="${escAttr(String(Number(node.goal) || 0))}" /></label>
+          <label>Artizen URL<input type="url" name="meta-artizen-url" value="${escAttr(node.artizenUrl || '')}" /></label>
+          <label>Repository URL<input type="url" name="meta-repo-url" value="${escAttr(node.repoUrl || '')}" /></label>
+          <label>Project site<input type="url" name="meta-pages-url" value="${escAttr(node.githubPagesUrl || '')}" /></label>
+          <label>Ledger URL<input type="url" name="meta-ledger-url" value="${escAttr(node.ledgerUrl || '')}" /></label>
+          <label>Contract URL<input type="url" name="meta-contract-url" value="${escAttr(node.contractUrl || '')}" /></label>
+          <label>Next action<input type="text" name="meta-next-action" value="${escAttr(node.nextAction || '')}" /></label>
+          <label>Location<input type="text" name="meta-location" value="${escAttr(node.location || '')}" /></label>
+          <label>Last update<input type="text" name="meta-last-update" value="${escAttr(node.lastUpdate || '')}" /></label>
+          <label>Public update<input type="text" name="meta-public-update" value="${escAttr(node.publicUpdate || '')}" /></label>
+          <label>Stewards<input type="number" name="meta-stewards" min="0" step="1" value="${escAttr(String(Number(node.stewards) || 1))}" /></label>
+          <label class="details-editor-textarea">Description<textarea name="meta-description">${escHtml(node.description || '')}</textarea></label>
+        </div>
+        ${renderCustomMetadataRows(node)}
+        <div class="details-editor-actions">
+          <button type="submit" class="details-editor-save">Save metadata</button>
+          <button type="button" class="details-editor-cancel">Cancel</button>
+        </div>
+        <p class="details-editor-status" aria-live="polite"></p>
+      </form>
+    </div>`;
+  }
+
+  function refreshProjectDataFromChain(nodeId) {
+    if (typeof GTPData === 'undefined' || typeof GTPData.reload !== 'function') {
+      return Promise.resolve();
+    }
+
+    return GTPData.reload().then(function () {
+      allProjects = GTPData.getProjects();
+      allAssociations = GTPData.getAssociations();
+      populateFilters();
+      buildLayout();
+      applyHomeCamera(false);
+      updateBreadcrumbs();
+      if (nodeId && nodeMap[nodeId]) {
+        selectedNode = nodeMap[nodeId];
+        showDetails(selectedNode);
+      } else {
+        closeDetails({ clearSelection: true, preserveFocusState: false });
+      }
+      scheduleRender();
+    });
+  }
+
   function showDetails(node) {
     if (!detailsPanel || !detailsContentEl) return;
+    if (!selectedNode || selectedNode.id !== node.id) {
+      detailsEditMode = false;
+    }
 
     const color = TRACK_COLORS[node.track] || '#94a3b8';
     const progress = Math.round(progressPct(node));
@@ -1352,7 +1707,7 @@
       ? `<a href="${escAttr(node.repoUrl)}" target="_blank" rel="noreferrer">Repository ↗</a>`
       : '';
     const artizenLink = node.artizenUrl
-      ? `<a href="${escAttr(node.artizenUrl)}" target="_blank" rel="noreferrer">Artizen ↗</a>`
+      ? `<a href="${escAttr(node.artizenUrl)}" target="_blank" rel="noreferrer">Artizen page ↗</a>`
       : '';
     const ledgerLink = node.ledgerUrl
       ? `<a href="${escAttr(node.ledgerUrl)}" target="_blank" rel="noreferrer">Public Ledger ↗</a>`
@@ -1366,19 +1721,21 @@
     const linksHtml = [repoLink, artizenLink, ledgerLink, contractLink, githubPagesLink].filter(Boolean).length
       ? `<div class="details-links">${[repoLink, artizenLink, ledgerLink, contractLink, githubPagesLink].filter(Boolean).join('')}</div>`
       : '';
+    const canSubmit = canEditProjectMetadata(node);
 
     detailsContentEl.innerHTML =
       `<p class="details-track" style="color:${color}">${escHtml(node.track)}</p>` +
       `<h2 class="details-title">${escHtml(node.name)}</h2>` +
+      (detailsEditMode ? renderMetadataEditor(node) : '') +
       `<div class="details-priority">` +
         `<h3>What needs action now</h3>` +
         `<p>${escHtml(primaryAction(node))}</p>` +
       `</div>` +
-      `<p class="details-desc">${escHtml(node.description || '')}</p>` +
+      `<p class="details-desc">${escHtml(formatTextValue(node.description))}</p>` +
       `<div class="details-meta">` +
         `<span class="badge badge-${node.status}">${capitalize(node.status)}</span>` +
         `<span>${node.stewards} steward${node.stewards !== 1 ? 's' : ''}</span>` +
-        `<span>Updated ${escHtml(node.lastUpdate)}</span>` +
+        `<span>Updated ${escHtml(formatTextValue(node.lastUpdate, 'Not recorded'))}</span>` +
       `</div>` +
       `<div class="details-funding">` +
         `<div class="funding-bar-track">` +
@@ -1388,19 +1745,99 @@
           (gap > 0 ? ` &middot; ${formatCurrency(gap)} remaining` : ' &middot; Goal reached') +
         `</p>` +
       `</div>` +
+      metadataSchemaHtml(node) +
       parentHtml +
       childHtml +
       assocHtml +
       linksHtml;
 
+    const cancelBtn = detailsContentEl.querySelector('.details-editor-cancel');
+    if (cancelBtn) {
+      cancelBtn.addEventListener('click', function () {
+        detailsEditMode = false;
+        showDetails(node);
+      });
+    }
+
+    const form = detailsContentEl.querySelector('.details-editor-form');
+    if (form) {
+      const addMetaBtn = form.querySelector('.details-custom-metadata-add');
+      if (addMetaBtn) {
+        addMetaBtn.addEventListener('click', function () {
+          appendCustomMetadataRow(form, '', '');
+        });
+      }
+
+      form.addEventListener('click', function (event) {
+        const removeBtn = event.target.closest('.details-custom-metadata-remove');
+        if (!removeBtn) return;
+        const row = removeBtn.closest('[data-custom-metadata-row="true"]');
+        if (row && row.parentNode) {
+          row.parentNode.removeChild(row);
+        }
+        const list = form.querySelector('.details-custom-metadata-list');
+        if (list && !list.children.length) {
+          appendCustomMetadataRow(form, '', '');
+        }
+      });
+
+      form.addEventListener('submit', function (event) {
+        event.preventDefault();
+        const statusEl = form.querySelector('.details-editor-status');
+        if (typeof GTPData === 'undefined' || typeof GTPData.updateProjectMetadataURI !== 'function') {
+          if (statusEl) statusEl.textContent = 'Metadata updates are unavailable right now.';
+          return;
+        }
+
+        if (statusEl) {
+          statusEl.textContent = canSubmit
+            ? 'Submitting metadata update…'
+            : 'Submitting metadata update… MetaMask will prompt you to approve or reject the transaction.';
+        }
+
+        const projectId = form.dataset.projectId || node.projectId || node.id;
+        const payload = metadataPayloadFromNode(node, form);
+        const metadataURI = JSON.stringify(payload);
+        GTPData.updateProjectMetadataURI(projectId, metadataURI)
+          .then(function () {
+            if (statusEl) {
+              statusEl.textContent = 'Metadata update submitted. Waiting a few seconds for the chain to update…';
+            }
+            detailsEditMode = false;
+            return new Promise(function (resolve) {
+              window.setTimeout(function () {
+                refreshProjectDataFromChain(projectId).then(resolve);
+              }, POST_SAVE_REFRESH_DELAY_MS);
+            });
+          })
+          .catch(function (err) {
+            if (statusEl) statusEl.textContent = err && err.message ? err.message : String(err);
+          });
+      });
+    }
+
     detailsPanel.classList.add('open');
     detailsPanel.setAttribute('aria-hidden', 'false');
+
+    if (editDetailsBtn) {
+      editDetailsBtn.hidden = false;
+      editDetailsBtn.disabled = false;
+      editDetailsBtn.textContent = detailsEditMode ? 'Close editor' : 'Edit metadata';
+      editDetailsBtn.title = detailsEditMode ? 'Close the metadata editor' : 'Edit project metadata';
+    }
   }
 
   function closeDetails(options = {}) {
     const { clearSelection = true, preserveFocusState = false } = options;
     detailsPanel?.classList.remove('open');
     detailsPanel?.setAttribute('aria-hidden', 'true');
+    detailsEditMode = false;
+    if (editDetailsBtn) {
+      editDetailsBtn.hidden = true;
+      editDetailsBtn.disabled = true;
+      editDetailsBtn.textContent = 'Edit metadata';
+      editDetailsBtn.title = '';
+    }
     if (clearSelection) selectedNode = null;
     if (!preserveFocusState) {
       focusMode = false;
@@ -1416,6 +1853,11 @@
   function populateFilters() {
     if (!trackSel || !statusSel) return;
 
+    const selectedTrack = filterTrack;
+    const selectedStatus = filterStatus;
+    trackSel.innerHTML = '<option value="all">All tracks</option>';
+    statusSel.innerHTML = '<option value="all">All statuses</option>';
+
     const tracks = TRACK_ORDER.filter((track) => allProjects.some((project) => project.track === track));
     tracks.forEach((track) => {
       const option = document.createElement('option');
@@ -1430,6 +1872,9 @@
       option.textContent = capitalize(status);
       statusSel.appendChild(option);
     });
+
+    trackSel.value = selectedTrack;
+    statusSel.value = selectedStatus;
   }
 
   function updateBreadcrumbs() {

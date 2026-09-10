@@ -147,6 +147,15 @@
           >
             <div class="details-header">
               <h3>Project details</h3>
+              <div class="details-header-actions">
+                <button
+                  id="details-edit"
+                  class="details-edit-btn"
+                  type="button"
+                  aria-label="Edit project metadata"
+                  hidden
+                >Edit</button>
+              </div>
               <button
                 id="close-details"
                 class="close-btn"
@@ -444,9 +453,9 @@
             <div class="admin-contract-header">
               <h3>ProjectRegistry</h3>
               <a class="admin-contract-address"
-                 href="https://optimistic.etherscan.io/address/0x1b093804d9BF8572F9ea58e24E051580Ed608F64"
+                 href="https://optimistic.etherscan.io/address/0x799A97231685d91fdbB03A635B965971A8c71a84"
                  target="_blank" rel="noopener noreferrer">
-                0x1b093804…8F64
+                0x799A9723…1a84
               </a>
             </div>
 
@@ -537,6 +546,49 @@
                   <label>
                     Project ID (slug)
                     <input type="text" name="pr-get-id" placeholder="e.g. green-tea-hut-01" autocomplete="off" />
+                  </label>
+                  <div class="admin-fn-actions">
+                    <button type="submit" class="admin-call-btn">Call</button>
+                    <button type="reset" class="admin-clear-btn">Clear</button>
+                  </div>
+                  <pre class="admin-read-output" aria-live="polite"></pre>
+                  <div class="admin-fn-status" aria-live="polite"></div>
+                </form>
+              </div>
+
+              <!-- getProjectCount() -->
+              <div class="admin-fn-card admin-fn-read">
+                <h4>getProjectCount()</h4>
+                <form id="admin-pr-count-form" class="admin-fn-form" novalidate>
+                  <div class="admin-fn-actions">
+                    <button type="submit" class="admin-call-btn">Call</button>
+                    <button type="reset" class="admin-clear-btn">Clear</button>
+                  </div>
+                  <pre class="admin-read-output" aria-live="polite"></pre>
+                  <div class="admin-fn-status" aria-live="polite"></div>
+                </form>
+              </div>
+
+              <!-- getAllProjectIds() -->
+              <div class="admin-fn-card admin-fn-read">
+                <h4>getAllProjectIds()</h4>
+                <form id="admin-pr-allids-form" class="admin-fn-form" novalidate>
+                  <div class="admin-fn-actions">
+                    <button type="submit" class="admin-call-btn">Call</button>
+                    <button type="reset" class="admin-clear-btn">Clear</button>
+                  </div>
+                  <pre class="admin-read-output" aria-live="polite"></pre>
+                  <div class="admin-fn-status" aria-live="polite"></div>
+                </form>
+              </div>
+
+              <!-- projectList(index) -->
+              <div class="admin-fn-card admin-fn-read">
+                <h4>projectList(index)</h4>
+                <form id="admin-pr-projectlist-form" class="admin-fn-form" novalidate>
+                  <label>
+                    Index
+                    <input type="number" name="pr-projectlist-index" min="0" step="1" placeholder="0" autocomplete="off" />
                   </label>
                   <div class="admin-fn-actions">
                     <button type="submit" class="admin-call-btn">Call</button>
@@ -688,9 +740,9 @@
             <div class="admin-contract-header">
               <h3>Treasury</h3>
               <a class="admin-contract-address"
-                 href="https://optimistic.etherscan.io/address/0xebE0D6Fa315CeA75D491219d5D9CC13136580144"
+                 href="https://optimistic.etherscan.io/address/0x14c1E69309C96569bBA0423507DA6AFE6FD30DdC"
                  target="_blank" rel="noopener noreferrer">
-                0xebE0D6…0144
+                0x14c1E693…0DdC
               </a>
             </div>
 
@@ -723,9 +775,35 @@
                 </form>
               </div>
 
-              <!-- projectBalances(projectId) -->
+              <!-- registry() -->
               <div class="admin-fn-card admin-fn-read">
-                <h4>projectBalances(projectId)</h4>
+                <h4>registry()</h4>
+                <form id="admin-tr-registry-form" class="admin-fn-form" novalidate>
+                  <div class="admin-fn-actions">
+                    <button type="submit" class="admin-call-btn">Call</button>
+                    <button type="reset" class="admin-clear-btn">Clear</button>
+                  </div>
+                  <pre class="admin-read-output" aria-live="polite"></pre>
+                  <div class="admin-fn-status" aria-live="polite"></div>
+                </form>
+              </div>
+
+              <!-- profileRegistry() -->
+              <div class="admin-fn-card admin-fn-read">
+                <h4>profileRegistry()</h4>
+                <form id="admin-tr-profile-form" class="admin-fn-form" novalidate>
+                  <div class="admin-fn-actions">
+                    <button type="submit" class="admin-call-btn">Call</button>
+                    <button type="reset" class="admin-clear-btn">Clear</button>
+                  </div>
+                  <pre class="admin-read-output" aria-live="polite"></pre>
+                  <div class="admin-fn-status" aria-live="polite"></div>
+                </form>
+              </div>
+
+              <!-- getProjectBalance(projectId) -->
+              <div class="admin-fn-card admin-fn-read">
+                <h4>getProjectBalance(projectId)</h4>
                 <form id="admin-tr-balance-form" class="admin-fn-form" novalidate>
                   <label>
                     Project ID (slug)
@@ -782,6 +860,38 @@
                 </form>
               </div>
 
+              <!-- updateRegistry -->
+              <div class="admin-fn-card">
+                <h4>updateRegistry(newRegistry)</h4>
+                <form id="admin-tr-updateregistry-form" class="admin-fn-form" novalidate>
+                  <label>
+                    New registry address
+                    <input type="text" name="tr-updateregistry-addr" placeholder="0x…" required autocomplete="off" />
+                  </label>
+                  <div class="admin-fn-actions">
+                    <button type="submit" class="admin-write-btn">Send</button>
+                    <button type="reset" class="admin-clear-btn">Clear</button>
+                  </div>
+                  <div class="admin-fn-status" aria-live="polite"></div>
+                </form>
+              </div>
+
+              <!-- updateProfileRegistry -->
+              <div class="admin-fn-card">
+                <h4>updateProfileRegistry(newProfileRegistry)</h4>
+                <form id="admin-tr-updateprofileregistry-form" class="admin-fn-form" novalidate>
+                  <label>
+                    New profile registry address
+                    <input type="text" name="tr-updateprofileregistry-addr" placeholder="0x…" required autocomplete="off" />
+                  </label>
+                  <div class="admin-fn-actions">
+                    <button type="submit" class="admin-write-btn">Send</button>
+                    <button type="reset" class="admin-clear-btn">Clear</button>
+                  </div>
+                  <div class="admin-fn-status" aria-live="polite"></div>
+                </form>
+              </div>
+
               <!-- setPayoutAddress -->
               <div class="admin-fn-card">
                 <h4>setPayoutAddress(projectId, payoutAddress)</h4>
@@ -813,6 +923,50 @@
                   <label>
                     Amount (ETH)
                     <input type="number" name="tr-withdraw-amount" placeholder="0.01" min="0" step="any" required />
+                  </label>
+                  <div class="admin-fn-actions">
+                    <button type="submit" class="admin-write-btn">Send</button>
+                    <button type="reset" class="admin-clear-btn">Clear</button>
+                  </div>
+                  <div class="admin-fn-status" aria-live="polite"></div>
+                </form>
+              </div>
+
+              <!-- sweepUnassignedETH -->
+              <div class="admin-fn-card">
+                <h4>sweepUnassignedETH(recipient, amount)</h4>
+                <form id="admin-tr-sweepeth-form" class="admin-fn-form" novalidate>
+                  <label>
+                    Recipient address
+                    <input type="text" name="tr-sweepeth-recipient" placeholder="0x…" required autocomplete="off" />
+                  </label>
+                  <label>
+                    Amount (ETH)
+                    <input type="number" name="tr-sweepeth-amount" placeholder="0.01" min="0" step="any" required />
+                  </label>
+                  <div class="admin-fn-actions">
+                    <button type="submit" class="admin-write-btn">Send</button>
+                    <button type="reset" class="admin-clear-btn">Clear</button>
+                  </div>
+                  <div class="admin-fn-status" aria-live="polite"></div>
+                </form>
+              </div>
+
+              <!-- sweepERC20 -->
+              <div class="admin-fn-card">
+                <h4>sweepERC20(token, recipient, amount)</h4>
+                <form id="admin-tr-sweepertc-form" class="admin-fn-form" novalidate>
+                  <label>
+                    Token address
+                    <input type="text" name="tr-sweepertc-token" placeholder="0x…" required autocomplete="off" />
+                  </label>
+                  <label>
+                    Recipient address
+                    <input type="text" name="tr-sweepertc-recipient" placeholder="0x…" required autocomplete="off" />
+                  </label>
+                  <label>
+                    Amount (token units)
+                    <input type="text" name="tr-sweepertc-amount" placeholder="100" required autocomplete="off" />
                   </label>
                   <div class="admin-fn-actions">
                     <button type="submit" class="admin-write-btn">Send</button>
@@ -939,6 +1093,7 @@
     <script src="scripts/wallet.js"></script>
     <script src="scripts/mode-ui.js"></script>
     <script src="scripts/data-adapter/interface.js"></script>
+    <script src="scripts/text-utils.js"></script>
     <script src="scripts/data-adapter/mock-adapter.js"></script>
     <script src="scripts/contract-adapter.js"></script>
     <script src="scripts/data-adapter/app-adapter.js"></script>

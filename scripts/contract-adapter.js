@@ -10,6 +10,9 @@ var GTPContractAdapter = (function () {
     'function getSteward(bytes32 projectId) view returns (address)',
     'function getStatus(bytes32 projectId) view returns (uint8)',
     'function getProject(bytes32 projectId) view returns (address steward, string metadataURI, uint8 status)',
+    'function getProjectCount() view returns (uint256)',
+    'function getAllProjectIds() view returns (bytes32[])',
+    'function projectList(uint256 index) view returns (bytes32)',
     'function registerProject(bytes32 projectId, address steward, string metadataURI)',
     'function updateProjectMetadataURI(bytes32 projectId, string metadataURI)',
     'function updateProjectStatus(bytes32 projectId, uint8 nextStatus)',
@@ -32,33 +35,46 @@ var GTPContractAdapter = (function () {
   var TREASURY_ABI = [
     'function owner() view returns (address)',
     'function paused() view returns (bool)',
+    'function registry() view returns (address)',
+    'function profileRegistry() view returns (address)',
     'function projectBalances(bytes32 projectId) view returns (uint256)',
     'function payoutAddresses(bytes32 projectId) view returns (address)',
+    'function getProjectBalance(bytes32 projectId) view returns (uint256)',
     'function contribute(bytes32 projectId) payable',
     'function setPayoutAddress(bytes32 projectId, address payoutAddress)',
     'function withdraw(bytes32 projectId, uint256 amount)',
+    'function updateRegistry(address newRegistry)',
+    'function updateProfileRegistry(address newProfileRegistry)',
+    'function sweepUnassignedETH(address payable recipient, uint256 amount)',
+    'function sweepERC20(address token, address recipient, uint256 amount)',
     'function transferOwnership(address nextOwner)',
     'function pause()',
     'function unpause()',
+    'event DirectDepositReceived(address indexed sender, uint256 amount)',
     'event ContributionReceived(bytes32 indexed projectId, address indexed contributor, uint256 amount, uint256 newBalance)',
     'event PayoutAddressUpdated(bytes32 indexed projectId, address indexed payoutAddress)',
-    'event Withdrawal(bytes32 indexed projectId, address indexed recipient, uint256 amount, uint256 newBalance)'
+    'event Withdrawal(bytes32 indexed projectId, address indexed recipient, uint256 amount, uint256 newBalance)',
+    'event RegistryUpdated(address indexed previousRegistry, address indexed nextRegistry)',
+    'event ProfileRegistryUpdated(address indexed previousProfileRegistry, address indexed nextProfileRegistry)',
+    'event UnassignedETHSwept(address indexed recipient, uint256 amount)',
+    'event ERC20TokensSwept(address indexed token, address indexed recipient, uint256 amount)'
   ];
 
   function getContractsForChain(chainId) {
     var contracts = GTPConfig && GTPConfig.contracts ? GTPConfig.contracts : {};
-    return contracts[chainId] || {
+    var resolvedChainId = typeof chainId === 'number'
+      ? chainId
+      : (GTPConfig && GTPConfig.app ? GTPConfig.app.defaultChainId : null);
+    return contracts[resolvedChainId] || {
       projectRegistry: null,
       treasury: null,
       profileRegistry: null
     };
   }
 
-  function getReadiness(chainId) {
-    var state = GTPAppState && typeof GTPAppState.getReadiness === 'function'
-      ? GTPAppState.getReadiness()
-      : { ready: false, reason: 'App state unavailable.' };
+  function getPublicReadiness(chainId) {
     var contracts = getContractsForChain(chainId);
+    var provider = getReadProvider(chainId);
 
     if (!contracts.projectRegistry || !contracts.treasury || !contracts.profileRegistry) {
       return {
@@ -68,10 +84,12 @@ var GTPContractAdapter = (function () {
       };
     }
 
-    if (!state.ready) {
+    if (!provider) {
       return {
         ready: false,
-        reason: state.reason,
+        reason: chainId
+          ? 'RPC provider unavailable for chain ' + chainId + '.'
+          : 'No network selected.',
         contracts: contracts
       };
     }
@@ -96,10 +114,13 @@ var GTPContractAdapter = (function () {
   function getReadProvider(chainId) {
     if (!ethersAvailable()) return null;
     var networks = GTPConfig && GTPConfig.networks ? GTPConfig.networks : {};
-    var net = networks[chainId];
+    var resolvedChainId = typeof chainId === 'number'
+      ? chainId
+      : (GTPConfig && GTPConfig.app ? GTPConfig.app.defaultChainId : null);
+    var net = networks[resolvedChainId];
     if (!net || !net.rpcUrl) return null;
     try {
-      return new window.ethers.JsonRpcProvider(net.rpcUrl, chainId);
+      return new window.ethers.JsonRpcProvider(net.rpcUrl, resolvedChainId);
     } catch (e) {
       console.warn('[GTPContractAdapter] Could not create JsonRpcProvider', e);
       return null;
@@ -134,9 +155,10 @@ var GTPContractAdapter = (function () {
       return options.chainId;
     }
     if (GTPAppState && typeof GTPAppState.getSessionIdentity === 'function') {
-      return GTPAppState.getSessionIdentity().chainId;
+      var sessionChainId = GTPAppState.getSessionIdentity().chainId;
+      if (typeof sessionChainId === 'number') return sessionChainId;
     }
-    return null;
+    return GTPConfig && GTPConfig.app ? GTPConfig.app.defaultChainId : null;
   }
 
   // ---- Contract factories -----------------------------------------------------
@@ -181,38 +203,30 @@ var GTPContractAdapter = (function () {
       getContractState: function () {
         var chainId = currentChainId();
         var contracts = getContractsForChain(chainId);
-        var provider = chainId ? getReadProvider(chainId) : null;
+        var resolvedChainId = typeof chainId === 'number'
+          ? chainId
+          : (GTPConfig && GTPConfig.app ? GTPConfig.app.defaultChainId : null);
 
+        var provider = getReadProvider(chainId);
         if (!provider) {
           return Promise.resolve({
             placeholder: false,
-            chainId: chainId,
+            chainId: resolvedChainId,
             contracts: contracts,
             ready: false,
-            reason: chainId
-              ? 'RPC provider unavailable for chain ' + chainId + '.'
+            reason: resolvedChainId
+              ? 'RPC provider unavailable for chain ' + resolvedChainId + '.'
               : 'No network selected.'
           });
         }
 
-        return provider.getNetwork().then(function (network) {
-          var readiness = getReadiness(chainId);
-          return {
-            placeholder: false,
-            chainId: Number(network.chainId),
-            contracts: contracts,
-            ready: readiness.ready,
-            reason: readiness.reason
-          };
-        }).catch(function (err) {
-          console.warn('[GTPContractAdapter] getContractState RPC error', err);
-          return {
-            placeholder: false,
-            chainId: chainId,
-            contracts: contracts,
-            ready: false,
-            reason: 'Could not reach Optimism RPC. Check your connection.'
-          };
+        var readiness = getPublicReadiness(resolvedChainId);
+        return Promise.resolve({
+          placeholder: false,
+          chainId: resolvedChainId,
+          contracts: contracts,
+          ready: readiness.ready,
+          reason: readiness.reason
         });
       },
 
@@ -420,6 +434,66 @@ var GTPContractAdapter = (function () {
         }).catch(function (err) {
           console.warn('[GTPContractAdapter] withdraw error', err);
           return { ok: false, placeholder: false, action: 'withdraw', chainId: chainId, error: err.message };
+        });
+      },
+
+      updateRegistry: function (newRegistry) {
+        assertCanWrite();
+        var chainId = currentChainId();
+        var contracts = getContractsForChain(chainId);
+        return getSignerProvider().getSigner().then(function (signer) {
+          var treasury = new window.ethers.Contract(contracts.treasury, TREASURY_ABI, signer);
+          return treasury.updateRegistry(newRegistry);
+        }).then(function (tx) {
+          return { ok: true, placeholder: false, action: 'updateRegistry', tx: tx };
+        }).catch(function (err) {
+          console.warn('[GTPContractAdapter] updateRegistry error', err);
+          return { ok: false, placeholder: false, action: 'updateRegistry', chainId: chainId, error: err.message };
+        });
+      },
+
+      updateProfileRegistry: function (newProfileRegistry) {
+        assertCanWrite();
+        var chainId = currentChainId();
+        var contracts = getContractsForChain(chainId);
+        return getSignerProvider().getSigner().then(function (signer) {
+          var treasury = new window.ethers.Contract(contracts.treasury, TREASURY_ABI, signer);
+          return treasury.updateProfileRegistry(newProfileRegistry);
+        }).then(function (tx) {
+          return { ok: true, placeholder: false, action: 'updateProfileRegistry', tx: tx };
+        }).catch(function (err) {
+          console.warn('[GTPContractAdapter] updateProfileRegistry error', err);
+          return { ok: false, placeholder: false, action: 'updateProfileRegistry', chainId: chainId, error: err.message };
+        });
+      },
+
+      sweepUnassignedETH: function (recipient, amount) {
+        assertCanWrite();
+        var chainId = currentChainId();
+        var contracts = getContractsForChain(chainId);
+        return getSignerProvider().getSigner().then(function (signer) {
+          var treasury = new window.ethers.Contract(contracts.treasury, TREASURY_ABI, signer);
+          return treasury.sweepUnassignedETH(recipient, amount);
+        }).then(function (tx) {
+          return { ok: true, placeholder: false, action: 'sweepUnassignedETH', tx: tx };
+        }).catch(function (err) {
+          console.warn('[GTPContractAdapter] sweepUnassignedETH error', err);
+          return { ok: false, placeholder: false, action: 'sweepUnassignedETH', chainId: chainId, error: err.message };
+        });
+      },
+
+      sweepERC20: function (token, recipient, amount) {
+        assertCanWrite();
+        var chainId = currentChainId();
+        var contracts = getContractsForChain(chainId);
+        return getSignerProvider().getSigner().then(function (signer) {
+          var treasury = new window.ethers.Contract(contracts.treasury, TREASURY_ABI, signer);
+          return treasury.sweepERC20(token, recipient, amount);
+        }).then(function (tx) {
+          return { ok: true, placeholder: false, action: 'sweepERC20', tx: tx };
+        }).catch(function (err) {
+          console.warn('[GTPContractAdapter] sweepERC20 error', err);
+          return { ok: false, placeholder: false, action: 'sweepERC20', chainId: chainId, error: err.message };
         });
       }
     };

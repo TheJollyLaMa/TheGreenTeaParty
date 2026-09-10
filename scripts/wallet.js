@@ -5,6 +5,9 @@ var GTPWallet = (function () {
 
   var provider = null;
   var initialized = false;
+  var boundProviders = [];
+  var sessionWatchInterval = null;
+  var sessionRefreshBound = false;
 
   function getProvider() {
     var injected = window.ethereum;
@@ -16,6 +19,36 @@ var GTPWallet = (function () {
     return injected;
   }
 
+  function isValidAddress(address) {
+    return typeof address === 'string' && /^0x[a-fA-F0-9]{40}$/.test(address);
+  }
+
+  function resolveActiveAddress(target, accounts) {
+    if (target) {
+      if (isValidAddress(target.selectedAddress)) {
+        return target.selectedAddress;
+      }
+      if (isValidAddress(target._selectedAddress)) {
+        return target._selectedAddress;
+      }
+    }
+
+    if (Array.isArray(accounts) && accounts.length && isValidAddress(accounts[0])) {
+      return accounts[0];
+    }
+
+    return null;
+  }
+
+  function refreshProvider() {
+    var nextProvider = getProvider();
+    if (nextProvider) {
+      provider = nextProvider;
+      bindProviderEvents(nextProvider);
+    }
+    return provider;
+  }
+
   function updateIdentity(address, chainId) {
     GTPAppState.setState({
       address: address || null,
@@ -25,19 +58,82 @@ var GTPWallet = (function () {
     });
   }
 
+  function bindProviderEvents(target) {
+    if (!target || typeof target.on !== 'function' || boundProviders.indexOf(target) !== -1) {
+      return;
+    }
+
+    target.on('accountsChanged', onAccountsChanged);
+    target.on('chainChanged', onChainChanged);
+    target.on('disconnect', function () {
+      disconnect();
+    });
+    boundProviders.push(target);
+  }
+
+  function bindSessionRefreshEvents() {
+    if (sessionRefreshBound) {
+      return;
+    }
+
+    sessionRefreshBound = true;
+
+    if (typeof window.addEventListener === 'function') {
+      window.addEventListener('focus', readSession);
+    }
+
+    if (typeof document !== 'undefined' && document && typeof document.addEventListener === 'function') {
+      document.addEventListener('visibilitychange', function () {
+        if (!document.hidden) {
+          readSession();
+        }
+      });
+    }
+
+    if (typeof window.setInterval === 'function') {
+      sessionWatchInterval = window.setInterval(function () {
+        if (typeof document !== 'undefined' && document && document.hidden) {
+          return Promise.resolve();
+        }
+        return readSession();
+      }, 4000);
+    }
+  }
+
+  function revokePermissions(requestProvider) {
+    if (!requestProvider || typeof requestProvider.request !== 'function') {
+      return Promise.resolve(false);
+    }
+
+    return requestProvider.request({
+      method: 'wallet_revokePermissions',
+      params: [{ eth_accounts: {} }]
+    }).then(function () {
+      return true;
+    }).catch(function (error) {
+      console.warn('[wallet] revoke permissions error', error);
+      return false;
+    });
+  }
+
+  function getRequestProvider() {
+    return refreshProvider() || window.ethereum || provider;
+  }
+
   function readSession() {
-    if (!provider) {
+    var requestProvider = getRequestProvider();
+    if (!requestProvider) {
       GTPAppState.setState({ connectionStatus: 'disconnected', lastError: 'Wallet provider unavailable. Install MetaMask to continue.' });
       return Promise.resolve();
     }
 
     return Promise.all([
-      provider.request({ method: 'eth_accounts' }),
-      provider.request({ method: 'eth_chainId' })
+      requestProvider.request({ method: 'eth_accounts' }),
+      requestProvider.request({ method: 'eth_chainId' })
     ]).then(function (results) {
       var accounts = results[0];
       var chainId = GTPNetwork.parseChainId(results[1]);
-      var address = Array.isArray(accounts) && accounts.length ? accounts[0] : null;
+      var address = resolveActiveAddress(requestProvider, accounts);
       updateIdentity(address, chainId);
       GTPAppState.setState({ lastError: null });
       console.info('[wallet] session sync', { address: address, chainId: chainId });
@@ -55,6 +151,7 @@ var GTPWallet = (function () {
       GTPAppState.setState({ lastError: null });
     }
     console.info('[wallet] accounts changed', accounts);
+    readSession();
   }
 
   function onChainChanged(nextChainId) {
@@ -62,43 +159,45 @@ var GTPWallet = (function () {
     var identity = GTPAppState.getSessionIdentity();
     updateIdentity(identity.address, parsedChainId);
     console.info('[wallet] chain changed', { chainId: parsedChainId });
+    readSession();
   }
 
   function init() {
     if (initialized) return Promise.resolve();
     initialized = true;
     provider = getProvider();
-    if (provider && typeof provider.on === 'function') {
-      provider.on('accountsChanged', onAccountsChanged);
-      provider.on('chainChanged', onChainChanged);
-      provider.on('disconnect', function () {
-        disconnect();
-      });
+    bindProviderEvents(provider);
+    if (window.ethereum && window.ethereum !== provider) {
+      bindProviderEvents(window.ethereum);
     }
+    bindSessionRefreshEvents();
     return readSession();
   }
 
   function connect() {
-    if (!provider) {
+    var requestProvider = getRequestProvider();
+    if (!requestProvider) {
       GTPAppState.setState({ connectionStatus: 'error', lastError: 'Wallet provider unavailable. Install MetaMask to continue.' });
       return Promise.resolve(false);
     }
 
     GTPAppState.setState({ connectionStatus: 'connecting', lastError: null });
 
-    return provider.request({ method: 'eth_requestAccounts' })
+    return requestProvider.request({ method: 'eth_requestAccounts' })
       .then(function (accounts) {
-        var address = Array.isArray(accounts) && accounts.length ? accounts[0] : null;
+        var address = resolveActiveAddress(requestProvider, accounts);
         if (!address) {
           GTPAppState.setState({ connectionStatus: 'error', lastError: 'No wallet account was returned.' });
           return false;
         }
-        return provider.request({ method: 'eth_chainId' }).then(function (rawChainId) {
+        return requestProvider.request({ method: 'eth_chainId' }).then(function (rawChainId) {
           var chainId = GTPNetwork.parseChainId(rawChainId);
           updateIdentity(address, chainId);
           GTPAppState.setState({ lastError: null });
           console.info('[wallet] connected', { address: address, chainId: chainId });
-          return true;
+          return readSession().then(function () {
+            return true;
+          });
         });
       })
       .catch(function (error) {
@@ -113,6 +212,8 @@ var GTPWallet = (function () {
   }
 
   function disconnect() {
+    var requestProvider = getRequestProvider();
+    var revokePromise = revokePermissions(requestProvider);
     GTPAppState.setState({
       address: null,
       chainId: null,
@@ -122,6 +223,7 @@ var GTPWallet = (function () {
       lastError: null
     });
     console.info('[wallet] disconnected');
+    return revokePromise;
   }
 
   return {

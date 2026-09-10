@@ -6,6 +6,64 @@ var GTPAppDataAdapter = (function () {
   var DEFAULT_CHAIN_ID = 10;
 
   var CONTRACT_STATUS_TO_LABEL = { 0: 'draft', 1: 'active', 2: 'paused', 3: 'completed' };
+  var INITIAL_PROJECT_SLUGS = ['green-tea-hut-001', 'green-tea-hut-1', 'green-tea-hut-01'];
+  var KNOWN_METADATA_KEYS = {
+    id: true,
+    projectId: true,
+    slug: true,
+    name: true,
+    title: true,
+    projectName: true,
+    metadataExtras: true,
+    track: true,
+    category: true,
+    theme: true,
+    status: true,
+    raised: true,
+    raisedUsd: true,
+    amountRaisedUsd: true,
+    amount_raised_usd: true,
+    fundsRaisedUsd: true,
+    fundsRaised: true,
+    goal: true,
+    fundingGoalUsd: true,
+    fundingGoal: true,
+    funding_goal_usd: true,
+    funding_goal: true,
+    goalUsd: true,
+    description: true,
+    summary: true,
+    about: true,
+    lastUpdate: true,
+    publicUpdate: true,
+    stewards: true,
+    stewardCount: true,
+    teamSize: true,
+    repoUrl: true,
+    repo: true,
+    githubUrl: true,
+    repositoryUrl: true,
+    artizenUrl: true,
+    fundingUrl: true,
+    projectUrl: true,
+    ledgerUrl: true,
+    explorerUrl: true,
+    etherscanUrl: true,
+    contractUrl: true,
+    contractExplorerUrl: true,
+    githubPagesUrl: true,
+    website: true,
+    siteUrl: true,
+    homepage: true,
+    nextAction: true,
+    nextStep: true,
+    location: true,
+    city: true,
+    region: true,
+    steward: true,
+    owner: true,
+    leadSteward: true
+  };
 
   function fetchJson(url) {
     return fetch(url).then(function (res) {
@@ -23,6 +81,212 @@ var GTPAppDataAdapter = (function () {
     return String(err);
   }
 
+  function toFiniteNumber(value, fallback) {
+    if (typeof value === 'number' && Number.isFinite(value)) return value;
+    if (typeof value === 'bigint') {
+      if (value >= BigInt(Number.MIN_SAFE_INTEGER) && value <= BigInt(Number.MAX_SAFE_INTEGER)) {
+        return Number(value);
+      }
+      return fallback;
+    }
+    if (typeof value === 'string' && value.trim()) {
+      var parsed = Number(value);
+      if (Number.isFinite(parsed)) return parsed;
+    }
+    return fallback;
+  }
+
+  var DEFAULT_TRACK_LABEL = 'Green Tea';
+
+  function normalizeTrackLabel(value) {
+    var track = String(value || '').trim();
+    return track || DEFAULT_TRACK_LABEL;
+  }
+
+  function getCanonicalTrackLabel(value) {
+    var canonicalLabels = window.GTPTrackLabels || [];
+    var track = String(value || '').trim().toLowerCase();
+    for (var i = 0; i < canonicalLabels.length; i += 1) {
+      if (canonicalLabels[i].toLowerCase() === track) {
+        return canonicalLabels[i];
+      }
+    }
+    return null;
+  }
+
+  function resolveLayoutTrack(value) {
+    return getCanonicalTrackLabel(value) || DEFAULT_TRACK_LABEL;
+  }
+
+  function firstDefined() {
+    for (var i = 0; i < arguments.length; i += 1) {
+      if (arguments[i] !== undefined && arguments[i] !== null && arguments[i] !== '') {
+        return arguments[i];
+      }
+    }
+    return null;
+  }
+
+  function normalizeMetadataPayload(payload) {
+    var current = payload;
+    var depth = 0;
+
+    while (typeof current === 'string' && depth < 3) {
+      var trimmed = current.trim();
+      if (!trimmed) return {};
+      try {
+        current = JSON.parse(trimmed);
+      } catch (e) {
+        return { name: trimmed };
+      }
+      depth += 1;
+    }
+
+    return current && typeof current === 'object' ? current : {};
+  }
+
+  function metadataValue(meta, keys) {
+    for (var i = 0; i < keys.length; i += 1) {
+      var key = keys[i];
+      if (meta && Object.prototype.hasOwnProperty.call(meta, key) && meta[key] !== undefined && meta[key] !== null && meta[key] !== '') {
+        return meta[key];
+      }
+    }
+    return null;
+  }
+
+  function responseToMetadata(res) {
+    if (!res || !res.ok) return {};
+    if (typeof res.text !== 'function') {
+      return typeof res.json === 'function' ? res.json() : {};
+    }
+
+    return res.text().then(function (body) {
+      if (typeof body !== 'string') return {};
+      var trimmed = body.trim();
+      if (!trimmed) return {};
+      try {
+        return normalizeMetadataPayload(JSON.parse(trimmed));
+      } catch (e) {
+        return normalizeMetadataPayload(trimmed);
+      }
+    }).catch(function () {
+      return {};
+    });
+  }
+
+  function projectDiagnosticSummary(project) {
+    if (!project) return null;
+    return {
+      id: project.id,
+      name: project.name,
+      track: project.track,
+      status: project.status,
+      raised: project.raised,
+      goal: project.goal,
+      projectId: project.projectId,
+      onChainStatus: project.onChainStatus
+    };
+  }
+
+  function toBytes32(value) {
+    if (!value) return null;
+    if (typeof value === 'string' && /^0x[0-9a-fA-F]{64}$/.test(value)) {
+      return value;
+    }
+    return window.ethers.keccak256(window.ethers.toUtf8Bytes(String(value)));
+  }
+
+  function slugifyProjectId(value) {
+    return String(value || '')
+      .trim()
+      .toLowerCase()
+      .replace(/['"]/g, '')
+      .replace(/[^a-z0-9]+/g, '-')
+      .replace(/^-+|-+$/g, '');
+  }
+
+  function candidateProjectIds() {
+    var ids = {};
+
+    INITIAL_PROJECT_SLUGS.concat(['green-tea-party', 'green-tea-hut']).forEach(function (seed) {
+     ids[seed] = true;
+    });
+
+    var fixtureNames = [];
+    try {
+      if (typeof window !== 'undefined' && window.GTPProjectSeeds && Array.isArray(window.GTPProjectSeeds)) {
+        fixtureNames = window.GTPProjectSeeds;
+      }
+    } catch (e) {
+      fixtureNames = [];
+    }
+
+    fixtureNames.forEach(function (entry) {
+      if (!entry) return;
+      var slug = slugifyProjectId(entry.id || entry.name || entry);
+      if (slug) {
+        ids[slug] = true;
+        if (slug.indexOf('green-tea-hut') !== -1) {
+          ['-01', '-1', '-001'].forEach(function (suffix) {
+            ids[slug.replace(/-\d+$/, '') + suffix] = true;
+          });
+        }
+      }
+    });
+
+    return Object.keys(ids);
+  }
+
+  function probeRegistryProjects(registry, candidateIds) {
+    var ids = (candidateIds || []).filter(function (id, index, all) {
+      return id && all.indexOf(id) === index;
+    });
+
+    if (!ids.length) return Promise.resolve([]);
+
+    return Promise.all(ids.map(function (projectId) {
+      var bytes32ProjectId = toBytes32(projectId);
+      if (!bytes32ProjectId) return Promise.resolve(null);
+
+      return Promise.resolve()
+        .then(function () {
+          if (typeof registry.projectExists === 'function') {
+            return registry.projectExists(bytes32ProjectId).then(function (exists) {
+              return exists ? registry.getProject(bytes32ProjectId) : null;
+            });
+          }
+          return registry.getProject(bytes32ProjectId);
+        })
+        .then(function (result) {
+          if (!result) return null;
+          var record = {
+            projectId: projectId,
+            steward: result.steward,
+            metadataURI: result.metadataURI,
+            status: Number(result.status)
+          };
+          return resolveMetadata(record.metadataURI)
+            .then(function (meta) {
+              return buildProjectObject(record, meta);
+            })
+            .catch(function (err) {
+              console.warn('[GTPAppDataAdapter] resolveMetadata failed for candidate ' + projectId, err);
+              return buildProjectObject(record, {});
+            });
+        })
+        .catch(function (err) {
+          if (!err || (err.message && err.message.indexOf('ProjectNotFound') !== -1)) {
+            return null;
+          }
+          console.warn('[GTPAppDataAdapter] probeRegistryProjects(' + projectId + ') failed:', err);
+          return null;
+        });
+    })).then(function (records) {
+      return records.filter(function (record) { return record !== null; });
+    });
+  }
+
   function isBlockRangeTooLargeError(err) {
     var msg = errorMessage(err).toLowerCase();
     return msg.indexOf('block range is too large') !== -1
@@ -31,6 +295,15 @@ var GTPAppDataAdapter = (function () {
       || (msg.indexOf('eth_getlogs') !== -1 && msg.indexOf('limited') !== -1)
       || msg.indexOf('limited to a 10,000') !== -1
       || msg.indexOf('10,000 range') !== -1;
+  }
+
+  function isRpcRateLimitError(err) {
+    var msg = errorMessage(err).toLowerCase();
+    return msg.indexOf('too many requests') !== -1
+      || msg.indexOf('exceeded its requests per second capacity') !== -1
+      || msg.indexOf('429') !== -1
+      || msg.indexOf('rate limit') !== -1
+      || msg.indexOf('request per second') !== -1;
   }
 
   function queryFilterResilient(contract, filter, fromBlock, toBlock, provider) {
@@ -67,20 +340,37 @@ var GTPAppDataAdapter = (function () {
 
   // ---- Live project list from ProjectRegistry --------------------------------
 
-  /**
-   * Returns a Promise<Object[]> of project objects built from on-chain data.
-   *
-   * Strategy:
-   *  1. Query all ProjectRegistered events to enumerate project IDs.
-   *  2. For each ID, call getProject() to read the current state.
-   *  3. Resolve metadataURI — if it starts with "{" parse it as inline JSON;
-   *     if it is an HTTP/IPFS URL, fetch it; otherwise treat it as a label.
-   *  4. Merge on-chain fields (steward, status) with metadata fields.
-   *
-   * Required project shape for data-layer.js:
-   *   { id, name, track, status, raised, goal }
-   * All other fields are optional but surfaced if present in the metadata.
-   */
+  function normalizeProjectIdList(ids) {
+    var seen = {};
+    return (Array.isArray(ids) ? ids : [])
+      .map(function (id) { return id === null || id === undefined ? '' : String(id); })
+      .filter(function (id) {
+          if (!id || seen[id]) return false;
+          seen[id] = true;
+          return true;
+      });
+  }
+
+  function fetchEnumeratedProjectIds(registry) {
+    if (typeof registry.getAllProjectIds === 'function') {
+      return Promise.resolve(registry.getAllProjectIds()).then(normalizeProjectIdList);
+    }
+
+    if (typeof registry.getProjectCount === 'function' && typeof registry.projectList === 'function') {
+      return Promise.resolve(registry.getProjectCount()).then(function (count) {
+          var total = toFiniteNumber(count, 0);
+          if (!Number.isFinite(total) || total <= 0) return [];
+          var fetches = [];
+          for (var i = 0; i < total; i += 1) {
+            fetches.push(registry.projectList(i));
+          }
+          return Promise.all(fetches).then(normalizeProjectIdList);
+      });
+    }
+
+    return Promise.resolve([]);
+  }
+
   function fetchProjectsFromRegistry(chainId) {
     if (typeof window === 'undefined' || typeof window.ethers === 'undefined') {
       console.warn('[GTPAppDataAdapter] ethers.js not loaded — returning empty project list.');
@@ -100,7 +390,6 @@ var GTPAppDataAdapter = (function () {
       return Promise.resolve([]);
     }
 
-    var fromBlock = typeof contractsCfg.fromBlock === 'number' ? contractsCfg.fromBlock : 0;
     var PROJECT_REGISTRY_ABI = GTPContractAdapter.PROJECT_REGISTRY_ABI;
 
     var provider;
@@ -113,63 +402,57 @@ var GTPAppDataAdapter = (function () {
 
     var registry = new window.ethers.Contract(contractsCfg.projectRegistry, PROJECT_REGISTRY_ABI, provider);
 
-    return queryFilterResilient(registry, registry.filters.ProjectRegistered(), fromBlock, 'latest', provider)
-      .then(function (logs) {
-        if (!logs.length) return [];
-
-        // De-duplicate by projectId, keeping the last (highest-index) event per ID.
-        // The contract prevents re-registration, but this guards against edge cases.
-        var latestByProjectId = {};
-        logs.forEach(function (log) {
-          var pid = log.args && log.args.projectId ? log.args.projectId : null;
-          if (pid) {
-            latestByProjectId[pid] = log;
-          }
-        });
-        var uniqueLogs = Object.values(latestByProjectId);
-
-        // Fetch current on-chain state for each project
-        var stateFetches = uniqueLogs.map(function (log) {
-          var projectId = log.args.projectId;
-          return registry.getProject(projectId)
-            .then(function (result) {
-              return {
-                projectId: projectId,
-                steward: result.steward,
-                metadataURI: result.metadataURI,
-                status: Number(result.status)
-              };
-            })
-            .catch(function (err) {
-              console.warn('[GTPAppDataAdapter] getProject(' + projectId + ') failed:', err);
-              return null;
+    return fetchEnumeratedProjectIds(registry)
+      .then(function (projectIds) {
+          if (!projectIds.length) {
+            console.info('[GTPAppDataAdapter] project registry enumeration complete', {
+              chainId: chainId,
+              count: 0,
+              source: 'registry-enumeration'
             });
-        });
+            return [];
+          }
 
-        return Promise.all(stateFetches);
-      })
-      .then(function (records) {
-        var metaFetches = records
-          .filter(function (r) { return r !== null; })
-          .map(function (record) {
-            return resolveMetadata(record.metadataURI)
-              .then(function (meta) {
-                return buildProjectObject(record, meta);
+          return Promise.all(projectIds.map(function (projectId) {
+            return registry.getProject(projectId)
+              .then(function (result) {
+                if (!result) return null;
+                var record = {
+                  projectId: projectId,
+                  steward: result.steward,
+                  metadataURI: result.metadataURI,
+                  status: Number(result.status)
+                };
+
+                return resolveMetadata(record.metadataURI)
+                  .then(function (meta) {
+                    return buildProjectObject(record, meta);
+                  })
+                  .catch(function (err) {
+                    console.warn('[GTPAppDataAdapter] resolveMetadata failed for ' + projectId, err);
+                    return buildProjectObject(record, {});
+                  });
               })
               .catch(function (err) {
-                console.warn('[GTPAppDataAdapter] resolveMetadata failed for ' + record.projectId, err);
-                return buildProjectObject(record, {});
+                console.warn('[GTPAppDataAdapter] getProject(' + projectId + ') failed:', err);
+                return null;
               });
-          });
-
-        return Promise.all(metaFetches);
+          }));
       })
       .then(function (projects) {
-        return projects.filter(function (p) { return p !== null; });
+          var filteredProjects = (projects || []).filter(function (p) { return p !== null; });
+          console.info('[GTPAppDataAdapter] project load complete', {
+            chainId: chainId,
+            count: filteredProjects.length,
+            firstProject: filteredProjects[0] ? projectDiagnosticSummary(filteredProjects[0]) : null,
+            projectIds: filteredProjects.slice(0, 5).map(function (p) { return p.id; }),
+            source: 'registry-enumeration'
+          });
+          return filteredProjects;
       })
       .catch(function (err) {
-        console.warn('[GTPAppDataAdapter] fetchProjectsFromRegistry failed:', err);
-        return [];
+          console.warn('[GTPAppDataAdapter] fetchProjectsFromRegistry failed:', err);
+          return [];
       });
   }
 
@@ -186,9 +469,9 @@ var GTPAppDataAdapter = (function () {
     var trimmed = uri.trim();
 
     // Inline JSON
-    if (trimmed.charAt(0) === '{') {
+    if (trimmed.charAt(0) === '{' || trimmed.charAt(0) === '[' || trimmed.charAt(0) === '"') {
       try {
-        return Promise.resolve(JSON.parse(trimmed));
+        return Promise.resolve(normalizeMetadataPayload(JSON.parse(trimmed)));
       } catch (e) {
         return Promise.resolve({});
       }
@@ -200,14 +483,14 @@ var GTPAppDataAdapter = (function () {
       var ipfsGateway = (GTPConfig && GTPConfig.ipfsGateway) || 'https://ipfs.io/ipfs/';
       var gatewayUrl = ipfsGateway.replace(/\/?$/, '/') + cid;
       return fetch(gatewayUrl)
-        .then(function (res) { return res.ok ? res.json() : {}; })
+        .then(responseToMetadata)
         .catch(function () { return {}; });
     }
 
     // HTTP(S) URL
     if (trimmed.indexOf('http://') === 0 || trimmed.indexOf('https://') === 0) {
       return fetch(trimmed)
-        .then(function (res) { return res.ok ? res.json() : {}; })
+        .then(responseToMetadata)
         .catch(function () { return {}; });
     }
 
@@ -221,33 +504,50 @@ var GTPAppDataAdapter = (function () {
    * On-chain status is authoritative; metadata status is ignored.
    */
   function buildProjectObject(record, meta) {
-    var statusLabel = CONTRACT_STATUS_TO_LABEL[record.status] || 'draft';
+    var normalizedMeta = normalizeMetadataPayload(meta);
+    var statusCode = toFiniteNumber(record && record.status, 0);
+    var statusLabel = CONTRACT_STATUS_TO_LABEL[statusCode] || 'draft';
 
     // Use the hex projectId as the canonical id, falling back to a metadata id field
-    var id = (meta && meta.id) ? String(meta.id) : record.projectId;
+    var id = String(firstDefined(metadataValue(normalizedMeta, ['id', 'projectId', 'slug']), record.projectId));
+    var raised = toFiniteNumber(metadataValue(normalizedMeta, ['raised', 'raisedUsd', 'amountRaisedUsd', 'amount_raised_usd', 'fundsRaisedUsd', 'fundsRaised']), 0);
+    var goal = toFiniteNumber(metadataValue(normalizedMeta, ['goal', 'fundingGoalUsd', 'fundingGoal', 'funding_goal_usd', 'funding_goal', 'goalUsd']), 0);
+    var metadataTrack = metadataValue(normalizedMeta, ['track', 'category', 'theme']);
+    var metadataName = firstDefined(metadataValue(normalizedMeta, ['name', 'title', 'projectName']), id);
+    var metadataDescription = firstDefined(metadataValue(normalizedMeta, ['description', 'summary', 'about']), '');
 
     return {
       id: id,
-      name: String((meta && meta.name) || id),
-      track: String((meta && meta.track) || 'Green Tea'),
+      name: String(metadataName),
+      track: normalizeTrackLabel(metadataTrack),
+      layoutTrack: resolveLayoutTrack(metadataTrack),
       // On-chain status is the source of truth; metadata.status is not used.
       status: statusLabel,
-      raised: (meta && typeof meta.raised === 'number') ? meta.raised : 0,
-      goal: (meta && typeof meta.goal === 'number') ? meta.goal : 0,
-      lastUpdate: (meta && meta.lastUpdate) || null,
-      publicUpdate: (meta && (meta.publicUpdate || meta.lastUpdate)) || null,
-      stewards: (meta && typeof meta.stewards === 'number') ? meta.stewards : 1,
-      description: String((meta && meta.description) || ''),
-      repoUrl: (meta && meta.repoUrl) || null,
-      artizenUrl: (meta && meta.artizenUrl) || null,
-      ledgerUrl: (meta && meta.ledgerUrl) || null,
-      contractUrl: (meta && meta.contractUrl) || null,
-      githubPagesUrl: (meta && meta.githubPagesUrl) || null,
-      nextAction: (meta && meta.nextAction) || null,
-      location: (meta && meta.location) || null,
+      raised: raised,
+      goal: goal,
+      lastUpdate: firstDefined(metadataValue(normalizedMeta, ['lastUpdate']), null),
+      publicUpdate: firstDefined(metadataValue(normalizedMeta, ['publicUpdate', 'lastUpdate']), null),
+      stewards: toFiniteNumber(metadataValue(normalizedMeta, ['stewards', 'stewardCount', 'teamSize']), 1),
+      description: String(metadataDescription),
+      metadataURI: String(record.metadataURI || ''),
+      metadataExtras: Object.keys(normalizedMeta).reduce(function (extras, key) {
+        if (!Object.prototype.hasOwnProperty.call(KNOWN_METADATA_KEYS, key) && normalizedMeta[key] !== undefined) {
+          extras[key] = normalizedMeta[key];
+        }
+        return extras;
+      }, {}),
+      repoUrl: firstDefined(metadataValue(normalizedMeta, ['repoUrl', 'repo', 'githubUrl', 'repositoryUrl']), null),
+      artizenUrl: firstDefined(metadataValue(normalizedMeta, ['artizenUrl', 'fundingUrl', 'projectUrl']), null),
+      ledgerUrl: firstDefined(metadataValue(normalizedMeta, ['ledgerUrl', 'explorerUrl', 'etherscanUrl']), null),
+      contractUrl: firstDefined(metadataValue(normalizedMeta, ['contractUrl', 'contractExplorerUrl']), null),
+      githubPagesUrl: firstDefined(metadataValue(normalizedMeta, ['githubPagesUrl', 'website', 'siteUrl', 'homepage']), null),
+      nextAction: firstDefined(metadataValue(normalizedMeta, ['nextAction', 'nextStep']), null),
+      location: firstDefined(metadataValue(normalizedMeta, ['location', 'city', 'region']), null),
       // On-chain fields surfaced for the panel/detail views
       onChainSteward: record.steward,
       onChainStatus: record.status,
+      metadataSteward: firstDefined(metadataValue(normalizedMeta, ['steward', 'owner', 'leadSteward']), null),
+      metadataStatus: firstDefined(metadataValue(normalizedMeta, ['status']), null),
       projectId: record.projectId
     };
   }
@@ -261,7 +561,8 @@ var GTPAppDataAdapter = (function () {
    * CONTRACT_EVENT_MAP in data-layer.js keys on these eventName values:
    *   ProjectRegistered, ProjectMetadataUpdated, ProjectStatusUpdated,
    *   ProjectStewardTransferred, ContributionReceived, PayoutAddressUpdated,
-   *   Withdrawal, ProfileURIUpdated
+   *   Withdrawal, DirectDepositReceived, UnassignedETHSwept, ERC20TokensSwept,
+   *   ProfileURIUpdated
    */
   function fetchLiveActivity(chainId) {
     if (typeof window === 'undefined' || typeof window.ethers === 'undefined') {
@@ -300,6 +601,25 @@ var GTPAppDataAdapter = (function () {
     var treasury = new window.ethers.Contract(contractsCfg.treasury, TREASURY_ABI, provider);
     var profile = new window.ethers.Contract(contractsCfg.profileRegistry, PROFILE_REGISTRY_ABI, provider);
 
+    function isActivityRateLimited(err) {
+      return isRpcRateLimitError(err) || isBlockRangeTooLargeError(err);
+    }
+
+    function preflightActivityQueries() {
+      return provider.getBlockNumber().then(function () {
+        return true;
+      }).catch(function (err) {
+        if (isActivityRateLimited(err)) {
+          console.warn('[GTPAppDataAdapter] activity scan throttled before query fan-out; skipping live activity fetch', {
+            chainId: chainId,
+            error: errorMessage(err)
+          });
+          return false;
+        }
+        throw err;
+      });
+    }
+
     var eventQueries = [
       { contract: registry, event: 'ProjectRegistered' },
       { contract: registry, event: 'ProjectMetadataUpdated' },
@@ -308,65 +628,72 @@ var GTPAppDataAdapter = (function () {
       { contract: treasury, event: 'ContributionReceived' },
       { contract: treasury, event: 'PayoutAddressUpdated' },
       { contract: treasury, event: 'Withdrawal' },
+      { contract: treasury, event: 'DirectDepositReceived' },
+      { contract: treasury, event: 'UnassignedETHSwept' },
+      { contract: treasury, event: 'ERC20TokensSwept' },
       { contract: profile, event: 'ProfileURIUpdated' }
     ];
 
-    var queries = eventQueries.map(function (q) {
-      return queryFilterResilient(q.contract, q.contract.filters[q.event](), fromBlock, 'latest', provider)
-        .then(function (logs) {
-          return logs.map(function (log) {
-            return mapLogToActivity(log, q.event, chainId);
+    return preflightActivityQueries().then(function (okToQuery) {
+      if (!okToQuery) return [];
+
+      var queries = eventQueries.map(function (q) {
+        return queryFilterResilient(q.contract, q.contract.filters[q.event](), fromBlock, 'latest', provider)
+          .then(function (logs) {
+            return logs.map(function (log) {
+              return mapLogToActivity(log, q.event, chainId);
+            });
+          })
+          .catch(function (err) {
+            console.warn('[GTPAppDataAdapter] queryFilter(' + q.event + ') failed:', err);
+            return [];
           });
-        })
-        .catch(function (err) {
-          console.warn('[GTPAppDataAdapter] queryFilter(' + q.event + ') failed:', err);
-          return [];
-        });
-    });
-
-    return Promise.all(queries).then(function (results) {
-      var merged = [];
-      results.forEach(function (rows) {
-        rows.forEach(function (row) { merged.push(row); });
       });
 
-      if (!merged.length) return merged;
-
-      // Resolve block timestamps in a batch (one request per unique block)
-      var uniqueBlocks = {};
-      merged.forEach(function (row) {
-        if (row.blockNumber && !row.blockTimestamp) {
-          uniqueBlocks[row.blockNumber] = true;
-        }
-      });
-
-      var blockNumbers = Object.keys(uniqueBlocks).map(Number);
-      var blockFetches = blockNumbers.map(function (bn) {
-        return provider.getBlock(bn).then(function (block) {
-          return { bn: bn, timestamp: block && block.timestamp ? block.timestamp : null };
-        }).catch(function () {
-          return { bn: bn, timestamp: null };
-        });
-      });
-
-      return Promise.all(blockFetches).then(function (blockResults) {
-        var timestampByBlock = {};
-        blockResults.forEach(function (b) {
-          if (b.timestamp) timestampByBlock[b.bn] = b.timestamp;
+      return Promise.all(queries).then(function (results) {
+        var merged = [];
+        results.forEach(function (rows) {
+          rows.forEach(function (row) { merged.push(row); });
         });
 
+        if (!merged.length) return merged;
+
+        // Resolve block timestamps in a batch (one request per unique block)
+        var uniqueBlocks = {};
         merged.forEach(function (row) {
-          if (!row.blockTimestamp && timestampByBlock[row.blockNumber]) {
-            row.blockTimestamp = timestampByBlock[row.blockNumber];
+          if (row.blockNumber && !row.blockTimestamp) {
+            uniqueBlocks[row.blockNumber] = true;
           }
         });
 
-        // Sort newest-first by blockNumber then logIndex
-        merged.sort(function (a, b) {
-          if (b.blockNumber !== a.blockNumber) return b.blockNumber - a.blockNumber;
-          return (b.logIndex || 0) - (a.logIndex || 0);
+        var blockNumbers = Object.keys(uniqueBlocks).map(Number);
+        var blockFetches = blockNumbers.map(function (bn) {
+          return provider.getBlock(bn).then(function (block) {
+            return { bn: bn, timestamp: block && block.timestamp ? block.timestamp : null };
+          }).catch(function () {
+            return { bn: bn, timestamp: null };
+          });
         });
-        return merged;
+
+        return Promise.all(blockFetches).then(function (blockResults) {
+          var timestampByBlock = {};
+          blockResults.forEach(function (b) {
+            if (b.timestamp) timestampByBlock[b.bn] = b.timestamp;
+          });
+
+          merged.forEach(function (row) {
+            if (!row.blockTimestamp && timestampByBlock[row.blockNumber]) {
+              row.blockTimestamp = timestampByBlock[row.blockNumber];
+            }
+          });
+
+          // Sort newest-first by blockNumber then logIndex
+          merged.sort(function (a, b) {
+            if (b.blockNumber !== a.blockNumber) return b.blockNumber - a.blockNumber;
+            return (b.logIndex || 0) - (a.logIndex || 0);
+          });
+          return merged;
+        });
       });
     });
   }

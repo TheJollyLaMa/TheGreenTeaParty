@@ -184,6 +184,35 @@ const statusClassName = (value) => String(value || 'unknown')
 
 const getDeterministicLedgerEntries = () => GTPData.getActivity().slice();
 
+const getAdapterMetrics = () => (typeof GTPData.getAdapterMetrics === 'function'
+  ? GTPData.getAdapterMetrics()
+  : { placeholder: false, reason: '' });
+
+const logProjectDiagnostics = (context) => {
+  if (typeof GTPData === 'undefined' || typeof GTPData.getProjects !== 'function') {
+    return;
+  }
+
+  const projects = GTPData.getProjects();
+  const firstProject = projects[0] || null;
+  console.info('[app diagnostics] ' + context, {
+    projectCount: projects.length,
+    firstProject: firstProject
+      ? {
+          id: firstProject.id,
+          name: firstProject.name,
+          track: firstProject.track,
+          status: firstProject.status,
+          raised: firstProject.raised,
+          goal: firstProject.goal,
+          projectId: firstProject.projectId || null
+        }
+      : null,
+    activityCount: typeof GTPData.getActivity === 'function' ? GTPData.getActivity().length : null,
+    adapterMetrics: getAdapterMetrics()
+  });
+};
+
 const renderLedgerWalletNetworkChip = () => {
   if (!ledgerWalletNetworkChip || !modeInfo.isApp) {
     return;
@@ -228,13 +257,25 @@ const renderPublicLedger = () => {
   }
 
   const entries = getDeterministicLedgerEntries();
+  const adapterMetrics = getAdapterMetrics();
   const visibleEntries = entries.slice(0, ledgerVisibleCount);
 
+  console.info('[app diagnostics] public ledger render', {
+    entryCount: entries.length,
+    visibleCount: visibleEntries.length,
+    firstEntry: visibleEntries[0] || null,
+    adapterMetrics
+  });
+
   if (!visibleEntries.length) {
-    const emptyMsg = modeInfo.isApp
-      ? 'No on-chain entries yet — this ledger is a clean slate. Connect your wallet on Optimism and make the first entry.'
-      : 'No contract ledger rows available yet.';
-    renderPublicLedgerState('empty', emptyMsg);
+    if (modeInfo.isApp && adapterMetrics.placeholder) {
+      renderPublicLedgerState('loading', adapterMetrics.reason || 'Loading on-chain ledger rows…');
+    } else {
+      const emptyMsg = modeInfo.isApp
+        ? 'No on-chain entries yet — this ledger is a clean slate. Connect your wallet on Optimism and make the first entry.'
+        : 'No contract ledger rows available yet.';
+      renderPublicLedgerState('empty', emptyMsg);
+    }
     return;
   }
 
@@ -333,74 +374,74 @@ const renderWalletControl = () => {
   const state = GTPAppState.getState();
   walletControl.hidden = false;
   walletControl.innerHTML = '';
+  walletControl.classList.toggle('wallet-control--connected', state.connectionStatus === 'connected' && Boolean(state.address));
+  walletControl.classList.toggle('wallet-control--error', state.connectionStatus === 'rejected' || state.connectionStatus === 'error');
 
-  const row = document.createElement('div');
-  row.className = 'wallet-control-row';
+  const control = document.createElement('div');
+  control.className = 'wallet-control-orbiter';
 
   if (state.connectionStatus === 'connected' && state.address) {
-    const addressPill = document.createElement('span');
-    addressPill.className = 'wallet-address-pill';
-    addressPill.textContent = shortenAddress(state.address);
-    addressPill.title = state.address;
-    addressPill.setAttribute('aria-label', `Connected wallet ${state.address}`);
-    row.appendChild(addressPill);
-
-    const disconnectBtn = document.createElement('button');
-    disconnectBtn.type = 'button';
-    disconnectBtn.className = 'btn btn-secondary wallet-disconnect-btn';
-    disconnectBtn.textContent = 'Disconnect';
-    disconnectBtn.addEventListener('click', () => {
-      GTPWallet.disconnect();
+    const orbit = document.createElement('div');
+    orbit.className = 'wallet-address-orbit';
+    orbit.setAttribute('aria-hidden', 'true');
+    const orbitText = `${state.address.slice(0, 6)}🦊🦊🦊🦊${state.address.slice(-4)}`;
+    const orbitChars = Array.from(orbitText);
+    orbit.style.setProperty('--char-count', String(orbitChars.length));
+    orbitChars.forEach((char, index) => {
+      const span = document.createElement('span');
+      span.className = 'wallet-address-orbit-char';
+      span.style.setProperty('--char-index', String(index));
+      span.textContent = char;
+      orbit.appendChild(span);
     });
-    row.appendChild(disconnectBtn);
+    control.appendChild(orbit);
+  }
+
+  const button = document.createElement('button');
+  button.type = 'button';
+  button.className = 'wallet-fx-btn';
+  button.disabled = state.connectionStatus === 'connecting';
+  button.title = state.connectionStatus === 'connected' && state.address
+    ? `Disconnect ${state.address}`
+    : state.connectionStatus === 'connecting'
+      ? 'Connecting…'
+      : connectIconFailed ? 'Connect wallet' : 'Connect MetaMask Wallet';
+  button.setAttribute(
+    'aria-label',
+    state.connectionStatus === 'connected' && state.address
+      ? `Connected wallet ${state.address}. Click to disconnect.`
+      : state.connectionStatus === 'connecting'
+        ? 'Connecting wallet'
+        : 'Connect MetaMask Wallet'
+  );
+
+  if (!connectIconFailed) {
+    const icon = document.createElement('img');
+    icon.src = 'assets/metamask.png';
+    icon.alt = '';
+    icon.className = 'wallet-fx-icon';
+    icon.addEventListener('error', () => {
+      connectIconFailed = true;
+      renderWalletControl();
+    });
+    button.appendChild(icon);
   } else {
-    const connectBtn = document.createElement('button');
-    connectBtn.type = 'button';
-    connectBtn.className = 'btn btn-primary wallet-connect-btn';
-    connectBtn.setAttribute('aria-label', 'Connect MetaMask Wallet');
-    connectBtn.disabled = state.connectionStatus === 'connecting';
+    const fallback = document.createElement('span');
+    fallback.className = 'wallet-fx-fallback';
+    fallback.textContent = '🦊';
+    button.appendChild(fallback);
+  }
 
-    if (!connectIconFailed) {
-      const icon = document.createElement('img');
-      icon.src = 'assets/metamask.png';
-      icon.alt = 'MetaMask';
-      icon.className = 'wallet-connect-icon';
-      icon.addEventListener('error', () => {
-        connectIconFailed = true;
-        renderWalletControl();
-      });
-      connectBtn.appendChild(icon);
+  button.addEventListener('click', () => {
+    if (state.connectionStatus === 'connected' && state.address) {
+      GTPWallet.disconnect();
+      return;
     }
+    GTPWallet.connect();
+  });
 
-    const label = document.createElement('span');
-    if (state.connectionStatus === 'connecting') {
-      label.textContent = 'Connecting…';
-    } else {
-      label.textContent = connectIconFailed ? 'Connect Wallet' : 'Connect MetaMask Wallet';
-    }
-    connectBtn.appendChild(label);
-
-    connectBtn.addEventListener('click', () => {
-      GTPWallet.connect();
-    });
-    row.appendChild(connectBtn);
-  }
-
-  walletControl.appendChild(row);
-
-  if (!state.isSupportedNetwork && typeof state.chainId === 'number') {
-    const unsupported = document.createElement('p');
-    unsupported.className = 'wallet-warning';
-    unsupported.textContent = `Unsupported network (${state.chainId}). Switch to one of: ${GTPNetwork.supportedChainLabel()}.`;
-    walletControl.appendChild(unsupported);
-  }
-
-  if (state.connectionStatus === 'rejected' || state.connectionStatus === 'error') {
-    const warning = document.createElement('p');
-    warning.className = 'wallet-warning';
-    warning.textContent = state.lastError || 'Wallet connection failed. Try again.';
-    walletControl.appendChild(warning);
-  }
+  control.appendChild(button);
+  walletControl.appendChild(control);
 };
 
 const updateMetrics = (filteredProjects) => {
@@ -500,6 +541,7 @@ const renderProjects = () => {
   }
 
   const filteredProjects = GTPData.filterProjects();
+  const adapterMetrics = getAdapterMetrics();
   const projectById = {};
   GTPData.getProjects().forEach((project) => {
     projectById[project.id] = project;
@@ -508,20 +550,32 @@ const renderProjects = () => {
     ? GTPData.buildAssociationIndex(GTPData.getAssociations())
     : {};
   const displayProjects = isOperationsLanding()
-    ? filteredProjects
-      .filter((project) => project.status === 'active' || Boolean(project.nextAction))
-      .sort((projectA, projectB) => Number(Boolean(projectB.nextAction)) - Number(Boolean(projectA.nextAction)))
-      .slice(0, 6)
+    ? [...filteredProjects].sort((projectA, projectB) => {
+        const priorityA = Number(projectA.status === 'active') + Number(Boolean(projectA.nextAction));
+        const priorityB = Number(projectB.status === 'active') + Number(Boolean(projectB.nextAction));
+        return priorityB - priorityA || projectA.name.localeCompare(projectB.name);
+      }).slice(0, 6)
     : filteredProjects;
 
   updateMetrics(filteredProjects);
 
-  if (displayProjects.length === 0) {
-    const emptyMessage = modeInfo.isApp
-      ? 'No app projects loaded yet. Connect wallet, select network, and create profile to continue.'
-      : 'No projects match this filter yet.';
+  console.info('[app diagnostics] project grid render', {
+    filteredCount: filteredProjects.length,
+    displayCount: displayProjects.length,
+    firstFilteredProject: filteredProjects[0] || null,
+    firstDisplayProject: displayProjects[0] || null,
+    adapterMetrics
+  });
 
-    projectGrid.innerHTML = `<li class="project-card"><p class="project-meta">${emptyMessage}</p></li>`;
+  if (displayProjects.length === 0) {
+    const emptyMessage = modeInfo.isApp && adapterMetrics.placeholder
+      ? (adapterMetrics.reason || 'Loading on-chain projects…')
+      : (modeInfo.isApp
+        ? 'No on-chain projects loaded yet. Register a project in the Steward Panel to see it here.'
+        : 'No projects match this filter yet.');
+
+    const stateClass = modeInfo.isApp && adapterMetrics.placeholder ? 'loading' : 'placeholder';
+    projectGrid.innerHTML = `<li class="project-card"><p class="project-meta project-meta--${stateClass}">${emptyMessage}</p></li>`;
     return;
   }
 
@@ -529,13 +583,14 @@ const renderProjects = () => {
     .map((project) => {
       const links = [
         project.repoUrl ? `<a href="${project.repoUrl}" target="_blank" rel="noreferrer">Repo</a>` : '',
-        project.artizenUrl ? `<a href="${project.artizenUrl}" target="_blank" rel="noreferrer">Artizen</a>` : ''
+        project.artizenUrl ? `<a href="${project.artizenUrl}" target="_blank" rel="noreferrer">Artizen page</a>` : ''
       ]
         .filter(Boolean)
         .join('');
 
-      const nextActionHtml = project.nextAction
-        ? `<p class="project-meta">Next: ${project.nextAction}</p>`
+      const hasNextAction = hasTextValue(project.nextAction);
+      const nextActionHtml = hasNextAction
+        ? `<p class="project-meta">Next: ${formatTextValue(project.nextAction)}</p>`
         : '';
       const associationSummary = summarizeProjectAssociations(project.id, associationMap, projectById);
       const associationHtml = associationSummary
@@ -547,7 +602,7 @@ const renderProjects = () => {
           <h4 class="project-title">${project.name}</h4>
           <p class="project-meta">${project.track} · ${project.status}</p>
           <p>${formatCurrency(project.raised)} / ${formatCurrency(project.goal)}</p>
-          <p class="project-meta">Last update: ${project.lastUpdate}</p>
+          <p class="project-meta">Last update: ${formatTextValue(project.lastUpdate)}</p>
           ${nextActionHtml}
           ${associationHtml}
           ${links ? `<div class="project-links">${links}</div>` : ''}
@@ -568,13 +623,23 @@ const renderActivity = () => {
   }
 
   const activity = GTPData.getActivity();
+  const adapterMetrics = getAdapterMetrics();
+
+  console.info('[app diagnostics] activity render', {
+    activityCount: activity.length,
+    firstActivity: activity[0] || null,
+    adapterMetrics
+  });
 
   if (!activity.length) {
-    const emptyMessage = modeInfo.isApp
-      ? 'No onchain activity loaded yet. Connect wallet and network to load ledger activity.'
-      : 'No activity recorded yet.';
+    const emptyMessage = modeInfo.isApp && adapterMetrics.placeholder
+      ? (adapterMetrics.reason || 'Loading on-chain activity…')
+      : (modeInfo.isApp
+        ? 'No onchain activity loaded yet. Connect wallet and network to load ledger activity.'
+        : 'No activity recorded yet.');
 
-    activityList.innerHTML = `<li class="activity-item"><p class="activity-meta">${emptyMessage}</p></li>`;
+    const stateClass = modeInfo.isApp && adapterMetrics.placeholder ? 'loading' : 'placeholder';
+    activityList.innerHTML = `<li class="activity-item"><p class="activity-meta activity-meta--${stateClass}">${emptyMessage}</p></li>`;
     return;
   }
 
@@ -682,6 +747,7 @@ if (isOperationsLanding() && publicLedgerBody) {
 }
 
 GTPData.load(dataBasePath).then(() => {
+  logProjectDiagnostics('data load complete');
   populateFilters();
   renderOperationsSnapshots();
   renderProjects();
