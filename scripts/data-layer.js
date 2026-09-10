@@ -110,6 +110,7 @@ var GTPData = (function () {
       stewards: Number(raw.stewards) || 0,
       description: String(raw.description || ''),
       metadataURI: raw.metadataURI || null,
+      metadataExtras: raw.metadataExtras && typeof raw.metadataExtras === 'object' ? raw.metadataExtras : {},
       repoUrl: raw.repoUrl || null,
       artizenUrl: raw.artizenUrl || null,
       nextAction: raw.nextAction || null,

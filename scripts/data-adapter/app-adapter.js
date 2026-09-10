@@ -7,6 +7,63 @@ var GTPAppDataAdapter = (function () {
 
   var CONTRACT_STATUS_TO_LABEL = { 0: 'draft', 1: 'active', 2: 'paused', 3: 'completed' };
   var INITIAL_PROJECT_SLUGS = ['green-tea-hut-001', 'green-tea-hut-1', 'green-tea-hut-01'];
+  var KNOWN_METADATA_KEYS = {
+    id: true,
+    projectId: true,
+    slug: true,
+    name: true,
+    title: true,
+    projectName: true,
+    metadataExtras: true,
+    track: true,
+    category: true,
+    theme: true,
+    status: true,
+    raised: true,
+    raisedUsd: true,
+    amountRaisedUsd: true,
+    amount_raised_usd: true,
+    fundsRaisedUsd: true,
+    fundsRaised: true,
+    goal: true,
+    fundingGoalUsd: true,
+    fundingGoal: true,
+    funding_goal_usd: true,
+    funding_goal: true,
+    goalUsd: true,
+    description: true,
+    summary: true,
+    about: true,
+    lastUpdate: true,
+    publicUpdate: true,
+    stewards: true,
+    stewardCount: true,
+    teamSize: true,
+    repoUrl: true,
+    repo: true,
+    githubUrl: true,
+    repositoryUrl: true,
+    artizenUrl: true,
+    fundingUrl: true,
+    projectUrl: true,
+    ledgerUrl: true,
+    explorerUrl: true,
+    etherscanUrl: true,
+    contractUrl: true,
+    contractExplorerUrl: true,
+    githubPagesUrl: true,
+    website: true,
+    siteUrl: true,
+    homepage: true,
+    nextAction: true,
+    nextStep: true,
+    location: true,
+    city: true,
+    region: true,
+    steward: true,
+    owner: true,
+    leadSteward: true
+  };
 
   function fetchJson(url) {
     return fetch(url).then(function (res) {
@@ -473,6 +530,12 @@ var GTPAppDataAdapter = (function () {
       stewards: toFiniteNumber(metadataValue(normalizedMeta, ['stewards', 'stewardCount', 'teamSize']), 1),
       description: String(metadataDescription),
       metadataURI: String(record.metadataURI || ''),
+      metadataExtras: Object.keys(normalizedMeta).reduce(function (extras, key) {
+        if (!Object.prototype.hasOwnProperty.call(KNOWN_METADATA_KEYS, key) && normalizedMeta[key] !== undefined) {
+          extras[key] = normalizedMeta[key];
+        }
+        return extras;
+      }, {}),
       repoUrl: firstDefined(metadataValue(normalizedMeta, ['repoUrl', 'repo', 'githubUrl', 'repositoryUrl']), null),
       artizenUrl: firstDefined(metadataValue(normalizedMeta, ['artizenUrl', 'fundingUrl', 'projectUrl']), null),
       ledgerUrl: firstDefined(metadataValue(normalizedMeta, ['ledgerUrl', 'explorerUrl', 'etherscanUrl']), null),

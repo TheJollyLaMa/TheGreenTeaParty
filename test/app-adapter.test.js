@@ -183,6 +183,42 @@ describe('GTPAppDataAdapter', function () {
     });
   });
 
+  it('preserves arbitrary custom metadata fields from registry JSON', async function () {
+    const sandbox = await loadAppAdapterSandbox();
+    const metadata = {
+      id: 'green-tea-hut-001',
+      name: 'The Green Tea Hut #1',
+      track: 'Green Tea',
+      raised: 4500,
+      goal: 12000,
+      ipfsContentHash: 'bafybeigdyrzt',
+      heroImage: 'ipfs://image-cid',
+      customNote: 'Launch week update'
+    };
+
+    sandbox.setRegistryStub({
+      getAllProjectIds: async function () {
+        return ['0xproject1'];
+      },
+      getProject: async function () {
+        return {
+          steward: '0x0000000000000000000000000000000000000002',
+          metadataURI: JSON.stringify(metadata),
+          status: 1n
+        };
+      }
+    });
+
+    const projects = await sandbox.adapter.create({}).getProjects();
+
+    expect(projects).to.have.lengthOf(1);
+    expect(projects[0].metadataExtras).to.deep.equal({
+      ipfsContentHash: 'bafybeigdyrzt',
+      heroImage: 'ipfs://image-cid',
+      customNote: 'Launch week update'
+    });
+  });
+
   it('accepts metadata fetched as raw JSON text', async function () {
     const sandbox = await loadAppAdapterSandbox({
       fetch: async function () {

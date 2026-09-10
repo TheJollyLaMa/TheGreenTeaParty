@@ -55,6 +55,64 @@
   const VIEW_MARGIN = 120;
   const DRAG_THRESHOLD = 4;
   const GREEN_TEA_PARTY_ROOT_ID = 'gtp-root';
+  const RESERVED_METADATA_KEYS = {
+    id: true,
+    projectId: true,
+    slug: true,
+    name: true,
+    title: true,
+    projectName: true,
+    metadataURI: true,
+    metadataExtras: true,
+    track: true,
+    category: true,
+    theme: true,
+    status: true,
+    raised: true,
+    raisedUsd: true,
+    amountRaisedUsd: true,
+    amount_raised_usd: true,
+    fundsRaisedUsd: true,
+    fundsRaised: true,
+    goal: true,
+    fundingGoalUsd: true,
+    fundingGoal: true,
+    funding_goal_usd: true,
+    funding_goal: true,
+    goalUsd: true,
+    description: true,
+    summary: true,
+    about: true,
+    lastUpdate: true,
+    publicUpdate: true,
+    stewards: true,
+    stewardCount: true,
+    teamSize: true,
+    repoUrl: true,
+    repo: true,
+    githubUrl: true,
+    repositoryUrl: true,
+    artizenUrl: true,
+    fundingUrl: true,
+    projectUrl: true,
+    ledgerUrl: true,
+    explorerUrl: true,
+    etherscanUrl: true,
+    contractUrl: true,
+    contractExplorerUrl: true,
+    githubPagesUrl: true,
+    website: true,
+    siteUrl: true,
+    homepage: true,
+    nextAction: true,
+    nextStep: true,
+    location: true,
+    city: true,
+    region: true,
+    steward: true,
+    owner: true,
+    leadSteward: true
+  };
 
   // ---- Application state --------------------------------------------------------
 
@@ -1384,6 +1442,61 @@
     return `<div class="details-schema-item"><dt>${escHtml(label)}</dt><dd>${valueHtml}</dd></div>`;
   }
 
+  function customMetadataRowHtml(key, value) {
+    return `<div class="details-custom-metadata-row" data-custom-metadata-row="true">
+      <label>
+        <span>Field name</span>
+        <input type="text" name="custom-metadata-key" value="${escAttr(key || '')}" placeholder="website" />
+      </label>
+      <label>
+        <span>Field value</span>
+        <textarea name="custom-metadata-value" rows="2" placeholder="https://example.org">${escHtml(value === null || value === undefined ? '' : value)}</textarea>
+      </label>
+      <button type="button" class="details-custom-metadata-remove" aria-label="Remove metadata field">Remove</button>
+    </div>`;
+  }
+
+  function metadataExtrasEntries(node) {
+    const extras = node && node.metadataExtras && typeof node.metadataExtras === 'object'
+      ? node.metadataExtras
+      : {};
+    return Object.keys(extras)
+      .filter((key) => !RESERVED_METADATA_KEYS[key])
+      .sort((a, b) => a.localeCompare(b))
+      .map((key) => [key, extras[key]]);
+  }
+
+  function renderCustomMetadataRows(node) {
+    const rows = metadataExtrasEntries(node);
+    const body = rows.length
+      ? rows.map(([key, value]) => customMetadataRowHtml(key, value)).join('')
+      : customMetadataRowHtml('', '');
+    return `<div class="details-editor-custom-metadata">
+      <div class="details-editor-custom-metadata-head">
+        <div>
+          <h4>Additional metadata</h4>
+          <p>Add any extra key/value pair you want stored in the registry JSON.</p>
+        </div>
+        <button type="button" class="details-custom-metadata-add">Add field</button>
+      </div>
+      <div class="details-custom-metadata-list">
+        ${body}
+      </div>
+    </div>`;
+  }
+
+  function appendCustomMetadataRow(form, key, value) {
+    const list = form && form.querySelector('.details-custom-metadata-list');
+    if (!list) return null;
+    const wrapper = document.createElement('div');
+    wrapper.innerHTML = customMetadataRowHtml(key, value);
+    const row = wrapper.firstElementChild;
+    if (row) {
+      list.appendChild(row);
+    }
+    return row;
+  }
+
   function metadataSchemaHtml(node) {
     const metadataUri = node.metadataURI
       ? (isSafeHttpUrl(node.metadataURI) || String(node.metadataURI).indexOf('ipfs://') === 0
@@ -1399,6 +1512,15 @@
     const site = node.githubPagesUrl && isSafeHttpUrl(node.githubPagesUrl)
       ? `<a href="${escAttr(node.githubPagesUrl)}" target="_blank" rel="noreferrer noopener">${escHtml(node.githubPagesUrl)}</a>`
       : formatSchemaValue(node.githubPagesUrl);
+    const extras = metadataExtrasEntries(node);
+    const extraSchema = extras.length
+      ? `<div class="details-group details-schema-group">
+          <h3>Additional metadata</h3>
+          <dl class="details-schema">
+            ${extras.map(([key, value]) => schemaRow(key, formatSchemaValue(value))).join('')}
+          </dl>
+        </div>`
+      : '';
 
     return `<div class="details-group details-schema-group">
       <h3>Metadata schema</h3>
@@ -1423,7 +1545,7 @@
         ${schemaRow('Metadata steward', formatSchemaValue(node.metadataSteward))}
         ${schemaRow('Metadata status', formatSchemaValue(node.metadataStatus))}
       </dl>
-    </div>`;
+    </div>${extraSchema}`;
   }
 
   function metadataPayloadFromNode(node, form) {
@@ -1438,34 +1560,6 @@
 
     function setIfText(target, key, value) {
       if (value !== '') target[key] = value;
-    }
-
-    const metadataURI = read('meta-metadata-uri');
-    const currentMetadataURI = String(node.metadataURI || '').trim();
-    const hasFieldChanges = [
-      changed('meta-name', node.name || ''),
-      changed('meta-track', node.track || ''),
-      changed('meta-status', node.status || ''),
-      changed('meta-raised', Number(node.raised) || 0),
-      changed('meta-goal', Number(node.goal) || 0),
-      changed('meta-artizen-url', node.artizenUrl || ''),
-      changed('meta-repo-url', node.repoUrl || ''),
-      changed('meta-pages-url', node.githubPagesUrl || ''),
-      changed('meta-ledger-url', node.ledgerUrl || ''),
-      changed('meta-contract-url', node.contractUrl || ''),
-      changed('meta-next-action', node.nextAction || ''),
-      changed('meta-location', node.location || ''),
-      changed('meta-last-update', node.lastUpdate || ''),
-      changed('meta-public-update', node.publicUpdate || ''),
-      changed('meta-stewards', Number(node.stewards) || 0),
-      changed('meta-description', node.description || '')
-    ].some(Boolean);
-
-    if (metadataURI && metadataURI !== currentMetadataURI) {
-      return metadataURI;
-    }
-    if (metadataURI && !hasFieldChanges) {
-      return metadataURI;
     }
 
     const payload = { id: node.projectId || node.id };
@@ -1490,6 +1584,20 @@
     payload.raised = raised !== '' ? Number(raised) || 0 : Number(node.raised) || 0;
     payload.goal = goal !== '' ? Number(goal) || 0 : Number(node.goal) || 0;
 
+    const extras = {};
+    const rows = form ? form.querySelectorAll('[data-custom-metadata-row="true"]') : [];
+    rows.forEach(function (row) {
+      const keyInput = row.querySelector('input[name="custom-metadata-key"]');
+      const valueInput = row.querySelector('textarea[name="custom-metadata-value"]');
+      const key = String(keyInput && keyInput.value ? keyInput.value : '').trim();
+      const value = String(valueInput && valueInput.value ? valueInput.value : '').trim();
+      if (!key || RESERVED_METADATA_KEYS[key] || key === 'metadataExtras') return;
+      extras[key] = value;
+    });
+    Object.keys(extras).forEach(function (key) {
+      payload[key] = extras[key];
+    });
+
     return payload;
   }
 
@@ -1498,11 +1606,10 @@
     const currentStatus = String(node.status || 'planning');
     return `<div class="details-group details-editor-group">
       <h3>Edit metadata</h3>
-      <p class="details-editor-note">Edit the fields below to save inline JSON metadata, or change the metadata URI to point at IPFS/HTTP content.</p>
+      <p class="details-editor-note">Edit the fields below. Saving writes updated JSON metadata back to the ProjectRegistry.</p>
       <form class="details-editor-form" data-project-id="${escAttr(node.projectId || node.id)}">
         <div class="details-editor-grid">
           <label>Project ID<input type="text" name="meta-id" value="${escAttr(node.projectId || node.id)}" readonly /></label>
-          <label class="details-editor-textarea">Registry metadata URI / IPFS CID<textarea name="meta-metadata-uri" placeholder="ipfs://... or https://...">${escHtml(node.metadataURI || '')}</textarea></label>
           <label>Name<input type="text" name="meta-name" value="${escAttr(node.name || '')}" /></label>
           <label>Track<input type="text" name="meta-track" value="${escAttr(node.track || '')}" /></label>
           <label>Status
@@ -1524,6 +1631,7 @@
           <label>Stewards<input type="number" name="meta-stewards" min="0" step="1" value="${escAttr(String(Number(node.stewards) || 1))}" /></label>
           <label class="details-editor-textarea">Description<textarea name="meta-description">${escHtml(node.description || '')}</textarea></label>
         </div>
+        ${renderCustomMetadataRows(node)}
         <div class="details-editor-actions">
           <button type="submit" class="details-editor-save">Save metadata</button>
           <button type="button" class="details-editor-cancel">Cancel</button>
@@ -1656,6 +1764,26 @@
 
     const form = detailsContentEl.querySelector('.details-editor-form');
     if (form) {
+      const addMetaBtn = form.querySelector('.details-custom-metadata-add');
+      if (addMetaBtn) {
+        addMetaBtn.addEventListener('click', function () {
+          appendCustomMetadataRow(form, '', '');
+        });
+      }
+
+      form.addEventListener('click', function (event) {
+        const removeBtn = event.target.closest('.details-custom-metadata-remove');
+        if (!removeBtn) return;
+        const row = removeBtn.closest('[data-custom-metadata-row="true"]');
+        if (row && row.parentNode) {
+          row.parentNode.removeChild(row);
+        }
+        const list = form.querySelector('.details-custom-metadata-list');
+        if (list && !list.children.length) {
+          appendCustomMetadataRow(form, '', '');
+        }
+      });
+
       form.addEventListener('submit', function (event) {
         event.preventDefault();
         const statusEl = form.querySelector('.details-editor-status');
@@ -1671,7 +1799,7 @@
 
         const projectId = form.dataset.projectId || node.projectId || node.id;
         const payload = metadataPayloadFromNode(node, form);
-        const metadataURI = typeof payload === 'string' ? payload : JSON.stringify(payload);
+        const metadataURI = JSON.stringify(payload);
 
         if (statusEl) statusEl.textContent = 'Submitting metadata update…';
         GTPData.updateProjectMetadataURI(projectId, metadataURI)
