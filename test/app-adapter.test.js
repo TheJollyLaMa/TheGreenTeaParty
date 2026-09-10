@@ -6,7 +6,7 @@ import vm from 'node:vm';
 
 const __dirname = path.dirname(fileURLToPath(import.meta.url));
 
-async function loadAppAdapterSandbox() {
+async function loadAppAdapterSandbox(options = {}) {
   const source = await readFile(path.join(__dirname, '..', 'scripts', 'data-adapter', 'app-adapter.js'), 'utf8');
   let registryStub = null;
 
@@ -32,9 +32,9 @@ async function loadAppAdapterSandbox() {
     parseInt,
     parseFloat,
     isFinite,
-    fetch: async function () {
+    fetch: options.fetch || (async function () {
       throw new Error('Unexpected fetch call in app-adapter test');
-    },
+    }),
     keccak256: function (value) {
       return 'hash:' + value;
     },
@@ -232,6 +232,54 @@ describe('GTPAppDataAdapter', function () {
       goal: 12000,
       description: 'A community tea house',
       githubPagesUrl: 'https://example.com/green-tea-hut-1'
+    });
+  });
+
+  it('accepts metadata fetched as raw JSON text', async function () {
+    const sandbox = await loadAppAdapterSandbox({
+      fetch: async function () {
+        return {
+          ok: true,
+          text: async function () {
+            return '{"id":"green-tea-hut-001","name":"The Green Tea Hut #1","track":"Green Tea","fundingGoalUsd":12000,"raised":500}';
+          }
+        };
+      }
+    });
+
+    sandbox.setRegistryStub({
+      filters: {
+        ProjectRegistered: function () {
+          return {};
+        }
+      },
+      queryFilter: async function () {
+        return [
+          {
+            args: {
+              projectId: '0xproject1',
+              steward: '0x0000000000000000000000000000000000000002',
+              metadataURI: 'https://example.com/metadata.json',
+              status: 1
+            }
+          }
+        ];
+      },
+      getProject: async function () {
+        throw new Error('getProject should not be called when event payload is complete');
+      }
+    });
+
+    const projects = await sandbox.adapter.create({}).getProjects();
+
+    expect(projects).to.have.lengthOf(1);
+    expect(projects[0]).to.include({
+      id: 'green-tea-hut-001',
+      name: 'The Green Tea Hut #1',
+      track: 'Green Tea',
+      status: 'active',
+      raised: 500,
+      goal: 12000
     });
   });
 

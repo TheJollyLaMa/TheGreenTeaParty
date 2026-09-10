@@ -97,6 +97,26 @@ var GTPAppDataAdapter = (function () {
     return null;
   }
 
+  function responseToMetadata(res) {
+    if (!res || !res.ok) return {};
+    if (typeof res.text !== 'function') {
+      return typeof res.json === 'function' ? res.json() : {};
+    }
+
+    return res.text().then(function (body) {
+      if (typeof body !== 'string') return {};
+      var trimmed = body.trim();
+      if (!trimmed) return {};
+      try {
+        return normalizeMetadataPayload(JSON.parse(trimmed));
+      } catch (e) {
+        return normalizeMetadataPayload(trimmed);
+      }
+    }).catch(function () {
+      return {};
+    });
+  }
+
   function projectDiagnosticSummary(project) {
     if (!project) return null;
     return {
@@ -476,16 +496,14 @@ var GTPAppDataAdapter = (function () {
       var ipfsGateway = (GTPConfig && GTPConfig.ipfsGateway) || 'https://ipfs.io/ipfs/';
       var gatewayUrl = ipfsGateway.replace(/\/?$/, '/') + cid;
       return fetch(gatewayUrl)
-        .then(function (res) { return res.ok ? res.json() : {}; })
-        .then(function (payload) { return normalizeMetadataPayload(payload); })
+        .then(responseToMetadata)
         .catch(function () { return {}; });
     }
 
     // HTTP(S) URL
     if (trimmed.indexOf('http://') === 0 || trimmed.indexOf('https://') === 0) {
       return fetch(trimmed)
-        .then(function (res) { return res.ok ? res.json() : {}; })
-        .then(function (payload) { return normalizeMetadataPayload(payload); })
+        .then(responseToMetadata)
         .catch(function () { return {}; });
     }
 
