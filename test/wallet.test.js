@@ -9,6 +9,7 @@ const __dirname = path.dirname(fileURLToPath(import.meta.url));
 function createEventTarget(requestAccountRef, selectedAddressRef) {
   const listeners = {};
   const addressRef = selectedAddressRef || requestAccountRef;
+  const requests = [];
 
   return {
     isMetaMask: true,
@@ -24,6 +25,7 @@ function createEventTarget(requestAccountRef, selectedAddressRef) {
       (listeners[event] || []).forEach((handler) => handler(payload));
     },
     request({ method }) {
+      requests.push(method);
       if (method === 'eth_accounts') {
         return Promise.resolve(requestAccountRef.value ? [requestAccountRef.value] : []);
       }
@@ -33,8 +35,12 @@ function createEventTarget(requestAccountRef, selectedAddressRef) {
       if (method === 'eth_chainId') {
         return Promise.resolve('0xa');
       }
+      if (method === 'wallet_revokePermissions') {
+        return Promise.resolve(true);
+      }
       return Promise.reject(new Error(`Unexpected method: ${method}`));
-    }
+    },
+    requests,
   };
 }
 
@@ -150,15 +156,39 @@ describe('GTPWallet', function () {
     const sandbox = await loadWalletSandbox();
 
     await sandbox.wallet.init();
-    sandbox.wallet.disconnect();
+    await sandbox.wallet.disconnect();
 
     sandbox.liveAccountRef.value = '0x0000000000000000000000000000000000000003';
     sandbox.liveSelectedRef.value = '0x0000000000000000000000000000000000000003';
     const result = await sandbox.wallet.connect();
 
     expect(result).to.equal(true);
+    expect(sandbox.selectedProvider.requests).to.include('wallet_revokePermissions');
     expect(sandbox.state.address).to.equal('0x0000000000000000000000000000000000000003');
     expect(sandbox.state.connectionStatus).to.equal('connected');
+  });
+
+  it('falls back cleanly if revoke permissions is unsupported', async function () {
+    const sandbox = await loadWalletSandbox();
+
+    sandbox.selectedProvider.request = ({ method }) => {
+      if (method === 'eth_accounts' || method === 'eth_requestAccounts') {
+        return Promise.resolve(['0x0000000000000000000000000000000000000001']);
+      }
+      if (method === 'eth_chainId') {
+        return Promise.resolve('0xa');
+      }
+      if (method === 'wallet_revokePermissions') {
+        return Promise.reject(new Error('unsupported'));
+      }
+      return Promise.reject(new Error(`Unexpected method: ${method}`));
+    };
+
+    await sandbox.wallet.init();
+    await sandbox.wallet.disconnect();
+
+    expect(sandbox.state.connectionStatus).to.equal('disconnected');
+    expect(sandbox.state.address).to.equal(null);
   });
 
   it('refreshes the active account when the periodic sync runs', async function () {

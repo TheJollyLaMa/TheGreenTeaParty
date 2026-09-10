@@ -100,6 +100,22 @@ var GTPWallet = (function () {
     }
   }
 
+  function revokePermissions(requestProvider) {
+    if (!requestProvider || typeof requestProvider.request !== 'function') {
+      return Promise.resolve(false);
+    }
+
+    return requestProvider.request({
+      method: 'wallet_revokePermissions',
+      params: [{ eth_accounts: {} }]
+    }).then(function () {
+      return true;
+    }).catch(function (error) {
+      console.warn('[wallet] revoke permissions error', error);
+      return false;
+    });
+  }
+
   function getRequestProvider() {
     return refreshProvider() || window.ethereum || provider;
   }
@@ -196,6 +212,8 @@ var GTPWallet = (function () {
   }
 
   function disconnect() {
+    var requestProvider = getRequestProvider();
+    var revokePromise = revokePermissions(requestProvider);
     GTPAppState.setState({
       address: null,
       chainId: null,
@@ -205,6 +223,7 @@ var GTPWallet = (function () {
       lastError: null
     });
     console.info('[wallet] disconnected');
+    return revokePromise;
   }
 
   return {
