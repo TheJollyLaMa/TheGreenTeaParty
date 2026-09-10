@@ -23,6 +23,9 @@ function createEventTarget(currentAccountRef) {
       if (method === 'eth_accounts') {
         return Promise.resolve(currentAccountRef.value ? [currentAccountRef.value] : []);
       }
+      if (method === 'eth_requestAccounts') {
+        return Promise.resolve(currentAccountRef.value ? [currentAccountRef.value] : []);
+      }
       if (method === 'eth_chainId') {
         return Promise.resolve('0xa');
       }
@@ -33,9 +36,10 @@ function createEventTarget(currentAccountRef) {
 
 async function loadWalletSandbox() {
   const source = await readFile(path.join(__dirname, '..', 'scripts', 'wallet.js'), 'utf8');
-  const accountRef = { value: '0x0000000000000000000000000000000000000001' };
-  const selectedProvider = createEventTarget(accountRef);
-  const injectedProvider = createEventTarget(accountRef);
+  const staleAccountRef = { value: '0x0000000000000000000000000000000000000001' };
+  const liveAccountRef = { value: '0x0000000000000000000000000000000000000001' };
+  const selectedProvider = createEventTarget(staleAccountRef);
+  const injectedProvider = createEventTarget(liveAccountRef);
 
   const state = {
     connectionStatus: 'disconnected',
@@ -103,7 +107,8 @@ async function loadWalletSandbox() {
     state,
     selectedProvider,
     injectedProvider,
-    accountRef
+    liveAccountRef,
+    staleAccountRef
   };
 }
 
@@ -115,13 +120,27 @@ describe('GTPWallet', function () {
     expect(sandbox.selectedProvider.listeners.accountsChanged).to.have.lengthOf(1);
     expect(sandbox.injectedProvider.listeners.accountsChanged).to.have.lengthOf(1);
 
-    sandbox.accountRef.value = '0x0000000000000000000000000000000000000002';
-    sandbox.injectedProvider.emit('accountsChanged', [sandbox.accountRef.value]);
+    sandbox.liveAccountRef.value = '0x0000000000000000000000000000000000000002';
+    sandbox.injectedProvider.emit('accountsChanged', [sandbox.liveAccountRef.value]);
 
     await new Promise((resolve) => setTimeout(resolve, 0));
 
     expect(sandbox.state.address).to.equal('0x0000000000000000000000000000000000000002');
     expect(sandbox.state.connectionStatus).to.equal('connected');
     expect(sandbox.state.chainId).to.equal(10);
+  });
+
+  it('reconnects against the latest injected account after disconnecting', async function () {
+    const sandbox = await loadWalletSandbox();
+
+    await sandbox.wallet.init();
+    sandbox.wallet.disconnect();
+
+    sandbox.liveAccountRef.value = '0x0000000000000000000000000000000000000003';
+    const result = await sandbox.wallet.connect();
+
+    expect(result).to.equal(true);
+    expect(sandbox.state.address).to.equal('0x0000000000000000000000000000000000000003');
+    expect(sandbox.state.connectionStatus).to.equal('connected');
   });
 });
