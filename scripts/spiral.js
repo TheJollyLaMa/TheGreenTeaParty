@@ -1554,10 +1554,6 @@
       return String(form.elements[name].value || '').trim();
     }
 
-    function changed(name, current) {
-      return read(name) !== String(current === null || current === undefined ? '' : current).trim();
-    }
-
     function setIfText(target, key, value) {
       if (value !== '') target[key] = value;
     }
