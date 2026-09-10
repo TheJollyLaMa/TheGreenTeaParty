@@ -147,6 +147,7 @@ describe('GTPAppDataAdapter', function () {
       fundingGoalUsd: '12000',
       raisedUsd: '4500',
       summary: 'A community tea house',
+      artizenUrl: 'https://artizen.fund/projects/green-tea-hut-1',
       website: 'https://example.com/green-tea-hut-1',
       steward: '0x0000000000000000000000000000000000000002'
     };
@@ -175,6 +176,7 @@ describe('GTPAppDataAdapter', function () {
       raised: 4500,
       goal: 12000,
       description: 'A community tea house',
+      artizenUrl: 'https://artizen.fund/projects/green-tea-hut-1',
       githubPagesUrl: 'https://example.com/green-tea-hut-1'
     });
   });

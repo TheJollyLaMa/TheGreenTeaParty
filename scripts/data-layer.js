@@ -493,6 +493,11 @@ var GTPData = (function () {
     return _loadPromise;
   }
 
+  function reload(basePath) {
+    _loadPromise = null;
+    return load(typeof basePath === 'string' ? basePath : _basePath);
+  }
+
   // ---- Activity reload (call after a confirmed on-chain write) ----------------
 
   function reloadActivity() {
@@ -632,6 +637,7 @@ var GTPData = (function () {
 
   return {
     load: load,
+    reload: reload,
     reloadActivity: reloadActivity,
     registerProject: function (projectId, steward, metadataURI) { return callAdapter('registerProject', projectId, steward, metadataURI); },
     updateProjectMetadataURI: function (projectId, metadataURI) { return callAdapter('updateProjectMetadataURI', projectId, metadataURI); },

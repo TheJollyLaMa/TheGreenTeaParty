@@ -583,7 +583,7 @@ const renderProjects = () => {
     .map((project) => {
       const links = [
         project.repoUrl ? `<a href="${project.repoUrl}" target="_blank" rel="noreferrer">Repo</a>` : '',
-        project.artizenUrl ? `<a href="${project.artizenUrl}" target="_blank" rel="noreferrer">Artizen</a>` : ''
+        project.artizenUrl ? `<a href="${project.artizenUrl}" target="_blank" rel="noreferrer">Artizen page</a>` : ''
       ]
         .filter(Boolean)
         .join('');
