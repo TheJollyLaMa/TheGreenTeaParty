@@ -74,6 +74,111 @@ var GTPAppDataAdapter = (function () {
     };
   }
 
+  function toBytes32(value) {
+    if (!value) return null;
+    if (typeof value === 'string' && /^0x[0-9a-fA-F]{64}$/.test(value)) {
+      return value;
+    }
+    return window.ethers.keccak256(window.ethers.toUtf8Bytes(String(value)));
+  }
+
+  function slugifyProjectId(value) {
+    return String(value || '')
+      .trim()
+      .toLowerCase()
+      .replace(/['"]/g, '')
+      .replace(/[^a-z0-9]+/g, '-')
+      .replace(/^-+|-+$/g, '');
+  }
+
+  function candidateProjectIds() {
+    var seeds = [
+      'green-tea-party',
+      'green-tea-hut',
+      'green-tea-hut-01',
+      'green-tea-hut-1',
+      'green-tea-hut-001'
+    ];
+    var ids = {};
+
+    seeds.forEach(function (seed) {
+      ids[seed] = true;
+    });
+
+    var fixtureNames = [];
+    try {
+      if (typeof window !== 'undefined' && window.GTPProjectSeeds && Array.isArray(window.GTPProjectSeeds)) {
+        fixtureNames = window.GTPProjectSeeds;
+      }
+    } catch (e) {
+      fixtureNames = [];
+    }
+
+    fixtureNames.forEach(function (entry) {
+      if (!entry) return;
+      var slug = slugifyProjectId(entry.id || entry.name || entry);
+      if (slug) {
+        ids[slug] = true;
+        if (slug.indexOf('green-tea-hut') !== -1) {
+          ['-01', '-1', '-001'].forEach(function (suffix) {
+            ids[slug.replace(/-\d+$/, '') + suffix] = true;
+          });
+        }
+      }
+    });
+
+    return Object.keys(ids);
+  }
+
+  function probeRegistryProjects(registry, candidateIds) {
+    var ids = (candidateIds || []).filter(function (id, index, all) {
+      return id && all.indexOf(id) === index;
+    });
+
+    if (!ids.length) return Promise.resolve([]);
+
+    return Promise.all(ids.map(function (projectId) {
+      var bytes32ProjectId = toBytes32(projectId);
+      if (!bytes32ProjectId) return Promise.resolve(null);
+
+      return Promise.resolve()
+        .then(function () {
+          if (typeof registry.projectExists === 'function') {
+            return registry.projectExists(bytes32ProjectId).then(function (exists) {
+              return exists ? registry.getProject(bytes32ProjectId) : null;
+            });
+          }
+          return registry.getProject(bytes32ProjectId);
+        })
+        .then(function (result) {
+          if (!result) return null;
+          var record = {
+            projectId: projectId,
+            steward: result.steward,
+            metadataURI: result.metadataURI,
+            status: Number(result.status)
+          };
+          return resolveMetadata(record.metadataURI)
+            .then(function (meta) {
+              return buildProjectObject(record, meta);
+            })
+            .catch(function (err) {
+              console.warn('[GTPAppDataAdapter] resolveMetadata failed for candidate ' + projectId, err);
+              return buildProjectObject(record, {});
+            });
+        })
+        .catch(function (err) {
+          if (!err || (err.message && err.message.indexOf('ProjectNotFound') !== -1)) {
+            return null;
+          }
+          console.warn('[GTPAppDataAdapter] probeRegistryProjects(' + projectId + ') failed:', err);
+          return null;
+        });
+    })).then(function (records) {
+      return records.filter(function (record) { return record !== null; });
+    });
+  }
+
   function isBlockRangeTooLargeError(err) {
     var msg = errorMessage(err).toLowerCase();
     return msg.indexOf('block range is too large') !== -1
@@ -132,7 +237,7 @@ var GTPAppDataAdapter = (function () {
    *   { id, name, track, status, raised, goal }
    * All other fields are optional but surfaced if present in the metadata.
    */
-  function fetchProjectsFromRegistry(chainId) {
+  function fetchProjectsFromRegistry(chainId, options) {
     if (typeof window === 'undefined' || typeof window.ethers === 'undefined') {
       console.warn('[GTPAppDataAdapter] ethers.js not loaded — returning empty project list.');
       return Promise.resolve([]);
@@ -152,6 +257,7 @@ var GTPAppDataAdapter = (function () {
     }
 
     var fromBlock = typeof contractsCfg.fromBlock === 'number' ? contractsCfg.fromBlock : 0;
+    var projectHints = options && Array.isArray(options.projectHints) ? options.projectHints : candidateProjectIds();
     var PROJECT_REGISTRY_ABI = GTPContractAdapter.PROJECT_REGISTRY_ABI;
 
     var provider;
@@ -163,6 +269,7 @@ var GTPAppDataAdapter = (function () {
     }
 
     var registry = new window.ethers.Contract(contractsCfg.projectRegistry, PROJECT_REGISTRY_ABI, provider);
+    var loadSource = 'registry-events';
 
     function loadProjectRegistrationLogs(startBlock) {
       return queryFilterResilient(registry, registry.filters.ProjectRegistered(), startBlock, 'latest', provider);
@@ -226,6 +333,15 @@ var GTPAppDataAdapter = (function () {
         return Promise.all(stateFetches);
       })
       .then(function (records) {
+        if (!records.length) {
+          console.info('[GTPAppDataAdapter] registry event scan yielded no projects; probing candidate ids', {
+            chainId: chainId,
+            candidateCount: projectHints.length
+          });
+          loadSource = 'registry-candidates';
+          return probeRegistryProjects(registry, projectHints);
+        }
+
         var metaFetches = records
           .filter(function (r) { return r !== null; })
           .map(function (record) {
@@ -242,20 +358,30 @@ var GTPAppDataAdapter = (function () {
         return Promise.all(metaFetches);
       })
       .then(function (projects) {
+        if (!projects.length) {
+          loadSource = 'registry-candidates';
+          return probeRegistryProjects(registry, projectHints);
+        }
+
+        return projects;
+      })
+      .then(function (projects) {
         var filteredProjects = projects.filter(function (p) { return p !== null; });
         if (filteredProjects.length) {
           console.info('[GTPAppDataAdapter] project load complete', {
             chainId: chainId,
             count: filteredProjects.length,
             firstProject: projectDiagnosticSummary(filteredProjects[0]),
-            projectIds: filteredProjects.slice(0, 5).map(function (p) { return p.id; })
+            projectIds: filteredProjects.slice(0, 5).map(function (p) { return p.id; }),
+            source: loadSource
           });
         } else {
           console.info('[GTPAppDataAdapter] project load complete', {
             chainId: chainId,
             count: 0,
             firstProject: null,
-            projectIds: []
+            projectIds: [],
+            source: 'none'
           });
         }
         return filteredProjects;
@@ -560,7 +686,7 @@ var GTPAppDataAdapter = (function () {
 
     return {
       getProjects: function () {
-        return fetchProjectsFromRegistry(resolvedChainId()).catch(function (err) {
+        return fetchProjectsFromRegistry(resolvedChainId(), { projectHints: candidateProjectIds() }).catch(function (err) {
           console.warn('[GTPAppDataAdapter] fetchProjectsFromRegistry failed:', err);
           return [];
         });

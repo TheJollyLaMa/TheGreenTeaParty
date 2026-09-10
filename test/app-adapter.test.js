@@ -35,6 +35,12 @@ async function loadAppAdapterSandbox() {
     fetch: async function () {
       throw new Error('Unexpected fetch call in app-adapter test');
     },
+    keccak256: function (value) {
+      return 'hash:' + value;
+    },
+    toUtf8Bytes: function (value) {
+      return value;
+    },
     GTPConfig: {
       networks: {
         10: { rpcUrl: 'http://localhost:8545' }
@@ -75,6 +81,12 @@ async function loadAppAdapterSandbox() {
       constructor() {
         return registryStub;
       }
+    },
+    keccak256: function (value) {
+      return 'hash:' + value;
+    },
+    toUtf8Bytes: function (value) {
+      return value;
     }
   };
 
@@ -206,5 +218,40 @@ describe('GTPAppDataAdapter', function () {
 
     expect(projects).to.have.lengthOf(1);
     expect(queryCalls.some(({ fromBlock }) => fromBlock === 0)).to.equal(true);
+  });
+
+  it('probes candidate ids when registry logs are empty', async function () {
+    const sandbox = await loadAppAdapterSandbox();
+    const targetHash = 'hash:green-tea-hut-01';
+
+    sandbox.setRegistryStub({
+      filters: {
+        ProjectRegistered: function () {
+          return {};
+        }
+      },
+      queryFilter: async function () {
+        return [];
+      },
+      projectExists: async function (bytes32ProjectId) {
+        return bytes32ProjectId === targetHash;
+      },
+      getProject: async function (bytes32ProjectId) {
+        if (bytes32ProjectId !== targetHash) {
+          throw new Error('ProjectNotFound');
+        }
+        return {
+          steward: '0x0000000000000000000000000000000000000002',
+          metadataURI: '{"id":"green-tea-hut-01","name":"The Green Tea Hut #1","track":"Green Tea","goal":"12000"}',
+          status: 1n
+        };
+      }
+    });
+
+    const projects = await sandbox.adapter.create({}).getProjects();
+
+    expect(projects).to.have.lengthOf(1);
+    expect(projects[0].id).to.equal('green-tea-hut-01');
+    expect(projects[0].status).to.equal('active');
   });
 });
