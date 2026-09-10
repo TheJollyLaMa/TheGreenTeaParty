@@ -121,6 +121,7 @@
   let zoomInBtn;
   let zoomOutBtn;
   let backBtn;
+  let editDetailsBtn;
   let closeDetailsBtn;
   let breadcrumbsEl;
   let trackSel;
@@ -143,6 +144,7 @@
     zoomInBtn = document.getElementById('zoom-in');
     zoomOutBtn = document.getElementById('zoom-out');
     backBtn = document.getElementById('focus-back');
+    editDetailsBtn = document.getElementById('details-edit');
     closeDetailsBtn = document.getElementById('close-details');
     breadcrumbsEl = document.getElementById('spiral-breadcrumbs');
     trackSel = document.getElementById('spiral-track-filter');
@@ -947,6 +949,11 @@
     zoomInBtn?.addEventListener('click', () => zoomAtViewportCenter(1.25));
     zoomOutBtn?.addEventListener('click', () => zoomAtViewportCenter(0.8));
     backBtn?.addEventListener('click', goToPreviousFocus);
+    editDetailsBtn?.addEventListener('click', () => {
+      if (!selectedNode || !nodeMap[selectedNode.id] || !canEditProjectMetadata(selectedNode)) return;
+      detailsEditMode = !detailsEditMode;
+      showDetails(selectedNode);
+    });
     closeDetailsBtn?.addEventListener('click', () => closeDetails({ clearSelection: true }));
     breadcrumbsEl?.addEventListener('click', onBreadcrumbClick);
 
@@ -1610,12 +1617,8 @@
       ? `<div class="details-links">${[repoLink, artizenLink, ledgerLink, contractLink, githubPagesLink].filter(Boolean).join('')}</div>`
       : '';
     const editable = canEditProjectMetadata(node);
-    const editButtonHtml = editable
-      ? `<button type="button" class="details-edit-btn">${detailsEditMode ? 'Close editor' : 'Edit metadata'}</button>`
-      : '';
 
     detailsContentEl.innerHTML =
-      `<div class="details-top-actions">${editButtonHtml}</div>` +
       `<p class="details-track" style="color:${color}">${escHtml(node.track)}</p>` +
       `<h2 class="details-title">${escHtml(node.name)}</h2>` +
       (editable && detailsEditMode ? renderMetadataEditor(node) : '') +
@@ -1642,14 +1645,6 @@
       childHtml +
       assocHtml +
       linksHtml;
-
-    const editBtn = detailsContentEl.querySelector('.details-edit-btn');
-    if (editBtn) {
-      editBtn.addEventListener('click', function () {
-        detailsEditMode = !detailsEditMode;
-        showDetails(node);
-      });
-    }
 
     const cancelBtn = detailsContentEl.querySelector('.details-editor-cancel');
     if (cancelBtn) {
@@ -1693,6 +1688,15 @@
 
     detailsPanel.classList.add('open');
     detailsPanel.setAttribute('aria-hidden', 'false');
+
+    if (editDetailsBtn) {
+      editDetailsBtn.hidden = false;
+      editDetailsBtn.disabled = !editable;
+      editDetailsBtn.textContent = detailsEditMode ? 'Close editor' : 'Edit metadata';
+      editDetailsBtn.title = editable
+        ? (detailsEditMode ? 'Close the metadata editor' : 'Edit project metadata')
+        : 'Connect the steward wallet for this project to edit metadata';
+    }
   }
 
   function closeDetails(options = {}) {
@@ -1700,6 +1704,12 @@
     detailsPanel?.classList.remove('open');
     detailsPanel?.setAttribute('aria-hidden', 'true');
     detailsEditMode = false;
+    if (editDetailsBtn) {
+      editDetailsBtn.hidden = true;
+      editDetailsBtn.disabled = true;
+      editDetailsBtn.textContent = 'Edit metadata';
+      editDetailsBtn.title = '';
+    }
     if (clearSelection) selectedNode = null;
     if (!preserveFocusState) {
       focusMode = false;
