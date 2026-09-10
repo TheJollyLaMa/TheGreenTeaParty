@@ -254,4 +254,39 @@ describe('GTPAppDataAdapter', function () {
     expect(projects[0].id).to.equal('green-tea-hut-01');
     expect(projects[0].status).to.equal('active');
   });
+
+  it('falls back to candidate ids when the registry scan is rate limited', async function () {
+    const sandbox = await loadAppAdapterSandbox();
+    const targetHash = 'hash:green-tea-hut-01';
+
+    sandbox.setRegistryStub({
+      filters: {
+        ProjectRegistered: function () {
+          return {};
+        }
+      },
+      queryFilter: async function () {
+        throw new Error('Your IP has exceeded its requests per second capacity');
+      },
+      projectExists: async function (bytes32ProjectId) {
+        return bytes32ProjectId === targetHash;
+      },
+      getProject: async function (bytes32ProjectId) {
+        if (bytes32ProjectId !== targetHash) {
+          throw new Error('ProjectNotFound');
+        }
+        return {
+          steward: '0x0000000000000000000000000000000000000002',
+          metadataURI: '{"id":"green-tea-hut-01","name":"The Green Tea Hut #1","track":"Green Tea","goal":"12000"}',
+          status: 1n
+        };
+      }
+    });
+
+    const projects = await sandbox.adapter.create({}).getProjects();
+
+    expect(projects).to.have.lengthOf(1);
+    expect(projects[0].id).to.equal('green-tea-hut-01');
+    expect(projects[0].status).to.equal('active');
+  });
 });

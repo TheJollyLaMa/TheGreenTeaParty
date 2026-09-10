@@ -188,11 +188,11 @@ var GTPContractAdapter = (function () {
       getContractState: function () {
         var chainId = currentChainId();
         var contracts = getContractsForChain(chainId);
-        var provider = getReadProvider(chainId);
         var resolvedChainId = typeof chainId === 'number'
           ? chainId
           : (GTPConfig && GTPConfig.app ? GTPConfig.app.defaultChainId : null);
 
+        var provider = getReadProvider(chainId);
         if (!provider) {
           return Promise.resolve({
             placeholder: false,
@@ -205,24 +205,13 @@ var GTPContractAdapter = (function () {
           });
         }
 
-        return provider.getNetwork().then(function (network) {
-          var readiness = getPublicReadiness(Number(network.chainId));
-          return {
-            placeholder: false,
-            chainId: Number(network.chainId),
-            contracts: contracts,
-            ready: readiness.ready,
-            reason: readiness.reason
-          };
-        }).catch(function (err) {
-          console.warn('[GTPContractAdapter] getContractState RPC error', err);
-          return {
-            placeholder: false,
-            chainId: resolvedChainId,
-            contracts: contracts,
-            ready: false,
-            reason: 'Could not reach Optimism RPC. Check your connection.'
-          };
+        var readiness = getPublicReadiness(resolvedChainId);
+        return Promise.resolve({
+          placeholder: false,
+          chainId: resolvedChainId,
+          contracts: contracts,
+          ready: readiness.ready,
+          reason: readiness.reason
         });
       },
 

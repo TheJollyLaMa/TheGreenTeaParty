@@ -189,6 +189,15 @@ var GTPAppDataAdapter = (function () {
       || msg.indexOf('10,000 range') !== -1;
   }
 
+  function isRpcRateLimitError(err) {
+    var msg = errorMessage(err).toLowerCase();
+    return msg.indexOf('too many requests') !== -1
+      || msg.indexOf('exceeded its requests per second capacity') !== -1
+      || msg.indexOf('429') !== -1
+      || msg.indexOf('rate limit') !== -1
+      || msg.indexOf('request per second') !== -1;
+  }
+
   function queryFilterResilient(contract, filter, fromBlock, toBlock, provider) {
     function queryRange(startBlock, endBlock) {
       if (startBlock > endBlock) return Promise.resolve([]);
@@ -365,6 +374,17 @@ var GTPAppDataAdapter = (function () {
 
         return projects;
       })
+      .catch(function (err) {
+        if (isRpcRateLimitError(err) || isBlockRangeTooLargeError(err)) {
+          console.warn('[GTPAppDataAdapter] registry scan throttled; probing candidate ids instead', {
+            chainId: chainId,
+            error: errorMessage(err)
+          });
+          loadSource = 'registry-candidates';
+          return probeRegistryProjects(registry, projectHints);
+        }
+        throw err;
+      })
       .then(function (projects) {
         var filteredProjects = projects.filter(function (p) { return p !== null; });
         if (filteredProjects.length) {
@@ -523,6 +543,25 @@ var GTPAppDataAdapter = (function () {
     var treasury = new window.ethers.Contract(contractsCfg.treasury, TREASURY_ABI, provider);
     var profile = new window.ethers.Contract(contractsCfg.profileRegistry, PROFILE_REGISTRY_ABI, provider);
 
+    function isActivityRateLimited(err) {
+      return isRpcRateLimitError(err) || isBlockRangeTooLargeError(err);
+    }
+
+    function preflightActivityQueries() {
+      return provider.getBlockNumber().then(function () {
+        return true;
+      }).catch(function (err) {
+        if (isActivityRateLimited(err)) {
+          console.warn('[GTPAppDataAdapter] activity scan throttled before query fan-out; skipping live activity fetch', {
+            chainId: chainId,
+            error: errorMessage(err)
+          });
+          return false;
+        }
+        throw err;
+      });
+    }
+
     var eventQueries = [
       { contract: registry, event: 'ProjectRegistered' },
       { contract: registry, event: 'ProjectMetadataUpdated' },
@@ -534,62 +573,66 @@ var GTPAppDataAdapter = (function () {
       { contract: profile, event: 'ProfileURIUpdated' }
     ];
 
-    var queries = eventQueries.map(function (q) {
-      return queryFilterResilient(q.contract, q.contract.filters[q.event](), fromBlock, 'latest', provider)
-        .then(function (logs) {
-          return logs.map(function (log) {
-            return mapLogToActivity(log, q.event, chainId);
+    return preflightActivityQueries().then(function (okToQuery) {
+      if (!okToQuery) return [];
+
+      var queries = eventQueries.map(function (q) {
+        return queryFilterResilient(q.contract, q.contract.filters[q.event](), fromBlock, 'latest', provider)
+          .then(function (logs) {
+            return logs.map(function (log) {
+              return mapLogToActivity(log, q.event, chainId);
+            });
+          })
+          .catch(function (err) {
+            console.warn('[GTPAppDataAdapter] queryFilter(' + q.event + ') failed:', err);
+            return [];
           });
-        })
-        .catch(function (err) {
-          console.warn('[GTPAppDataAdapter] queryFilter(' + q.event + ') failed:', err);
-          return [];
-        });
-    });
-
-    return Promise.all(queries).then(function (results) {
-      var merged = [];
-      results.forEach(function (rows) {
-        rows.forEach(function (row) { merged.push(row); });
       });
 
-      if (!merged.length) return merged;
-
-      // Resolve block timestamps in a batch (one request per unique block)
-      var uniqueBlocks = {};
-      merged.forEach(function (row) {
-        if (row.blockNumber && !row.blockTimestamp) {
-          uniqueBlocks[row.blockNumber] = true;
-        }
-      });
-
-      var blockNumbers = Object.keys(uniqueBlocks).map(Number);
-      var blockFetches = blockNumbers.map(function (bn) {
-        return provider.getBlock(bn).then(function (block) {
-          return { bn: bn, timestamp: block && block.timestamp ? block.timestamp : null };
-        }).catch(function () {
-          return { bn: bn, timestamp: null };
-        });
-      });
-
-      return Promise.all(blockFetches).then(function (blockResults) {
-        var timestampByBlock = {};
-        blockResults.forEach(function (b) {
-          if (b.timestamp) timestampByBlock[b.bn] = b.timestamp;
+      return Promise.all(queries).then(function (results) {
+        var merged = [];
+        results.forEach(function (rows) {
+          rows.forEach(function (row) { merged.push(row); });
         });
 
+        if (!merged.length) return merged;
+
+        // Resolve block timestamps in a batch (one request per unique block)
+        var uniqueBlocks = {};
         merged.forEach(function (row) {
-          if (!row.blockTimestamp && timestampByBlock[row.blockNumber]) {
-            row.blockTimestamp = timestampByBlock[row.blockNumber];
+          if (row.blockNumber && !row.blockTimestamp) {
+            uniqueBlocks[row.blockNumber] = true;
           }
         });
 
-        // Sort newest-first by blockNumber then logIndex
-        merged.sort(function (a, b) {
-          if (b.blockNumber !== a.blockNumber) return b.blockNumber - a.blockNumber;
-          return (b.logIndex || 0) - (a.logIndex || 0);
+        var blockNumbers = Object.keys(uniqueBlocks).map(Number);
+        var blockFetches = blockNumbers.map(function (bn) {
+          return provider.getBlock(bn).then(function (block) {
+            return { bn: bn, timestamp: block && block.timestamp ? block.timestamp : null };
+          }).catch(function () {
+            return { bn: bn, timestamp: null };
+          });
         });
-        return merged;
+
+        return Promise.all(blockFetches).then(function (blockResults) {
+          var timestampByBlock = {};
+          blockResults.forEach(function (b) {
+            if (b.timestamp) timestampByBlock[b.bn] = b.timestamp;
+          });
+
+          merged.forEach(function (row) {
+            if (!row.blockTimestamp && timestampByBlock[row.blockNumber]) {
+              row.blockTimestamp = timestampByBlock[row.blockNumber];
+            }
+          });
+
+          // Sort newest-first by blockNumber then logIndex
+          merged.sort(function (a, b) {
+            if (b.blockNumber !== a.blockNumber) return b.blockNumber - a.blockNumber;
+            return (b.logIndex || 0) - (a.logIndex || 0);
+          });
+          return merged;
+        });
       });
     });
   }
