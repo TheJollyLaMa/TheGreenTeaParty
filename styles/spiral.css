@@ -319,7 +319,7 @@ body {
 /* ---- Details panel ---- */
 #details-panel {
   position: absolute;
-  top: 0;
+  top: 4.5rem;
   right: 0;
   bottom: 0;
   width: 340px;
@@ -855,7 +855,7 @@ body {
 
   #details-panel {
     width: 100vw;
-    top: auto;
+    top: 4.1rem;
     bottom: 0;
     left: 0;
     right: 0;
