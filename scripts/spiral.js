@@ -183,6 +183,12 @@
 
     if (loadingEl) loadingEl.style.display = 'none';
     const adapterMetrics = getAdapterMetrics();
+    console.info('[spiral diagnostics] data load complete', {
+      projectCount: allProjects.length,
+      firstProject: allProjects[0] || null,
+      associationCount: allAssociations.length,
+      adapterMetrics: adapterMetrics
+    });
     if (loadingEl && adapterMetrics.placeholder) {
       loadingEl.style.display = 'block';
       const textNode = loadingEl.querySelector('div:last-child');
@@ -246,6 +252,13 @@
   function buildLayout() {
     const filtered = filteredProjects();
     const adapterMetrics = getAdapterMetrics();
+    console.info('[spiral diagnostics] layout build', {
+      filteredCount: filtered.length,
+      firstFilteredProject: filtered[0] || null,
+      totalProjects: allProjects.length,
+      associationCount: allAssociations.length,
+      adapterMetrics: adapterMetrics
+    });
 
     if (filtered.length === 0) {
       nodes = [];

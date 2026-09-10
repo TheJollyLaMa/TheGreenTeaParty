@@ -188,6 +188,31 @@ const getAdapterMetrics = () => (typeof GTPData.getAdapterMetrics === 'function'
   ? GTPData.getAdapterMetrics()
   : { placeholder: false, reason: '' });
 
+const logProjectDiagnostics = (context) => {
+  if (typeof GTPData === 'undefined' || typeof GTPData.getProjects !== 'function') {
+    return;
+  }
+
+  const projects = GTPData.getProjects();
+  const firstProject = projects[0] || null;
+  console.info('[app diagnostics] ' + context, {
+    projectCount: projects.length,
+    firstProject: firstProject
+      ? {
+          id: firstProject.id,
+          name: firstProject.name,
+          track: firstProject.track,
+          status: firstProject.status,
+          raised: firstProject.raised,
+          goal: firstProject.goal,
+          projectId: firstProject.projectId || null
+        }
+      : null,
+    activityCount: typeof GTPData.getActivity === 'function' ? GTPData.getActivity().length : null,
+    adapterMetrics: getAdapterMetrics()
+  });
+};
+
 const renderLedgerWalletNetworkChip = () => {
   if (!ledgerWalletNetworkChip || !modeInfo.isApp) {
     return;
@@ -234,6 +259,13 @@ const renderPublicLedger = () => {
   const entries = getDeterministicLedgerEntries();
   const adapterMetrics = getAdapterMetrics();
   const visibleEntries = entries.slice(0, ledgerVisibleCount);
+
+  console.info('[app diagnostics] public ledger render', {
+    entryCount: entries.length,
+    visibleCount: visibleEntries.length,
+    firstEntry: visibleEntries[0] || null,
+    adapterMetrics
+  });
 
   if (!visibleEntries.length) {
     if (modeInfo.isApp && adapterMetrics.placeholder) {
@@ -527,6 +559,14 @@ const renderProjects = () => {
 
   updateMetrics(filteredProjects);
 
+  console.info('[app diagnostics] project grid render', {
+    filteredCount: filteredProjects.length,
+    displayCount: displayProjects.length,
+    firstFilteredProject: filteredProjects[0] || null,
+    firstDisplayProject: displayProjects[0] || null,
+    adapterMetrics
+  });
+
   if (displayProjects.length === 0) {
     const emptyMessage = modeInfo.isApp && adapterMetrics.placeholder
       ? (adapterMetrics.reason || 'Loading on-chain projects…')
@@ -584,6 +624,12 @@ const renderActivity = () => {
 
   const activity = GTPData.getActivity();
   const adapterMetrics = getAdapterMetrics();
+
+  console.info('[app diagnostics] activity render', {
+    activityCount: activity.length,
+    firstActivity: activity[0] || null,
+    adapterMetrics
+  });
 
   if (!activity.length) {
     const emptyMessage = modeInfo.isApp && adapterMetrics.placeholder
@@ -701,6 +747,7 @@ if (isOperationsLanding() && publicLedgerBody) {
 }
 
 GTPData.load(dataBasePath).then(() => {
+  logProjectDiagnostics('data load complete');
   populateFilters();
   renderOperationsSnapshots();
   renderProjects();

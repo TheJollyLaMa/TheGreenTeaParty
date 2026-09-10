@@ -60,6 +60,20 @@ var GTPAppDataAdapter = (function () {
     return getCanonicalTrackLabel(value) || DEFAULT_TRACK_LABEL;
   }
 
+  function projectDiagnosticSummary(project) {
+    if (!project) return null;
+    return {
+      id: project.id,
+      name: project.name,
+      track: project.track,
+      status: project.status,
+      raised: project.raised,
+      goal: project.goal,
+      projectId: project.projectId,
+      onChainStatus: project.onChainStatus
+    };
+  }
+
   function isBlockRangeTooLargeError(err) {
     var msg = errorMessage(err).toLowerCase();
     return msg.indexOf('block range is too large') !== -1
@@ -228,7 +242,23 @@ var GTPAppDataAdapter = (function () {
         return Promise.all(metaFetches);
       })
       .then(function (projects) {
-        return projects.filter(function (p) { return p !== null; });
+        var filteredProjects = projects.filter(function (p) { return p !== null; });
+        if (filteredProjects.length) {
+          console.info('[GTPAppDataAdapter] project load complete', {
+            chainId: chainId,
+            count: filteredProjects.length,
+            firstProject: projectDiagnosticSummary(filteredProjects[0]),
+            projectIds: filteredProjects.slice(0, 5).map(function (p) { return p.id; })
+          });
+        } else {
+          console.info('[GTPAppDataAdapter] project load complete', {
+            chainId: chainId,
+            count: 0,
+            firstProject: null,
+            projectIds: []
+          });
+        }
+        return filteredProjects;
       })
       .catch(function (err) {
         console.warn('[GTPAppDataAdapter] fetchProjectsFromRegistry failed:', err);
