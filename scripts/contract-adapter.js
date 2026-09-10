@@ -47,18 +47,19 @@ var GTPContractAdapter = (function () {
 
   function getContractsForChain(chainId) {
     var contracts = GTPConfig && GTPConfig.contracts ? GTPConfig.contracts : {};
-    return contracts[chainId] || {
+    var resolvedChainId = typeof chainId === 'number'
+      ? chainId
+      : (GTPConfig && GTPConfig.app ? GTPConfig.app.defaultChainId : null);
+    return contracts[resolvedChainId] || {
       projectRegistry: null,
       treasury: null,
       profileRegistry: null
     };
   }
 
-  function getReadiness(chainId) {
-    var state = GTPAppState && typeof GTPAppState.getReadiness === 'function'
-      ? GTPAppState.getReadiness()
-      : { ready: false, reason: 'App state unavailable.' };
+  function getPublicReadiness(chainId) {
     var contracts = getContractsForChain(chainId);
+    var provider = getReadProvider(chainId);
 
     if (!contracts.projectRegistry || !contracts.treasury || !contracts.profileRegistry) {
       return {
@@ -68,10 +69,12 @@ var GTPContractAdapter = (function () {
       };
     }
 
-    if (!state.ready) {
+    if (!provider) {
       return {
         ready: false,
-        reason: state.reason,
+        reason: chainId
+          ? 'RPC provider unavailable for chain ' + chainId + '.'
+          : 'No network selected.',
         contracts: contracts
       };
     }
@@ -96,10 +99,13 @@ var GTPContractAdapter = (function () {
   function getReadProvider(chainId) {
     if (!ethersAvailable()) return null;
     var networks = GTPConfig && GTPConfig.networks ? GTPConfig.networks : {};
-    var net = networks[chainId];
+    var resolvedChainId = typeof chainId === 'number'
+      ? chainId
+      : (GTPConfig && GTPConfig.app ? GTPConfig.app.defaultChainId : null);
+    var net = networks[resolvedChainId];
     if (!net || !net.rpcUrl) return null;
     try {
-      return new window.ethers.JsonRpcProvider(net.rpcUrl, chainId);
+      return new window.ethers.JsonRpcProvider(net.rpcUrl, resolvedChainId);
     } catch (e) {
       console.warn('[GTPContractAdapter] Could not create JsonRpcProvider', e);
       return null;
@@ -134,9 +140,10 @@ var GTPContractAdapter = (function () {
       return options.chainId;
     }
     if (GTPAppState && typeof GTPAppState.getSessionIdentity === 'function') {
-      return GTPAppState.getSessionIdentity().chainId;
+      var sessionChainId = GTPAppState.getSessionIdentity().chainId;
+      if (typeof sessionChainId === 'number') return sessionChainId;
     }
-    return null;
+    return GTPConfig && GTPConfig.app ? GTPConfig.app.defaultChainId : null;
   }
 
   // ---- Contract factories -----------------------------------------------------
@@ -181,22 +188,25 @@ var GTPContractAdapter = (function () {
       getContractState: function () {
         var chainId = currentChainId();
         var contracts = getContractsForChain(chainId);
-        var provider = chainId ? getReadProvider(chainId) : null;
+        var provider = getReadProvider(chainId);
+        var resolvedChainId = typeof chainId === 'number'
+          ? chainId
+          : (GTPConfig && GTPConfig.app ? GTPConfig.app.defaultChainId : null);
 
         if (!provider) {
           return Promise.resolve({
             placeholder: false,
-            chainId: chainId,
+            chainId: resolvedChainId,
             contracts: contracts,
             ready: false,
-            reason: chainId
-              ? 'RPC provider unavailable for chain ' + chainId + '.'
+            reason: resolvedChainId
+              ? 'RPC provider unavailable for chain ' + resolvedChainId + '.'
               : 'No network selected.'
           });
         }
 
         return provider.getNetwork().then(function (network) {
-          var readiness = getReadiness(chainId);
+          var readiness = getPublicReadiness(Number(network.chainId));
           return {
             placeholder: false,
             chainId: Number(network.chainId),
@@ -208,7 +218,7 @@ var GTPContractAdapter = (function () {
           console.warn('[GTPContractAdapter] getContractState RPC error', err);
           return {
             placeholder: false,
-            chainId: chainId,
+            chainId: resolvedChainId,
             contracts: contracts,
             ready: false,
             reason: 'Could not reach Optimism RPC. Check your connection.'

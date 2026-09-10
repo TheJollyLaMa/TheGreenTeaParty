@@ -17,6 +17,12 @@
     return null;
   }
 
+  function resolvedReadChainId() {
+    var chainId = currentChainId();
+    if (typeof chainId === 'number') return chainId;
+    return GTPConfig && GTPConfig.app ? GTPConfig.app.defaultChainId : null;
+  }
+
   function walletReady() {
     if (!GTPAppState || typeof GTPAppState.getSessionIdentity !== 'function') return false;
     var id = GTPAppState.getSessionIdentity();
@@ -26,7 +32,7 @@
   }
 
   function getReadProvider() {
-    var chainId = currentChainId();
+    var chainId = resolvedReadChainId();
     if (!chainId) return null;
     var networks = GTPConfig && GTPConfig.networks ? GTPConfig.networks : {};
     var net = networks[chainId];
@@ -44,7 +50,7 @@
   }
 
   function contractAddresses() {
-    var chainId = currentChainId();
+    var chainId = resolvedReadChainId();
     if (!chainId) return {};
     if (GTPContractAdapter && typeof GTPContractAdapter.getContractsForChain === 'function') {
       return GTPContractAdapter.getContractsForChain(chainId) || {};
@@ -158,7 +164,7 @@
   function txLink(tx) {
     var hash = tx && tx.hash ? tx.hash : null;
     if (!hash) return '';
-    var chainId = currentChainId();
+    var chainId = resolvedReadChainId();
     var networks = GTPConfig && GTPConfig.networks ? GTPConfig.networks : {};
     var explorer = (networks[chainId] && networks[chainId].blockExplorer)
       ? networks[chainId].blockExplorer
@@ -328,7 +334,7 @@
     loadingState.textContent = 'Loading contract introspection…';
     container.appendChild(loadingState);
 
-    var chainId = currentChainId();
+    var chainId = resolvedReadChainId();
     var contracts = contractAddresses();
     var provider = getReadProvider();
     if (!provider) {

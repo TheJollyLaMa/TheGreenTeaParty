@@ -184,6 +184,10 @@ const statusClassName = (value) => String(value || 'unknown')
 
 const getDeterministicLedgerEntries = () => GTPData.getActivity().slice();
 
+const getAdapterMetrics = () => (typeof GTPData.getAdapterMetrics === 'function'
+  ? GTPData.getAdapterMetrics()
+  : { placeholder: false, reason: '' });
+
 const renderLedgerWalletNetworkChip = () => {
   if (!ledgerWalletNetworkChip || !modeInfo.isApp) {
     return;
@@ -228,13 +232,18 @@ const renderPublicLedger = () => {
   }
 
   const entries = getDeterministicLedgerEntries();
+  const adapterMetrics = getAdapterMetrics();
   const visibleEntries = entries.slice(0, ledgerVisibleCount);
 
   if (!visibleEntries.length) {
-    const emptyMsg = modeInfo.isApp
-      ? 'No on-chain entries yet — this ledger is a clean slate. Connect your wallet on Optimism and make the first entry.'
-      : 'No contract ledger rows available yet.';
-    renderPublicLedgerState('empty', emptyMsg);
+    if (modeInfo.isApp && adapterMetrics.placeholder) {
+      renderPublicLedgerState('loading', adapterMetrics.reason || 'Loading on-chain ledger rows…');
+    } else {
+      const emptyMsg = modeInfo.isApp
+        ? 'No on-chain entries yet — this ledger is a clean slate. Connect your wallet on Optimism and make the first entry.'
+        : 'No contract ledger rows available yet.';
+      renderPublicLedgerState('empty', emptyMsg);
+    }
     return;
   }
 
@@ -500,6 +509,7 @@ const renderProjects = () => {
   }
 
   const filteredProjects = GTPData.filterProjects();
+  const adapterMetrics = getAdapterMetrics();
   const projectById = {};
   GTPData.getProjects().forEach((project) => {
     projectById[project.id] = project;
@@ -518,11 +528,14 @@ const renderProjects = () => {
   updateMetrics(filteredProjects);
 
   if (displayProjects.length === 0) {
-    const emptyMessage = modeInfo.isApp
-      ? 'No on-chain projects loaded yet. Register a project in the Steward Panel to see it here.'
-      : 'No projects match this filter yet.';
+    const emptyMessage = modeInfo.isApp && adapterMetrics.placeholder
+      ? (adapterMetrics.reason || 'Loading on-chain projects…')
+      : (modeInfo.isApp
+        ? 'No on-chain projects loaded yet. Register a project in the Steward Panel to see it here.'
+        : 'No projects match this filter yet.');
 
-    projectGrid.innerHTML = `<li class="project-card"><p class="project-meta project-meta--placeholder">${emptyMessage}</p></li>`;
+    const stateClass = modeInfo.isApp && adapterMetrics.placeholder ? 'loading' : 'placeholder';
+    projectGrid.innerHTML = `<li class="project-card"><p class="project-meta project-meta--${stateClass}">${emptyMessage}</p></li>`;
     return;
   }
 
@@ -570,13 +583,17 @@ const renderActivity = () => {
   }
 
   const activity = GTPData.getActivity();
+  const adapterMetrics = getAdapterMetrics();
 
   if (!activity.length) {
-    const emptyMessage = modeInfo.isApp
-      ? 'No onchain activity loaded yet. Connect wallet and network to load ledger activity.'
-      : 'No activity recorded yet.';
+    const emptyMessage = modeInfo.isApp && adapterMetrics.placeholder
+      ? (adapterMetrics.reason || 'Loading on-chain activity…')
+      : (modeInfo.isApp
+        ? 'No onchain activity loaded yet. Connect wallet and network to load ledger activity.'
+        : 'No activity recorded yet.');
 
-    activityList.innerHTML = `<li class="activity-item"><p class="activity-meta">${emptyMessage}</p></li>`;
+    const stateClass = modeInfo.isApp && adapterMetrics.placeholder ? 'loading' : 'placeholder';
+    activityList.innerHTML = `<li class="activity-item"><p class="activity-meta activity-meta--${stateClass}">${emptyMessage}</p></li>`;
     return;
   }
 

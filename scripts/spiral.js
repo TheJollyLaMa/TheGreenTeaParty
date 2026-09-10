@@ -101,6 +101,12 @@
   let touchPrev = null;
   let touchPinchDist = null;
 
+  function getAdapterMetrics() {
+    return typeof GTPData !== 'undefined' && typeof GTPData.getAdapterMetrics === 'function'
+      ? GTPData.getAdapterMetrics()
+      : { placeholder: false, reason: '' };
+  }
+
   // ---- DOM references -----------------------------------------------------------
 
   let canvas;
@@ -176,12 +182,22 @@
     }
 
     if (loadingEl) loadingEl.style.display = 'none';
+    const adapterMetrics = getAdapterMetrics();
+    if (loadingEl && adapterMetrics.placeholder) {
+      loadingEl.style.display = 'block';
+      const textNode = loadingEl.querySelector('div:last-child');
+      if (textNode) {
+        textNode.textContent = adapterMetrics.reason || 'Loading on-chain projects…';
+      }
+    }
 
     if (allProjects.length === 0 && emptyEl) {
       const modeInfo = typeof GTPData !== 'undefined' ? GTPData.getModeInfo() : null;
-      if (modeInfo && modeInfo.isApp) {
+      if (modeInfo && modeInfo.isApp && !adapterMetrics.placeholder) {
         emptyEl.querySelector('strong').textContent = 'Project registry is empty.';
         emptyEl.querySelector('p').textContent = 'No projects have been registered on-chain yet. Register The Green Tea Hut #1 to see it appear here.';
+      } else if (adapterMetrics.placeholder) {
+        emptyEl.style.display = 'none';
       }
     }
 
@@ -229,6 +245,7 @@
 
   function buildLayout() {
     const filtered = filteredProjects();
+    const adapterMetrics = getAdapterMetrics();
 
     if (filtered.length === 0) {
       nodes = [];
@@ -244,7 +261,9 @@
       descendantCache = {};
       trackClusters = [];
       if (selectedNode) closeDetails({ clearSelection: true });
-      if (emptyEl) emptyEl.style.display = 'block';
+      if (emptyEl) {
+        emptyEl.style.display = modeInfo.isApp && adapterMetrics.placeholder ? 'none' : 'block';
+      }
       needRender = true;
       updateBreadcrumbs();
       updateBackButton();
