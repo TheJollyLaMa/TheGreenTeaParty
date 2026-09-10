@@ -1008,7 +1008,7 @@
     zoomOutBtn?.addEventListener('click', () => zoomAtViewportCenter(0.8));
     backBtn?.addEventListener('click', goToPreviousFocus);
     editDetailsBtn?.addEventListener('click', () => {
-      if (!selectedNode || !nodeMap[selectedNode.id] || !canEditProjectMetadata(selectedNode)) return;
+      if (!selectedNode || !nodeMap[selectedNode.id]) return;
       detailsEditMode = !detailsEditMode;
       showDetails(selectedNode);
     });
@@ -1720,12 +1720,12 @@
     const linksHtml = [repoLink, artizenLink, ledgerLink, contractLink, githubPagesLink].filter(Boolean).length
       ? `<div class="details-links">${[repoLink, artizenLink, ledgerLink, contractLink, githubPagesLink].filter(Boolean).join('')}</div>`
       : '';
-    const editable = canEditProjectMetadata(node);
+    const canSubmit = canEditProjectMetadata(node);
 
     detailsContentEl.innerHTML =
       `<p class="details-track" style="color:${color}">${escHtml(node.track)}</p>` +
       `<h2 class="details-title">${escHtml(node.name)}</h2>` +
-      (editable && detailsEditMode ? renderMetadataEditor(node) : '') +
+      (detailsEditMode ? renderMetadataEditor(node) : '') +
       `<div class="details-priority">` +
         `<h3>What needs action now</h3>` +
         `<p>${escHtml(primaryAction(node))}</p>` +
@@ -1783,21 +1783,20 @@
       form.addEventListener('submit', function (event) {
         event.preventDefault();
         const statusEl = form.querySelector('.details-editor-status');
-        if (!editable) {
-          if (statusEl) statusEl.textContent = 'Connect the steward wallet for this project to save metadata.';
-          return;
-        }
-
         if (typeof GTPData === 'undefined' || typeof GTPData.updateProjectMetadataURI !== 'function') {
           if (statusEl) statusEl.textContent = 'Metadata updates are unavailable right now.';
           return;
         }
 
+        if (statusEl) {
+          statusEl.textContent = canSubmit
+            ? 'Submitting metadata update…'
+            : 'Submitting metadata update… MetaMask will prompt you to approve or reject the transaction.';
+        }
+
         const projectId = form.dataset.projectId || node.projectId || node.id;
         const payload = metadataPayloadFromNode(node, form);
         const metadataURI = JSON.stringify(payload);
-
-        if (statusEl) statusEl.textContent = 'Submitting metadata update…';
         GTPData.updateProjectMetadataURI(projectId, metadataURI)
           .then(function () {
             if (statusEl) statusEl.textContent = 'Metadata update submitted. Refreshing view…';
@@ -1815,11 +1814,9 @@
 
     if (editDetailsBtn) {
       editDetailsBtn.hidden = false;
-      editDetailsBtn.disabled = !editable;
+      editDetailsBtn.disabled = false;
       editDetailsBtn.textContent = detailsEditMode ? 'Close editor' : 'Edit metadata';
-      editDetailsBtn.title = editable
-        ? (detailsEditMode ? 'Close the metadata editor' : 'Edit project metadata')
-        : 'Connect the steward wallet for this project to edit metadata';
+      editDetailsBtn.title = detailsEditMode ? 'Close the metadata editor' : 'Edit project metadata';
     }
   }
 
