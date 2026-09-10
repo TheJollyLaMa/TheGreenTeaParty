@@ -40,6 +40,9 @@ async function loadWalletSandbox() {
   const liveAccountRef = { value: '0x0000000000000000000000000000000000000001' };
   const selectedProvider = createEventTarget(staleAccountRef);
   const injectedProvider = createEventTarget(liveAccountRef);
+  const windowListeners = {};
+  const documentListeners = {};
+  const intervalCallbacks = [];
 
   const state = {
     connectionStatus: 'disconnected',
@@ -61,6 +64,19 @@ async function loadWalletSandbox() {
         request(args) {
           return injectedProvider.request(args);
         }
+      },
+      addEventListener(event, handler) {
+        windowListeners[event] = handler;
+      },
+      setInterval(handler) {
+        intervalCallbacks.push(handler);
+        return intervalCallbacks.length;
+      }
+    },
+    document: {
+      hidden: false,
+      addEventListener(event, handler) {
+        documentListeners[event] = handler;
       }
     },
     console,
@@ -108,7 +124,10 @@ async function loadWalletSandbox() {
     selectedProvider,
     injectedProvider,
     liveAccountRef,
-    staleAccountRef
+    staleAccountRef,
+    windowListeners,
+    documentListeners,
+    intervalCallbacks
   };
 }
 
@@ -141,6 +160,19 @@ describe('GTPWallet', function () {
 
     expect(result).to.equal(true);
     expect(sandbox.state.address).to.equal('0x0000000000000000000000000000000000000003');
+    expect(sandbox.state.connectionStatus).to.equal('connected');
+  });
+
+  it('refreshes the active account when the periodic sync runs', async function () {
+    const sandbox = await loadWalletSandbox();
+
+    await sandbox.wallet.init();
+    sandbox.liveAccountRef.value = '0x0000000000000000000000000000000000000004';
+    expect(sandbox.intervalCallbacks).to.have.lengthOf(1);
+
+    await sandbox.intervalCallbacks[0]();
+
+    expect(sandbox.state.address).to.equal('0x0000000000000000000000000000000000000004');
     expect(sandbox.state.connectionStatus).to.equal('connected');
   });
 });

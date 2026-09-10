@@ -6,6 +6,8 @@ var GTPWallet = (function () {
   var provider = null;
   var initialized = false;
   var boundProviders = [];
+  var sessionWatchInterval = null;
+  var sessionRefreshBound = false;
 
   function getProvider() {
     var injected = window.ethereum;
@@ -37,6 +39,35 @@ var GTPWallet = (function () {
       disconnect();
     });
     boundProviders.push(target);
+  }
+
+  function bindSessionRefreshEvents() {
+    if (sessionRefreshBound) {
+      return;
+    }
+
+    sessionRefreshBound = true;
+
+    if (typeof window.addEventListener === 'function') {
+      window.addEventListener('focus', readSession);
+    }
+
+    if (typeof document !== 'undefined' && document && typeof document.addEventListener === 'function') {
+      document.addEventListener('visibilitychange', function () {
+        if (!document.hidden) {
+          readSession();
+        }
+      });
+    }
+
+    if (typeof window.setInterval === 'function') {
+      sessionWatchInterval = window.setInterval(function () {
+        if (typeof document !== 'undefined' && document && document.hidden) {
+          return Promise.resolve();
+        }
+        return readSession();
+      }, 4000);
+    }
   }
 
   function getRequestProvider() {
@@ -93,6 +124,7 @@ var GTPWallet = (function () {
     if (window.ethereum && window.ethereum !== provider) {
       bindProviderEvents(window.ethereum);
     }
+    bindSessionRefreshEvents();
     return readSession();
   }
 
