@@ -55,6 +55,7 @@
   const VIEW_MARGIN = 120;
   const DRAG_THRESHOLD = 4;
   const GREEN_TEA_PARTY_ROOT_ID = 'gtp-root';
+  const POST_SAVE_REFRESH_DELAY_MS = 3500;
   const RESERVED_METADATA_KEYS = {
     id: true,
     projectId: true,
@@ -1799,9 +1800,15 @@
         const metadataURI = JSON.stringify(payload);
         GTPData.updateProjectMetadataURI(projectId, metadataURI)
           .then(function () {
-            if (statusEl) statusEl.textContent = 'Metadata update submitted. Refreshing view…';
+            if (statusEl) {
+              statusEl.textContent = 'Metadata update submitted. Waiting a few seconds for the chain to update…';
+            }
             detailsEditMode = false;
-            return refreshProjectDataFromChain(projectId);
+            return new Promise(function (resolve) {
+              window.setTimeout(function () {
+                refreshProjectDataFromChain(projectId).then(resolve);
+              }, POST_SAVE_REFRESH_DELAY_MS);
+            });
           })
           .catch(function (err) {
             if (statusEl) statusEl.textContent = err && err.message ? err.message : String(err);
