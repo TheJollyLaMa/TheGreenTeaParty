@@ -60,6 +60,43 @@ var GTPAppDataAdapter = (function () {
     return getCanonicalTrackLabel(value) || DEFAULT_TRACK_LABEL;
   }
 
+  function firstDefined() {
+    for (var i = 0; i < arguments.length; i += 1) {
+      if (arguments[i] !== undefined && arguments[i] !== null && arguments[i] !== '') {
+        return arguments[i];
+      }
+    }
+    return null;
+  }
+
+  function normalizeMetadataPayload(payload) {
+    var current = payload;
+    var depth = 0;
+
+    while (typeof current === 'string' && depth < 3) {
+      var trimmed = current.trim();
+      if (!trimmed) return {};
+      try {
+        current = JSON.parse(trimmed);
+      } catch (e) {
+        return { name: trimmed };
+      }
+      depth += 1;
+    }
+
+    return current && typeof current === 'object' ? current : {};
+  }
+
+  function metadataValue(meta, keys) {
+    for (var i = 0; i < keys.length; i += 1) {
+      var key = keys[i];
+      if (meta && Object.prototype.hasOwnProperty.call(meta, key) && meta[key] !== undefined && meta[key] !== null && meta[key] !== '') {
+        return meta[key];
+      }
+    }
+    return null;
+  }
+
   function projectDiagnosticSummary(project) {
     if (!project) return null;
     return {
@@ -425,9 +462,9 @@ var GTPAppDataAdapter = (function () {
     var trimmed = uri.trim();
 
     // Inline JSON
-    if (trimmed.charAt(0) === '{') {
+    if (trimmed.charAt(0) === '{' || trimmed.charAt(0) === '[' || trimmed.charAt(0) === '"') {
       try {
-        return Promise.resolve(JSON.parse(trimmed));
+        return Promise.resolve(normalizeMetadataPayload(JSON.parse(trimmed)));
       } catch (e) {
         return Promise.resolve({});
       }
@@ -440,6 +477,7 @@ var GTPAppDataAdapter = (function () {
       var gatewayUrl = ipfsGateway.replace(/\/?$/, '/') + cid;
       return fetch(gatewayUrl)
         .then(function (res) { return res.ok ? res.json() : {}; })
+        .then(function (payload) { return normalizeMetadataPayload(payload); })
         .catch(function () { return {}; });
     }
 
@@ -447,6 +485,7 @@ var GTPAppDataAdapter = (function () {
     if (trimmed.indexOf('http://') === 0 || trimmed.indexOf('https://') === 0) {
       return fetch(trimmed)
         .then(function (res) { return res.ok ? res.json() : {}; })
+        .then(function (payload) { return normalizeMetadataPayload(payload); })
         .catch(function () { return {}; });
     }
 
@@ -460,37 +499,43 @@ var GTPAppDataAdapter = (function () {
    * On-chain status is authoritative; metadata status is ignored.
    */
   function buildProjectObject(record, meta) {
+    var normalizedMeta = normalizeMetadataPayload(meta);
     var statusCode = toFiniteNumber(record && record.status, 0);
     var statusLabel = CONTRACT_STATUS_TO_LABEL[statusCode] || 'draft';
 
     // Use the hex projectId as the canonical id, falling back to a metadata id field
-    var id = (meta && meta.id) ? String(meta.id) : String(record.projectId);
-    var raised = toFiniteNumber(meta && meta.raised, 0);
-    var goal = toFiniteNumber(meta && meta.goal, 0);
+    var id = String(firstDefined(metadataValue(normalizedMeta, ['id', 'projectId', 'slug']), record.projectId));
+    var raised = toFiniteNumber(metadataValue(normalizedMeta, ['raised', 'raisedUsd', 'amountRaisedUsd', 'amount_raised_usd', 'fundsRaisedUsd', 'fundsRaised']), 0);
+    var goal = toFiniteNumber(metadataValue(normalizedMeta, ['goal', 'fundingGoalUsd', 'fundingGoal', 'funding_goal_usd', 'funding_goal', 'goalUsd']), 0);
+    var metadataTrack = metadataValue(normalizedMeta, ['track', 'category', 'theme']);
+    var metadataName = firstDefined(metadataValue(normalizedMeta, ['name', 'title', 'projectName']), id);
+    var metadataDescription = firstDefined(metadataValue(normalizedMeta, ['description', 'summary', 'about']), '');
 
     return {
       id: id,
-      name: String((meta && meta.name) || id),
-      track: normalizeTrackLabel(meta && meta.track),
-      layoutTrack: resolveLayoutTrack(meta && meta.track),
+      name: String(metadataName),
+      track: normalizeTrackLabel(metadataTrack),
+      layoutTrack: resolveLayoutTrack(metadataTrack),
       // On-chain status is the source of truth; metadata.status is not used.
       status: statusLabel,
       raised: raised,
       goal: goal,
-      lastUpdate: (meta && meta.lastUpdate) || null,
-      publicUpdate: (meta && (meta.publicUpdate || meta.lastUpdate)) || null,
-      stewards: (meta && typeof meta.stewards === 'number') ? meta.stewards : 1,
-      description: String((meta && meta.description) || ''),
-      repoUrl: (meta && meta.repoUrl) || null,
-      artizenUrl: (meta && meta.artizenUrl) || null,
-      ledgerUrl: (meta && meta.ledgerUrl) || null,
-      contractUrl: (meta && meta.contractUrl) || null,
-      githubPagesUrl: (meta && meta.githubPagesUrl) || null,
-      nextAction: (meta && meta.nextAction) || null,
-      location: (meta && meta.location) || null,
+      lastUpdate: firstDefined(metadataValue(normalizedMeta, ['lastUpdate']), null),
+      publicUpdate: firstDefined(metadataValue(normalizedMeta, ['publicUpdate', 'lastUpdate']), null),
+      stewards: toFiniteNumber(metadataValue(normalizedMeta, ['stewards', 'stewardCount', 'teamSize']), 1),
+      description: String(metadataDescription),
+      repoUrl: firstDefined(metadataValue(normalizedMeta, ['repoUrl', 'repo', 'githubUrl', 'repositoryUrl']), null),
+      artizenUrl: firstDefined(metadataValue(normalizedMeta, ['artizenUrl', 'fundingUrl', 'projectUrl']), null),
+      ledgerUrl: firstDefined(metadataValue(normalizedMeta, ['ledgerUrl', 'explorerUrl', 'etherscanUrl']), null),
+      contractUrl: firstDefined(metadataValue(normalizedMeta, ['contractUrl', 'contractExplorerUrl']), null),
+      githubPagesUrl: firstDefined(metadataValue(normalizedMeta, ['githubPagesUrl', 'website', 'siteUrl', 'homepage']), null),
+      nextAction: firstDefined(metadataValue(normalizedMeta, ['nextAction', 'nextStep']), null),
+      location: firstDefined(metadataValue(normalizedMeta, ['location', 'city', 'region']), null),
       // On-chain fields surfaced for the panel/detail views
       onChainSteward: record.steward,
       onChainStatus: record.status,
+      metadataSteward: firstDefined(metadataValue(normalizedMeta, ['steward', 'owner', 'leadSteward']), null),
+      metadataStatus: firstDefined(metadataValue(normalizedMeta, ['status']), null),
       projectId: record.projectId
     };
   }

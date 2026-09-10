@@ -184,6 +184,57 @@ describe('GTPAppDataAdapter', function () {
     });
   });
 
+  it('normalizes registry metadata aliases and stringified JSON payloads', async function () {
+    const sandbox = await loadAppAdapterSandbox();
+    const metadata = {
+      id: 'green-tea-hut-001',
+      title: 'The Green Tea Hut #1',
+      category: 'Green Tea',
+      fundingGoalUsd: '12000',
+      raisedUsd: '4500',
+      summary: 'A community tea house',
+      website: 'https://example.com/green-tea-hut-1',
+      steward: '0x0000000000000000000000000000000000000002'
+    };
+
+    sandbox.setRegistryStub({
+      filters: {
+        ProjectRegistered: function () {
+          return {};
+        }
+      },
+      queryFilter: async function () {
+        return [
+          {
+            args: {
+              projectId: '0xproject1',
+              steward: '0x0000000000000000000000000000000000000002',
+              metadataURI: JSON.stringify(JSON.stringify(metadata)),
+              status: 1
+            }
+          }
+        ];
+      },
+      getProject: async function () {
+        throw new Error('getProject should not be called when event payload is complete');
+      }
+    });
+
+    const projects = await sandbox.adapter.create({}).getProjects();
+
+    expect(projects).to.have.lengthOf(1);
+    expect(projects[0]).to.include({
+      id: 'green-tea-hut-001',
+      name: 'The Green Tea Hut #1',
+      track: 'Green Tea',
+      status: 'active',
+      raised: 4500,
+      goal: 12000,
+      description: 'A community tea house',
+      githubPagesUrl: 'https://example.com/green-tea-hut-1'
+    });
+  });
+
   it('retries the registry scan from genesis when the configured start block misses the project', async function () {
     const sandbox = await loadAppAdapterSandbox();
     const queryCalls = [];
