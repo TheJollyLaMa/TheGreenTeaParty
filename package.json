@@ -8,6 +8,8 @@
   },
   "scripts": {
     "test": "hardhat test",
+    "test:payroll": "node --test test/payroll.test.cjs test/commentArt.test.cjs",
+    "validate:payroll": "node scripts/payroll/validatePayrollQueue.cjs",
     "compile": "hardhat compile",
     "deploy:optimism": "hardhat run scripts/deploy/01_deploy_all.js --network optimism",
     "verify:optimism": "hardhat run scripts/deploy/02_verify.js --network optimism",
