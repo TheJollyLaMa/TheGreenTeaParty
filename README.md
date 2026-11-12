@@ -161,6 +161,17 @@ All public image/icon assets live under `assets/`:
 | `assets/favicon.png` | all pages (`index.html`, `app/`, `prototype/`, `views/spiral.html`) | Browser tab icon |
 | `assets/GreenTeaParty_underground.jpeg` | `styles.css` (`.site-header` background) | Hero background image |
 
+## Contributor Payroll
+
+Merged pull requests can queue ART bounties from linked issues labeled `bounty: <amount> ART`. An optional `idea-credit: @username` label splits the bounty 80% to the implementer and 20% to the idea originator. Testing issues use `test-bounty: <amount> ART`, `/test-complete`, and owner-only `/test-approved` commands.
+
+Only wallets in `contributor-accounts.json` can receive entries. GitHub Actions update `payroll-queue.json`; an administrator then verifies payment and runs the **Settle Payroll** workflow. Settlement records ledger state and an optional transaction hash but does not transfer ART or invoke the project treasury contracts.
+
+```sh
+npm run test:payroll
+npm run validate:payroll
+```
+
 ## Development
 
 This repository intentionally favors minimal dependencies.
